@@ -41,6 +41,7 @@ import { MoviesSection } from './components/movies/MoviesSection';
 import { WishlistSection } from './components/wishlist/WishlistSection';
 import { TrophyCabinetSection } from './components/badges/TrophyCabinetSection';
 import { RomanticExtrasSection } from './components/romantic/RomanticExtrasSection';
+import { RealtimePlacesHub } from './components/home/RealtimePlacesHub';
 
 // Modals
 import { PinModal } from './components/auth/PinModal';
@@ -354,8 +355,12 @@ export default function App() {
               {/* Hero Section */}
               <HeroSection
                 settings={settings}
-                onExploreClick={() => handleSelectSection('peta')}
-                onAddMemoryClick={() => handleSelectSection('peta')}
+                onExploreClick={() => {
+                  document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                onAddMemoryClick={() => {
+                  document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
+                }}
               />
 
               {/* Intro Section: Savero & Soffie */}
@@ -366,18 +371,8 @@ export default function App() {
                 onSelectSection={handleSelectSection}
                 isGuestMode={settings.isGuestMode}
               />
-            </motion.div>
-          )}
 
-          {/* PAGE 2: PETA KENANGAN */}
-          {activeSection === 'peta' && (
-            <motion.div
-              key="page-peta"
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
-            >
+              {/* Peta Kenangan — langsung di Beranda */}
               <MemoryMapSection
                 pins={pins}
                 settings={settings}
@@ -386,22 +381,22 @@ export default function App() {
                 onDeletePin={handleDeletePin}
                 selectedPinId={selectedPinIdForMap}
               />
-            </motion.div>
-          )}
 
-          {/* PAGE 3: LINIMASA CINTA (TIMELINE) */}
-          {activeSection === 'timeline' && (
-            <motion.div
-              key="page-timeline"
-              initial={{ opacity: 0, x: 15 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -15 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
-            >
+              {/* Timeline Cinta — langsung di Beranda */}
               <TimelineSection
                 pins={pins}
                 settings={settings}
-                onOpenPinInMap={handleOpenPinInMap}
+                onOpenPinInMap={(pin) => {
+                  setSelectedPinIdForMap(pin.id);
+                  document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              />
+
+              {/* Rekomendasi Kafe & Penginapan Realtime */}
+              <RealtimePlacesHub
+                existingPlaces={wishlistPlaces}
+                onAddPlace={handleAddWishlistPlace}
+                settings={settings}
               />
             </motion.div>
           )}

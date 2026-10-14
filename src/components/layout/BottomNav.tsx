@@ -35,8 +35,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   const navItems: NavTabItem[] = [
     { id: 'beranda', label: 'Beranda', icon: Home },
-    { id: 'peta', label: 'Peta', icon: MapPin },
-    { id: 'timeline', label: 'Timeline', icon: Clock },
     { id: 'siklus', label: 'Siklus', icon: HeartPulse, sensitive: true },
     { id: 'wishlist', label: 'Wishlist', icon: Sparkles },
     { id: 'film', label: 'Film', icon: Film },

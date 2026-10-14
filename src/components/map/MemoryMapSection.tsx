@@ -29,7 +29,7 @@ import {
 import { MemoryPin, PinCategory, AppSettings } from '../../types';
 import { soundManager } from '../../utils/audio';
 import { AnimatedHeart, AnimatedSparkles } from '../common/AnimatedIcons';
-import { getCartoApiKey } from '../../config/env';
+import { getGoogleMapsApiKey } from '../../config/env';
 
 interface MemoryMapProps {
   pins: MemoryPin[];
@@ -73,21 +73,36 @@ const CATEGORY_ICONS: Record<PinCategory, { color: string; label: string }> = {
   lainnya: { color: '#BCAAA4', label: 'Lainnya' }
 };
 
+// Google Maps API Key dari .env
+const GOOGLE_MAPS_API_KEY = getGoogleMapsApiKey();
+
+// Tile map menggunakan Google Maps API key
+// lyrs=m → Road/Street | lyrs=s → Satellite | lyrs=y → Hybrid
 const MAP_TILES = {
   voyager: {
     name: 'Warm Romance (Krem)',
-    url: `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?api_key=${getCartoApiKey()}`,
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap'
+    // Google Maps Road tile — pakai API key dari env
+    url: GOOGLE_MAPS_API_KEY
+      ? `https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=${GOOGLE_MAPS_API_KEY}`
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: GOOGLE_MAPS_API_KEY ? '&copy; Google Maps' : '&copy; Esri &copy; OpenStreetMap',
+    subdomains: GOOGLE_MAPS_API_KEY ? '0123' : ''
   },
   dark: {
     name: 'Cinematic Noir',
-    url: `https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?api_key=${getCartoApiKey()}`,
-    attribution: '&copy; CARTO'
+    // Google tidak punya dark tile — pakai ArcGIS Dark Gray Canvas
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri &copy; HERE &copy; DeLorme',
+    subdomains: ''
   },
   satellite: {
     name: 'Satelit Realistis',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; Esri & USGS'
+    // Google Maps Satellite tile — pakai API key dari env
+    url: GOOGLE_MAPS_API_KEY
+      ? `https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}&key=${GOOGLE_MAPS_API_KEY}`
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: GOOGLE_MAPS_API_KEY ? '&copy; Google Maps' : '&copy; Esri &amp; contributors',
+    subdomains: GOOGLE_MAPS_API_KEY ? '0123' : ''
   }
 };
 
@@ -178,6 +193,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
     const tileMeta = MAP_TILES[activeTile];
     const initialTileLayer = L.tileLayer(tileMeta.url, {
       attribution: tileMeta.attribution,
+      subdomains: tileMeta.subdomains ?? 'abcd',
       maxZoom: 19
     }).addTo(map);
 
@@ -232,6 +248,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
     const tileMeta = MAP_TILES[tileKey];
     const newLayer = L.tileLayer(tileMeta.url, {
       attribution: tileMeta.attribution,
+      subdomains: tileMeta.subdomains ?? 'abcd',
       maxZoom: 19
     }).addTo(map);
 

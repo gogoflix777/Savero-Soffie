@@ -1,8 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import {
-  MapPin,
-  Clock,
   HeartPulse,
   Sparkles,
   Film,
@@ -24,22 +22,6 @@ export const AppLauncherHub: React.FC<AppLauncherHubProps> = ({
 }) => {
   const hubItems = [
     {
-      id: 'peta',
-      title: 'Peta Kenangan',
-      subtitle: 'Semarang & Sekitarnya',
-      desc: 'Tandai titik kafe, bioskop, jalanan, dan kenangan indah.',
-      icon: MapPin,
-      color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
-    },
-    {
-      id: 'timeline',
-      title: 'Linimasa Cinta',
-      subtitle: 'Perjalanan Berdua',
-      desc: 'Kilas balik momen tak terlupakan sejak awal bertemu.',
-      icon: Clock,
-      color: 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20'
-    },
-    {
       id: 'siklus',
       title: 'Siklus Flo & Intim',
       subtitle: 'Zona Privat Sensitif',
@@ -50,9 +32,9 @@ export const AppLauncherHub: React.FC<AppLauncherHubProps> = ({
     },
     {
       id: 'wishlist',
-      title: 'Wishlist & Kafe Live',
-      subtitle: 'Radar Realtime & Kafe Baru',
-      desc: 'Cek kafe yang buka detik ini, kafe baru/segera buka di Semarang, jarak GPS live, dan ranking matcha vs kopi.',
+      title: 'Wishlist Tempat',
+      subtitle: 'Daftar Kunjungan Berdua',
+      desc: 'Simpan tempat impian yang ingin dikunjungi bersama.',
       icon: Sparkles,
       color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
     },
