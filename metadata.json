@@ -1,0 +1,6 @@
+{
+  "name": "Savero & Soffie",
+  "description": "Ruang privat, interaktif, dan sinematik kenangan cinta Savero & Soffie di Semarang.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,18 @@
+{
+  "name": "Savero & Soffie",
+  "short_name": "Savero & Soffie",
+  "description": "Ruang privat, interaktif, dan sinematik kenangan cinta Savero & Soffie di Semarang.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EFE6DA",
+  "theme_color": "#7A1018",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237A1018'/><path d='M50 30 C35 15, 10 30, 10 50 C10 70, 50 90, 50 90 C50 90, 90 70, 90 50 C90 30, 65 15, 50 30 Z' fill='%23F4B6C2'/><circle cx='50' cy='52' r='5' fill='%237A1018'/><rect x='48' y='52' width='4' height='10' rx='2' fill='%237A1018'/></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
