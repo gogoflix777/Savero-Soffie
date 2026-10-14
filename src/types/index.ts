@@ -228,5 +228,4 @@ export interface AppSettings {
   shareCycleWithPartner: boolean;
   shareOnlyPredictions: boolean;
   allowAlcoholCategory: boolean;
-  tmdbApiKey?: string;
 }

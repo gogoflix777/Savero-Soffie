@@ -24,6 +24,7 @@ import {
 import { LockedLetter, LoveSong, MemoryPin, MovieItem, AppSettings } from '../../types';
 import { soundManager } from '../../utils/audio';
 import { HeartRating } from '../common/AnimatedIcons';
+import { getGeminiApiKey } from '../../config/env';
 
 interface RomanticExtrasProps {
   letters: LockedLetter[];
@@ -130,6 +131,34 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
     };
     onAddLetter(newL);
     setIsNewLetterOpen(false);
+  };
+
+  const handleGenerateLoveNote = async () => {
+    const apiKey = getGeminiApiKey();
+    if (!apiKey || !letterForm.title.trim()) return;
+
+    try {
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Tulis satu surat singkat romantis dalam bahasa Indonesia, berjudul "${letterForm.title}". Surat itu ditulis dari ${letterForm.sender} untuk ${letterForm.recipient}. Gunakan nada hangat, manis, personal, dan menggambarkan kebahagiaan bersama.`
+            }]
+          }]
+        })
+      });
+
+      if (!res.ok) throw new Error('Gemini request failed');
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+      if (text) {
+        setLetterForm((prev) => ({ ...prev, content: text.trim() }));
+      }
+    } catch (error) {
+      console.warn('Gemini note generation failed:', error);
+    }
   };
 
   return (
@@ -714,6 +743,13 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
                       className="px-5 py-2 bg-[#7A1018] text-[#EFE6DA] rounded-xl font-bold hover:bg-[#5e0a11]"
                     >
                       Segel & Kunci Surat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleGenerateLoveNote}
+                      className="px-3 py-2 bg-[#7A1018] text-[#EFE6DA] rounded-xl text-[10px] font-bold uppercase tracking-[0.15em]"
+                    >
+                      Generate AI Love Note
                     </button>
                   </div>
                 </form>

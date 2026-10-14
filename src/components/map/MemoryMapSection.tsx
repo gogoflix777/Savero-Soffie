@@ -29,6 +29,7 @@ import {
 import { MemoryPin, PinCategory, AppSettings } from '../../types';
 import { soundManager } from '../../utils/audio';
 import { AnimatedHeart, AnimatedSparkles } from '../common/AnimatedIcons';
+import { getCartoApiKey } from '../../config/env';
 
 interface MemoryMapProps {
   pins: MemoryPin[];
@@ -75,12 +76,12 @@ const CATEGORY_ICONS: Record<PinCategory, { color: string; label: string }> = {
 const MAP_TILES = {
   voyager: {
     name: 'Warm Romance (Krem)',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    url: `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?api_key=${getCartoApiKey()}`,
     attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap'
   },
   dark: {
     name: 'Cinematic Noir',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png',
+    url: `https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?api_key=${getCartoApiKey()}`,
     attribution: '&copy; CARTO'
   },
   satellite: {

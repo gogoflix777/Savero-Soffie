@@ -17,10 +17,9 @@ import {
 import { appStorage } from './utils/storage';
 import { soundManager } from './utils/audio';
 import { APIProvider } from '@vis.gl/react-google-maps';
+import { getGoogleMapsApiKey } from './config/env';
 
-const GOOGLE_MAPS_API_KEY =
-  (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) ||
-  'AIzaSyAsh99YPUfShW0Ok9FdBMcl_4fW1Ad8OmE';
+const GOOGLE_MAPS_API_KEY = getGoogleMapsApiKey();
 
 // Visual Effects & Backgrounds
 import { Lock } from 'lucide-react';

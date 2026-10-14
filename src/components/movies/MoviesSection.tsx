@@ -23,6 +23,7 @@ import { MovieItem, ActorItem, MovieCollection, TvSeries, MemoryPin, AppSettings
 import { initialTvSeries } from '../../data/initialData';
 import { appStorage } from '../../utils/storage';
 import { HeartRating } from '../common/AnimatedIcons';
+import { getTmdbApiKey } from '../../config/env';
 
 interface MoviesSectionProps {
   movies: MovieItem[];
@@ -56,6 +57,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   // TMDB Live Search State
   const [isSearchingTmdb, setIsSearchingTmdb] = useState(false);
   const [tmdbSearchResults, setTmdbSearchResults] = useState<MovieItem[]>([]);
+  const hasTmdbKey = Boolean(getTmdbApiKey());
 
   // Movie Night Planner State
   const [plannedMovieTitle, setPlannedMovieTitle] = useState('Oppenheimer');
@@ -63,13 +65,19 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   const [plannedSnack, setPlannedSnack] = useState('Sate Taichan Pleburan + Popcorn Manis');
   const [plannedDrink, setPlannedDrink] = useState('Iced Matcha Latte Soffie & Kopi V60 Savero');
 
-  // Perform search on TMDB
-  const handleTmdbSearch = async () => {
-    if (!searchQuery.trim()) return;
-    const apiKey = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_TMDB_API_KEY || settings.tmdbApiKey;
+  const normalizeText = (value?: string) => (value ?? '').toLowerCase().trim();
 
+  // Search using TMDB only
+  const handleTmdbSearch = async () => {
+    const query = normalizeText(searchQuery);
+    if (!query) {
+      setTmdbSearchResults([]);
+      return;
+    }
+
+    const apiKey = getTmdbApiKey();
     if (!apiKey) {
-      // Offline / Keyless filter through existing catalogue
+      setTmdbSearchResults([]);
       return;
     }
 
@@ -77,29 +85,35 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
       setIsSearchingTmdb(true);
       const res = await fetch(
         `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&language=id-ID&query=${encodeURIComponent(
-          searchQuery
+          query
         )}&page=1`
       );
-      if (res.ok) {
-        const data = await res.json();
-        const mapped: MovieItem[] = (data.results || []).slice(0, 8).map((m: any) => ({
-          id: 'tmdb-' + m.id,
-          tmdbId: m.id,
-          title: m.title || m.original_title,
-          year: m.release_date ? new Date(m.release_date).getFullYear() : 2026,
-          posterUrl: m.poster_path
-            ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
-            : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&q=80',
-          backdropUrl: m.backdrop_path ? `https://image.tmdb.org/t/p/original${m.backdrop_path}` : undefined,
-          genres: ['Film'],
-          overview: m.overview || 'Sinopsis film belum tersedia.',
-          tmdbRating: m.vote_average ? Math.round(m.vote_average * 10) / 10 : 7.5,
-          status: 'watchlist'
-        }));
-        setTmdbSearchResults(mapped);
+
+      if (!res.ok) {
+        setTmdbSearchResults([]);
+        return;
       }
+
+      const data = await res.json();
+      const mapped: MovieItem[] = (data.results || []).slice(0, 8).map((m: any) => ({
+        id: 'tmdb-' + m.id,
+        tmdbId: m.id,
+        title: m.title || m.original_title,
+        year: m.release_date ? new Date(m.release_date).getFullYear() : 2026,
+        posterUrl: m.poster_path
+          ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
+          : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&q=80',
+        backdropUrl: m.backdrop_path ? `https://image.tmdb.org/t/p/original${m.backdrop_path}` : undefined,
+        genres: ['Film'],
+        overview: m.overview || 'Sinopsis film belum tersedia.',
+        tmdbRating: m.vote_average ? Math.round(m.vote_average * 10) / 10 : 7.5,
+        status: 'watchlist'
+      }));
+
+      setTmdbSearchResults(mapped);
     } catch (err) {
       console.error('TMDB Search Error:', err);
+      setTmdbSearchResults([]);
     } finally {
       setIsSearchingTmdb(false);
     }
@@ -107,14 +121,10 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
 
   // Filtered & Sorted Movies
   const filteredMovies = useMemo(() => {
-    return movies
+    const localList = movies
       .filter((m) => {
         if (movieFilter === 'all') return true;
         return m.status === movieFilter;
-      })
-      .filter((m) => {
-        if (!searchQuery) return true;
-        return m.title.toLowerCase().includes(searchQuery.toLowerCase());
       })
       .sort((a, b) => {
         if (sortBy === 'title') return a.title.localeCompare(b.title);
@@ -125,7 +135,14 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
         }
         return (b.watchedDate || '0').localeCompare(a.watchedDate || '0');
       });
-  }, [movies, movieFilter, sortBy, searchQuery]);
+
+    const trimmedQuery = normalizeText(searchQuery);
+    if (trimmedQuery && tmdbSearchResults.length > 0) {
+      return tmdbSearchResults;
+    }
+
+    return localList;
+  }, [movies, movieFilter, sortBy, searchQuery, tmdbSearchResults]);
 
   return (
     <section id="film-aktor" className="py-12 px-4 bg-[#EFE6DA] dark:bg-[#1a0507] border-b border-[#7A1018]/15 transition-colors">
@@ -203,7 +220,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleTmdbSearch()}
-                  placeholder="Cari judul film atau TMDB..."
+                  placeholder={'Cari judul film atau kategori lokal...'}
                   className="w-full pl-9 pr-20 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20 text-xs font-sans-clean focus:outline-none focus:ring-1 focus:ring-[#7A1018]"
                 />
                 <button
@@ -293,6 +310,12 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {!hasTmdbKey && !tmdbSearchResults.length && (
+              <div className="rounded-2xl border border-dashed border-[#7A1018]/30 bg-[#7A1018]/5 p-4 text-center text-[11px] font-sans-clean text-[#3B0A0F] dark:text-[#EFE6DA]">
+                Pencarian film aktif memakai TMDB. Pastikan variabel <span className="font-bold">VITE_TMDB_API_KEY</span> sudah ada di file <span className="font-bold">.env</span>.
               </div>
             )}
 

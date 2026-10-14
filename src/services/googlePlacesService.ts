@@ -1,5 +1,7 @@
 // Google Places API (New) Service for Semarang Cafe Recommendations
 
+import { getGoogleMapsApiKey } from '../config/env';
+
 export interface GooglePlaceCafe {
   id: string;
   name: string;
@@ -22,9 +24,7 @@ export interface GooglePlaceCafe {
   isFromGoogleApi: boolean;
 }
 
-export const GOOGLE_MAPS_API_KEY =
-  (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) ||
-  'AIzaSyAsh99YPUfShW0Ok9FdBMcl_4fW1Ad8OmE';
+export const GOOGLE_MAPS_API_KEY = getGoogleMapsApiKey();
 
 // Authentic high-quality fallback photo gallery for Semarang cafes
 const SEMARANG_CAFE_STOCK_PHOTOS: Record<string, string[]> = {

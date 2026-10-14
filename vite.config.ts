@@ -5,7 +5,13 @@ import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiKey = env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyAsh99YPUfShW0Ok9FdBMcl_4fW1Ad8OmE';
+  const apiKey = env.VITE_GOOGLE_MAPS_API_KEY;
+
+  if (!apiKey) {
+    console.warn(
+      'VITE_GOOGLE_MAPS_API_KEY is missing. Google Places proxy requests will fail until this env var is configured.'
+    );
+  }
 
   return {
     plugins: [

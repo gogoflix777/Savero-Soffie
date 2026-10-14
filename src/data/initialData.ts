@@ -26,8 +26,7 @@ export const initialSettings: AppSettings = {
   soffieCollege: 'Mahasiswi Keperawatan UNDIP',
   shareCycleWithPartner: true,
   shareOnlyPredictions: false,
-  allowAlcoholCategory: false,
-  tmdbApiKey: ''
+  allowAlcoholCategory: false
 };
 
 export const initialPins: MemoryPin[] = [

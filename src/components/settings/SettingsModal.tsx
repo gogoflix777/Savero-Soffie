@@ -215,21 +215,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* TMDB API Key */}
-          <div className="p-4 rounded-2xl bg-white/60 dark:bg-black/30 border border-[#7A1018]/15 space-y-2">
-            <h4 className="font-bold text-[#7A1018] dark:text-[#F4B6C2] flex items-center space-x-1.5 uppercase tracking-wider text-[11px]">
-              <Film className="w-3.5 h-3.5" />
-              <span>TMDB API Key (Opsional)</span>
-            </h4>
-            <input
-              type="text"
-              value={formData.tmdbApiKey || ''}
-              onChange={(e) => setFormData({ ...formData, tmdbApiKey: e.target.value })}
-              placeholder="Masukkan TMDB v3 API Key jika ingin live search..."
-              className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20"
-            />
-          </div>
-
           {/* Backup & Restore */}
           <div className="p-4 rounded-2xl bg-white/60 dark:bg-black/30 border border-[#7A1018]/15 space-y-3">
             <h4 className="font-bold text-[#7A1018] dark:text-[#F4B6C2] uppercase tracking-wider text-[11px]">
