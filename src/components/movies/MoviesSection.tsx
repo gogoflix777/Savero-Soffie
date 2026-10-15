@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { ManagedImage } from '../common/ManagedImage';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Film,
@@ -16,14 +17,26 @@ import {
   Eye,
   Coffee,
   MapPin,
-  ExternalLink,
-  X
+  ExternalLink
 } from 'lucide-react';
+import { CloseButton } from '../common/CloseButton';
 import { MovieItem, ActorItem, MovieCollection, TvSeries, MemoryPin, AppSettings } from '../../types';
-import { initialTvSeries } from '../../data/initialData';
 import { appStorage } from '../../utils/storage';
 import { HeartRating } from '../common/AnimatedIcons';
 import { getTmdbApiKey } from '../../config/env';
+import {
+  getMovieByTitle,
+  getMovieFromTmdb,
+  getPersonByName,
+  getPersonFromTmdb,
+  getTvByTitle,
+  getTvFromTmdb,
+  mapMovieSearchResult,
+  mapPersonSearchResult,
+  mapTvSearchResult,
+  searchTmdb,
+  TmdbSearchResult
+} from '../../services/tmdbService';
 
 interface MoviesSectionProps {
   movies: MovieItem[];
@@ -33,6 +46,8 @@ interface MoviesSectionProps {
   settings: AppSettings;
   onAddMovie: (movie: MovieItem) => void;
   onUpdateMovie: (movie: MovieItem) => void;
+  onUpdateActor: (actor: ActorItem) => void;
+  onAddActor: (actor: ActorItem) => void;
   onToggleActorLike: (actorId: string, likedBy: 'Savero' | 'Soffie' | 'Berdua') => void;
 }
 
@@ -44,6 +59,8 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   settings,
   onAddMovie,
   onUpdateMovie,
+  onUpdateActor,
+  onAddActor,
   onToggleActorLike
 }) => {
   const [activeTab, setActiveTab] = useState<'film' | 'serial' | 'aktor' | 'koleksi' | 'planner'>('film');
@@ -58,6 +75,147 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   const [isSearchingTmdb, setIsSearchingTmdb] = useState(false);
   const [tmdbSearchResults, setTmdbSearchResults] = useState<MovieItem[]>([]);
   const hasTmdbKey = Boolean(getTmdbApiKey());
+  const allTmdbMetadataReady = movies.every((movie) => movie.tmdbMetadataFetched)
+    && actors.every((actor) => actor.tmdbMetadataFetched)
+    && tvSeriesList.every((series) => series.tmdbMetadataFetched);
+  const hydrationStarted = useRef(false);
+  const [catalogQuery, setCatalogQuery] = useState('');
+  const [catalogResults, setCatalogResults] = useState<TmdbSearchResult[]>([]);
+  const [catalogKind, setCatalogKind] = useState<'tv' | 'person' | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState('');
+  const [metadataSyncState, setMetadataSyncState] = useState<'loading' | 'ready' | 'missing-key' | 'error'>(
+    hasTmdbKey ? (allTmdbMetadataReady ? 'ready' : 'loading') : 'missing-key'
+  );
+
+  useEffect(() => {
+    if (!hasTmdbKey) {
+      setMetadataSyncState('missing-key');
+      return;
+    }
+    if (allTmdbMetadataReady) {
+      setMetadataSyncState('ready');
+      hydrationStarted.current = true;
+      return;
+    }
+    if (hydrationStarted.current) return;
+    hydrationStarted.current = true;
+    const refreshMetadata = async () => {
+      let metadataLoadFailed = false;
+      const [movieMetadata, actorMetadata, seriesMetadata] = await Promise.all([
+        Promise.all(movies.map(async (movie) => {
+          if (movie.tmdbMetadataFetched) return movie;
+          try {
+            const metadata = await getMovieByTitle(movie.title);
+            if (!metadata) metadataLoadFailed = true;
+            return metadata
+              ? { ...movie, ...metadata, tmdbMetadataFetched: true, status: movie.status }
+              : { ...movie, posterUrl: '', backdropUrl: undefined, genres: [], overview: '', tmdbRating: undefined, durationMinutes: undefined, cast: [], trailerUrl: undefined };
+          } catch (error) {
+            metadataLoadFailed = true;
+            console.warn(`TMDB gagal memuat film: ${movie.title}`, error);
+            return { ...movie, posterUrl: '', backdropUrl: undefined, genres: [], overview: '', tmdbRating: undefined, durationMinutes: undefined, cast: [], trailerUrl: undefined };
+          }
+        })),
+        Promise.all(actors.map(async (actor) => {
+          if (actor.tmdbMetadataFetched) return actor;
+          try {
+            const metadata = await getPersonByName(actor.name);
+            if (!metadata) metadataLoadFailed = true;
+            return metadata
+              ? { ...actor, ...metadata, tmdbMetadataFetched: true, likedBy: actor.likedBy }
+              : { ...actor, photoUrl: '', birthDate: undefined, birthPlace: undefined, biography: '', topMovies: [] };
+          } catch (error) {
+            metadataLoadFailed = true;
+            console.warn(`TMDB gagal memuat aktor: ${actor.name}`, error);
+            return { ...actor, photoUrl: '', birthDate: undefined, birthPlace: undefined, biography: '', topMovies: [] };
+          }
+        })),
+        Promise.all(tvSeriesList.map(async (series) => {
+          if (series.tmdbMetadataFetched) return series;
+          try {
+            const metadata = await getTvByTitle(series.title);
+            if (!metadata) metadataLoadFailed = true;
+            return metadata
+              ? { ...series, ...metadata, tmdbMetadataFetched: true, watchedEpisodes: Math.min(series.watchedEpisodes, metadata.totalEpisodes ?? series.totalEpisodes), status: series.status, notes: series.notes }
+              : { ...series, posterUrl: '', overview: '', totalSeasons: 0, totalEpisodes: 0, genres: [], tmdbRating: undefined, cast: [] };
+          } catch (error) {
+            metadataLoadFailed = true;
+            console.warn(`TMDB gagal memuat serial: ${series.title}`, error);
+            return { ...series, posterUrl: '', overview: '', totalSeasons: 0, totalEpisodes: 0, genres: [], tmdbRating: undefined, cast: [] };
+          }
+        }))
+      ]);
+
+      movieMetadata.forEach((movie, index) => {
+        if (JSON.stringify(movie) !== JSON.stringify(movies[index])) onUpdateMovie(movie);
+      });
+      actorMetadata.forEach((actor, index) => {
+        if (JSON.stringify(actor) !== JSON.stringify(actors[index])) onUpdateActor(actor);
+      });
+      if (JSON.stringify(seriesMetadata) !== JSON.stringify(tvSeriesList)) {
+        setTvSeriesList(seriesMetadata);
+        appStorage.saveTvSeries(seriesMetadata);
+      }
+      setMetadataSyncState(metadataLoadFailed ? 'error' : 'ready');
+    };
+
+    void refreshMetadata().catch((error) => {
+      console.error('TMDB metadata sync failed:', error);
+      setMetadataSyncState('error');
+    });
+  }, [hasTmdbKey, allTmdbMetadataReady]);
+
+  const handleCatalogSearch = async (kind: 'tv' | 'person') => {
+    const query = catalogQuery.trim();
+    if (!query || !hasTmdbKey) return;
+    setCatalogLoading(true);
+    setCatalogError('');
+    setCatalogKind(kind);
+    setCatalogResults([]);
+    try {
+      setCatalogResults(await searchTmdb(kind, query));
+    } catch (error) {
+      console.error('Catalog search failed:', error);
+      setCatalogError('Pencarian belum berhasil. Coba lagi sebentar.');
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
+
+  const addCatalogTv = async (result: TmdbSearchResult) => {
+    try {
+      const metadata = await getTvFromTmdb(result.id);
+      const freshSeries = {
+        ...mapTvSearchResult(result),
+        ...metadata,
+        tmdbMetadataFetched: true,
+        watchedEpisodes: 0,
+        status: 'watching' as const
+      };
+      const updated = [freshSeries, ...tvSeriesList.filter((series) => series.tmdbId !== result.id)];
+      setTvSeriesList(updated);
+      appStorage.saveTvSeries(updated);
+      setCatalogResults((items) => items.filter((item) => item.id !== result.id));
+    } catch (error) {
+      console.error('Could not load series details:', error);
+      setCatalogError('Detail serial belum tersedia. Coba lagi sebentar.');
+    }
+  };
+
+  const addCatalogPerson = async (result: TmdbSearchResult) => {
+    try {
+      const metadata = await getPersonFromTmdb(result.id);
+      const freshActor = { ...mapPersonSearchResult(result), ...metadata, tmdbMetadataFetched: true, likedBy: 'Berdua' as const };
+      if (!actors.some((actor) => actor.tmdbId === result.id)) {
+        onAddActor(freshActor);
+      }
+      setCatalogResults((items) => items.filter((item) => item.id !== result.id));
+    } catch (error) {
+      console.error('Could not load actor details:', error);
+      setCatalogError('Detail aktor belum tersedia. Coba lagi sebentar.');
+    }
+  };
 
   // Movie Night Planner State
   const [plannedMovieTitle, setPlannedMovieTitle] = useState('Oppenheimer');
@@ -83,32 +241,10 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
 
     try {
       setIsSearchingTmdb(true);
-      const res = await fetch(
-        `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&language=id-ID&query=${encodeURIComponent(
-          query
-        )}&page=1`
+      const results = await searchTmdb('movie', query);
+      const mapped: MovieItem[] = results.slice(0, 8).map((movie: TmdbSearchResult) =>
+        mapMovieSearchResult(movie)
       );
-
-      if (!res.ok) {
-        setTmdbSearchResults([]);
-        return;
-      }
-
-      const data = await res.json();
-      const mapped: MovieItem[] = (data.results || []).slice(0, 8).map((m: any) => ({
-        id: 'tmdb-' + m.id,
-        tmdbId: m.id,
-        title: m.title || m.original_title,
-        year: m.release_date ? new Date(m.release_date).getFullYear() : 2026,
-        posterUrl: m.poster_path
-          ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
-          : 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=500&q=80',
-        backdropUrl: m.backdrop_path ? `https://image.tmdb.org/t/p/original${m.backdrop_path}` : undefined,
-        genres: ['Film'],
-        overview: m.overview || 'Sinopsis film belum tersedia.',
-        tmdbRating: m.vote_average ? Math.round(m.vote_average * 10) / 10 : 7.5,
-        status: 'watchlist'
-      }));
 
       setTmdbSearchResults(mapped);
     } catch (err) {
@@ -142,7 +278,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
     }
 
     return localList;
-  }, [movies, movieFilter, sortBy, searchQuery, tmdbSearchResults]);
+  }, [movies, movieFilter, sortBy, searchQuery, tmdbSearchResults, metadataSyncState]);
 
   return (
     <section id="film-aktor" className="py-12 px-4 bg-[#EFE6DA] dark:bg-[#1a0507] border-b border-[#7A1018]/15 transition-colors">
@@ -163,10 +299,10 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
           </div>
 
           {/* Sub Navigation Tabs */}
-          <div className="flex items-center space-x-1.5 bg-white/50 dark:bg-black/30 p-1.5 rounded-2xl border border-[#7A1018]/15 text-xs font-sans-clean font-bold">
+          <div className="flex max-w-full items-center space-x-1.5 overflow-x-auto rounded-2xl border border-rose-200/70 bg-white/65 p-1.5 text-xs font-sans-clean font-bold scrollbar-none dark:border-white/10 dark:bg-white/5">
             <button
               onClick={() => setActiveTab('film')}
-              className={`px-3 py-1.5 rounded-xl transition ${
+              className={`shrink-0 px-3 py-1.5 rounded-xl transition ${
                 activeTab === 'film' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
               }`}
             >
@@ -174,7 +310,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('serial')}
-              className={`px-3 py-1.5 rounded-xl transition ${
+              className={`shrink-0 px-3 py-1.5 rounded-xl transition ${
                 activeTab === 'serial' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
               }`}
             >
@@ -182,7 +318,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('aktor')}
-              className={`px-3 py-1.5 rounded-xl transition ${
+              className={`shrink-0 px-3 py-1.5 rounded-xl transition ${
                 activeTab === 'aktor' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
               }`}
             >
@@ -190,7 +326,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('koleksi')}
-              className={`px-3 py-1.5 rounded-xl transition ${
+              className={`shrink-0 px-3 py-1.5 rounded-xl transition ${
                 activeTab === 'koleksi' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
               }`}
             >
@@ -198,7 +334,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('planner')}
-              className={`px-3 py-1.5 rounded-xl transition ${
+              className={`shrink-0 px-3 py-1.5 rounded-xl transition ${
                 activeTab === 'planner' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
               }`}
             >
@@ -206,6 +342,13 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
             </button>
           </div>
         </div>
+
+        {metadataSyncState === 'loading' && (
+          <p className="mb-4 text-xs text-[#956d74] dark:text-rose-100/60" role="status">Koleksi tersimpan tetap bisa dilihat selagi detail terbaru dimuat.</p>
+        )}
+        {metadataSyncState === 'error' && (
+          <p className="mb-4 rounded-2xl bg-rose-100/70 px-4 py-3 text-xs text-[#75414c] dark:bg-white/5 dark:text-rose-100/70" role="status">Sebagian detail belum tersedia. Koleksi dan catatan kalian tetap aman.</p>
+        )}
 
         {/* Tab 1: Film List */}
         {activeTab === 'film' && (
@@ -291,16 +434,17 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                       key={m.id}
                       className="bg-white dark:bg-black/40 rounded-xl overflow-hidden border border-[#7A1018]/15 shadow-sm p-2 flex flex-col justify-between"
                     >
-                      <img src={m.posterUrl} alt={m.title} className="w-full h-36 object-cover rounded-lg mb-2" />
+                      {m.posterUrl ? <ManagedImage src={m.posterUrl} alt={m.title} className="w-full h-36 object-cover rounded-lg mb-2" /> : <div className="w-full h-36 rounded-lg mb-2 bg-[#7A1018]/10 flex items-center justify-center text-xs text-center p-2">Poster belum tersedia di TMDB</div>}
                       <div>
                         <div className="text-xs font-bold text-[#3B0A0F] dark:text-[#EFE6DA] line-clamp-1">
                           {m.title}
                         </div>
-                        <div className="text-[10px] text-gray-500">{m.year}</div>
+                        <div className="text-[10px] text-gray-500">{m.year || 'Tahun belum tersedia'}</div>
                       </div>
                       <button
-                        onClick={() => {
-                          onAddMovie(m);
+                        onClick={async () => {
+                          const details = m.tmdbId ? await getMovieFromTmdb(m.tmdbId) : {};
+                          onAddMovie({ ...m, ...details, tmdbMetadataFetched: true, status: 'watchlist' });
                           setTmdbSearchResults((prev) => prev.filter((p) => p.id !== m.id));
                         }}
                         className="mt-2 w-full py-1 bg-[#7A1018] text-[#EFE6DA] text-[10px] font-bold rounded uppercase tracking-wider hover:bg-[#5e0a11]"
@@ -310,12 +454,6 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {!hasTmdbKey && !tmdbSearchResults.length && (
-              <div className="rounded-2xl border border-dashed border-[#7A1018]/30 bg-[#7A1018]/5 p-4 text-center text-[11px] font-sans-clean text-[#3B0A0F] dark:text-[#EFE6DA]">
-                Pencarian film aktif memakai TMDB. Pastikan variabel <span className="font-bold">VITE_TMDB_API_KEY</span> sudah ada di file <span className="font-bold">.env</span>.
               </div>
             )}
 
@@ -334,7 +472,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                   >
                     {/* Poster with Aspect Ratio */}
                     <div className="relative aspect-[2/3] w-full overflow-hidden bg-black/10">
-                      <img
+                      <ManagedImage
                         src={movie.posterUrl}
                         alt={movie.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
@@ -392,7 +530,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                           {movie.title}
                         </h4>
                         <div className="text-[10px] text-gray-500 font-sans-clean mt-0.5 flex items-center justify-between">
-                          <span>{movie.year}</span>
+                          <span>{movie.year || 'Tahun tidak tersedia'}</span>
                         </div>
                       </div>
 
@@ -437,34 +575,37 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                 </p>
               </div>
 
-              <button
-                onClick={() => {
-                  const title = prompt('Judul serial TV baru:');
-                  if (!title) return;
-                  const total = Number(prompt('Jumlah total episode:') || '16');
-                  const newSeries: TvSeries = {
-                    id: 'series-' + Date.now(),
-                    title,
-                    posterUrl: 'https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=500&q=80',
-                    totalSeasons: 1,
-                    totalEpisodes: total,
-                    watchedEpisodes: 0,
-                    status: 'watching'
-                  };
-                  const updated = [newSeries, ...tvSeriesList];
-                  setTvSeriesList(updated);
-                  appStorage.saveTvSeries(updated);
-                }}
-                className="px-4 py-2 bg-[#7A1018] text-[#EFE6DA] text-xs font-sans-clean font-bold rounded-xl shadow hover:bg-[#5e0a11] transition flex items-center space-x-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Tambah Serial Baru</span>
-              </button>
+              <div className="flex w-full sm:w-auto gap-2">
+                <input
+                  value={catalogQuery}
+                  onChange={(event) => setCatalogQuery(event.target.value)}
+                  onKeyDown={(event) => event.key === 'Enter' && handleCatalogSearch('tv')}
+                  placeholder="Cari serial di TMDB"
+                  className="min-w-0 flex-1 sm:w-56 px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20 text-xs"
+                />
+                <button onClick={() => handleCatalogSearch('tv')} disabled={catalogLoading} className="px-4 py-2 bg-[#7A1018] text-[#EFE6DA] text-xs font-bold rounded-xl disabled:opacity-50">
+                  {catalogLoading ? 'Memuat…' : 'Cari serial'}
+                </button>
+              </div>
             </div>
+
+            {catalogError && <p className="text-xs text-red-700 dark:text-red-300">{catalogError}</p>}
+            {catalogKind === 'tv' && catalogResults.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                {catalogResults.map((result) => {
+                  const series = mapTvSearchResult(result);
+                  return <div key={result.id} className="p-2 bg-white/70 dark:bg-black/30 rounded-xl">
+                    {series.posterUrl ? <ManagedImage src={series.posterUrl} alt={series.title} className="w-full h-36 object-cover rounded-lg mb-2" /> : <div className="w-full h-36 rounded-lg mb-2 bg-[#7A1018]/10 flex items-center justify-center text-xs text-center p-2">Poster belum tersedia di TMDB</div>}
+                    <p className="text-xs font-bold line-clamp-2">{series.title}</p>
+                    <button onClick={() => addCatalogTv(result)} className="mt-2 w-full py-2 rounded-lg bg-[#7A1018] text-white text-xs">Tambah serial</button>
+                  </div>;
+                })}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {tvSeriesList.map((series) => {
-                const pct = Math.round((series.watchedEpisodes / series.totalEpisodes) * 100);
+                const pct = series.totalEpisodes ? Math.round((series.watchedEpisodes / series.totalEpisodes) * 100) : 0;
                 const isCompleted = series.watchedEpisodes >= series.totalEpisodes;
 
                 return (
@@ -474,12 +615,12 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                   >
                     <div>
                       <div className="w-full h-44 rounded-xl overflow-hidden mb-3 bg-black/10">
-                        <img src={series.posterUrl} alt={series.title} className="w-full h-full object-cover" />
+                        {series.posterUrl ? <ManagedImage src={series.posterUrl} alt={series.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs">Poster belum tersedia di TMDB</div>}
                       </div>
 
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] font-sans-clean font-bold tracking-widest uppercase text-[#7A1018] dark:text-[#F4B6C2]">
-                          {series.totalSeasons} Season
+                      {series.totalSeasons} Season · {series.totalEpisodes} episode
                         </span>
                         <span
                           className={`text-[9px] font-sans-clean font-bold uppercase px-2 py-0.5 rounded-full ${
@@ -493,6 +634,13 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                       <h4 className="font-serif-title font-bold text-lg text-[#3B0A0F] dark:text-[#EFE6DA] mb-1">
                         {series.title}
                       </h4>
+                      <p className="text-[10px] text-gray-500 mb-2">
+                        {series.firstAirDate ? `Tayang perdana ${series.firstAirDate}` : ''}
+                        {series.tmdbRating !== undefined ? ` · Rating TMDB ${series.tmdbRating.toFixed(1)}` : ''}
+                        {series.genres?.length ? ` · ${series.genres.join(', ')}` : ''}
+                      </p>
+                      {series.overview && <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-3 mb-3">{series.overview}</p>}
+                      {!!series.cast?.length && <p className="text-[10px] text-gray-500 mb-3">Pemeran: {series.cast.slice(0, 4).join(', ')}</p>}
                       {series.notes && (
                         <p className="text-xs font-editorial italic text-gray-600 dark:text-gray-400 mb-3">
                           "{series.notes}"
@@ -553,6 +701,35 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
 
         {/* Tab 2: Aktor & Aktris */}
         {activeTab === 'aktor' && (
+          <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              value={catalogQuery}
+              onChange={(event) => setCatalogQuery(event.target.value)}
+              onKeyDown={(event) => event.key === 'Enter' && handleCatalogSearch('person')}
+              placeholder="Cari nama aktor di TMDB"
+              className="w-full sm:max-w-sm px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20 text-xs"
+            />
+            <button onClick={() => handleCatalogSearch('person')} disabled={catalogLoading} className="px-4 py-2 bg-[#7A1018] text-white text-xs font-bold rounded-xl disabled:opacity-50">
+              {catalogLoading ? 'Memuat…' : 'Cari aktor'}
+            </button>
+            {catalogError && <p className="self-center text-xs text-red-700 dark:text-red-300">{catalogError}</p>}
+          </div>
+
+          {catalogKind === 'person' && catalogResults.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+              {catalogResults.map((result) => {
+                const person = mapPersonSearchResult(result);
+                const alreadyAdded = actors.some((actor) => actor.tmdbId === result.id);
+                return <div key={result.id} className="p-2 bg-white/70 dark:bg-black/30 rounded-xl">
+                  {person.photoUrl ? <ManagedImage src={person.photoUrl} alt={person.name} className="w-full h-36 object-cover rounded-lg mb-2" /> : <div className="w-full h-36 rounded-lg mb-2 bg-[#7A1018]/10 flex items-center justify-center text-xs text-center p-2">Foto belum tersedia di TMDB</div>}
+                  <p className="text-xs font-bold line-clamp-2">{person.name}</p>
+                  <button onClick={() => addCatalogPerson(result)} disabled={alreadyAdded} className="mt-2 w-full py-2 rounded-lg bg-[#7A1018] text-white text-xs disabled:opacity-50">{alreadyAdded ? 'Sudah tersimpan' : 'Tambah aktor'}</button>
+                </div>;
+              })}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
             {actors.map((actor) => (
               <div
@@ -560,8 +737,8 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                 className="bg-white/60 dark:bg-black/30 rounded-2xl overflow-hidden border border-[#7A1018]/15 shadow-sm p-4 flex flex-col justify-between"
               >
                 <div>
-                  <div className="w-full h-56 rounded-xl overflow-hidden mb-3 shadow-inner">
-                    <img src={actor.photoUrl} alt={actor.name} className="w-full h-full object-cover" />
+                  <div className="w-full h-56 rounded-xl overflow-hidden mb-3 shadow-inner bg-[#7A1018]/10">
+                    {actor.photoUrl ? <ManagedImage src={actor.photoUrl} alt={actor.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs">Foto belum tersedia di TMDB</div>}
                   </div>
                   <h4 className="font-serif-title font-bold text-base text-[#3B0A0F] dark:text-[#EFE6DA]">
                     {actor.name}
@@ -569,9 +746,11 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                   <div className="text-[10px] text-gray-500 font-sans-clean mb-2">
                     {actor.birthPlace || 'Pemeran Film'}
                   </div>
+                  {actor.birthDate && <div className="text-[10px] text-gray-500 mb-2">Lahir {actor.birthDate}</div>}
                   <p className="text-xs font-editorial text-gray-700 dark:text-gray-300 line-clamp-3 mb-3">
                     {actor.biography}
                   </p>
+                  {!!actor.topMovies?.length && <p className="text-[10px] text-gray-500 line-clamp-2">Film/serial: {actor.topMovies.slice(0, 4).join(', ')}</p>}
                 </div>
 
                 <div className="pt-3 border-t border-[#7A1018]/10 flex items-center justify-between">
@@ -618,6 +797,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                 </div>
               </div>
             ))}
+          </div>
           </div>
         )}
 
@@ -722,7 +902,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                 >
                   {movies.map((m) => (
                     <option key={m.id} value={m.title}>
-                      {m.title} ({m.year})
+                      {m.title}{m.year ? ` (${m.year})` : ''}
                     </option>
                   ))}
                 </select>
@@ -812,28 +992,29 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                   <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
                     Detail Film & Catatan Kencan
                   </h3>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedMovie(null)}
-                    className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 hover:text-black dark:hover:text-white transition"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <CloseButton onClick={() => setSelectedMovie(null)} />
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-5">
-                  <img
-                    src={selectedMovie.posterUrl}
-                    alt={selectedMovie.title}
-                    className="w-36 h-52 object-cover rounded-xl shadow-md mx-auto sm:mx-0"
-                  />
+                    {selectedMovie.posterUrl ? <ManagedImage
+                      src={selectedMovie.posterUrl}
+                      alt={selectedMovie.title}
+                      className="w-36 h-52 object-cover rounded-xl shadow-md mx-auto sm:mx-0"
+                    /> : <div className="w-36 h-52 rounded-xl bg-[#7A1018]/10 flex items-center justify-center text-center text-xs p-3 mx-auto sm:mx-0">Poster belum tersedia di TMDB</div>}
                   <div className="flex-1 space-y-2 text-xs font-sans-clean">
                     <h4 className="font-serif-title text-2xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
-                      {selectedMovie.title} ({selectedMovie.year})
+                      {selectedMovie.title}{selectedMovie.year ? ` (${selectedMovie.year})` : ''}
                     </h4>
+                    <p className="text-[11px] text-gray-500">
+                      {selectedMovie.tmdbRating !== undefined ? `Rating TMDB ${selectedMovie.tmdbRating.toFixed(1)}` : ''}
+                      {selectedMovie.durationMinutes ? ` · ${selectedMovie.durationMinutes} menit` : ''}
+                      {selectedMovie.genres.length ? ` · ${selectedMovie.genres.join(', ')}` : ''}
+                    </p>
                     <p className="font-editorial text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                       {selectedMovie.overview}
                     </p>
+                    {!!selectedMovie.cast?.length && <p className="text-[11px] text-gray-500">Pemeran: {selectedMovie.cast.join(', ')}</p>}
+                    {selectedMovie.trailerUrl && <a href={selectedMovie.trailerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#7A1018] dark:text-[#F4B6C2] font-bold"><Play className="w-3.5 h-3.5" /> Trailer YouTube</a>}
 
                     <div className="pt-2">
                       <label className="block font-bold text-[#3B0A0F] dark:text-[#EFE6DA] mb-1">

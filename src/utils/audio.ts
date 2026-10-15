@@ -2,7 +2,16 @@
 
 class SoundManager {
   private audioCtx: AudioContext | null = null;
+  private lastEffectAt = 0;
   public enabled: boolean = true;
+
+  wasPlayedRecently(windowMs = 100) {
+    return typeof performance !== 'undefined' && performance.now() - this.lastEffectAt < windowMs;
+  }
+
+  private markEffect() {
+    if (typeof performance !== 'undefined') this.lastEffectAt = performance.now();
+  }
 
   private initCtx() {
     if (!this.audioCtx && typeof window !== 'undefined') {
@@ -19,6 +28,7 @@ class SoundManager {
   // Play romantic chime for badge unlock
   playChime() {
     if (!this.enabled) return;
+    this.markEffect();
     try {
       this.initCtx();
       if (!this.audioCtx) return;
@@ -47,9 +57,38 @@ class SoundManager {
     }
   }
 
+  // Gemini reference heart sound: a short, bright triangle-wave chime.
+  playHeart() {
+    if (!this.enabled) return;
+    this.markEffect();
+    try {
+      this.initCtx();
+      if (!this.audioCtx) return;
+
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((frequency, index) => {
+        if (!this.audioCtx) return;
+        const startAt = this.audioCtx.currentTime + index * 0.055;
+        const oscillator = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(frequency, startAt);
+        gain.gain.setValueAtTime(0.15, startAt);
+        gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.22);
+        oscillator.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        oscillator.start(startAt);
+        oscillator.stop(startAt + 0.22);
+      });
+    } catch {
+      // Browsers may block audio until the first user interaction.
+    }
+  }
+
   // Soft click / gentle tap
   playTap() {
     if (!this.enabled) return;
+    this.markEffect();
     try {
       this.initCtx();
       if (!this.audioCtx) return;
@@ -77,6 +116,7 @@ class SoundManager {
   // Heartbeat sound
   playHeartbeat() {
     if (!this.enabled) return;
+    this.markEffect();
     try {
       this.initCtx();
       if (!this.audioCtx) return;
@@ -107,6 +147,7 @@ class SoundManager {
   // Soft celebratory pop / success notification
   playSuccess() {
     if (!this.enabled) return;
+    this.markEffect();
     try {
       this.initCtx();
       if (!this.audioCtx) return;
@@ -133,6 +174,33 @@ class SoundManager {
 
   playPop() {
     this.playTap();
+  }
+
+  // A soft two-part click reserved for dismiss and close controls.
+  playClose() {
+    if (!this.enabled) return;
+    this.markEffect();
+    try {
+      this.initCtx();
+      if (!this.audioCtx) return;
+      const now = this.audioCtx.currentTime;
+      [620, 420].forEach((frequency, index) => {
+        if (!this.audioCtx) return;
+        const startAt = now + index * 0.045;
+        const oscillator = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, startAt);
+        gain.gain.setValueAtTime(0.055, startAt);
+        gain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.09);
+        oscillator.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        oscillator.start(startAt);
+        oscillator.stop(startAt + 0.1);
+      });
+    } catch {
+      // Ignore unavailable audio contexts.
+    }
   }
 }
 

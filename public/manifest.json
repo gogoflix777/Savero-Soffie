@@ -4,12 +4,12 @@
   "description": "Ruang privat, interaktif, dan sinematik kenangan cinta Savero & Soffie di Semarang.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#EFE6DA",
-  "theme_color": "#7A1018",
+  "background_color": "#fffaf0",
+  "theme_color": "#fffaf0",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://i.ibb.co/xtNWkjyn/a-cute-high-quality-3d-chibi-digital-illustration.png",
+      "src": "/logo/logo%20couple%203d.png",
       "sizes": "192x192 512x512",
       "type": "image/png",
       "purpose": "any maskable"

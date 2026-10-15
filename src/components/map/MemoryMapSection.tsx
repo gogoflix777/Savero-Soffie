@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ManagedImage } from '../common/ManagedImage';
 import L from 'leaflet';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -142,6 +143,10 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
   // Active selected pin highlight
   const [highlightedPinId, setHighlightedPinId] = useState<string | null>(selectedPinId || null);
 
+  useEffect(() => {
+    if (selectedPinId) setHighlightedPinId(selectedPinId);
+  }, [selectedPinId]);
+
   // Modal State for Add / Edit
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPin, setEditingPin] = useState<MemoryPin | null>(null);
@@ -211,7 +216,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
         date: new Date().toISOString().split('T')[0],
         time: '20:00',
         description: '',
-        photos: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80',
+        photos: '',
         rating: 5,
         tags: 'Semarang, Kenangan Kita',
         category: 'kafe',
@@ -345,6 +350,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
       marker.on('click', () => {
         setHighlightedPinId(pin.id);
         soundManager.playTap();
+        marker.openPopup();
       });
 
       // Pure SVG Heart Rating Generator (Zero Emojis)
@@ -353,7 +359,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
         for (let i = 1; i <= 5; i++) {
           const filled = i <= score;
           res += `
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="${filled ? '#7A1018' : 'none'}" stroke="${filled ? '#7A1018' : '#bbb'}" stroke-width="2" style="display:inline-block; margin-right:2px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="${filled ? 'var(--theme-brand)' : 'none'}" stroke="${filled ? 'var(--theme-brand)' : '#bbb'}" stroke-width="2" style="display:inline-block; margin-right:2px;">
               <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
             </svg>
           `;
@@ -363,33 +369,33 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
 
       // Romantic Popup Design (Strictly No Emojis)
       const popupHtml = `
-        <div style="font-family: 'Plus Jakarta Sans', sans-serif; min-width: 240px; background: #EFE6DA; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.18);">
+        <div style="font-family: 'Nunito', sans-serif; min-width: 240px; color: var(--theme-ink); background: var(--theme-card); border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.18);">
           ${pin.photos && pin.photos[0] ? `
             <div style="width: 100%; height: 115px; overflow: hidden; position: relative;">
               <img src="${pin.photos[0]}" style="width: 100%; height: 100%; object-fit: cover;" />
-              <div style="position: absolute; top: 6px; left: 6px; background: #7A1018; color: #EFE6DA; font-size: 9px; font-weight: bold; padding: 2px 7px; border-radius: 6px; text-transform: uppercase;">
+              <div style="position: absolute; top: 6px; left: 6px; background: var(--theme-brand); color: var(--theme-on-brand); font-size: 9px; font-weight: bold; padding: 2px 7px; border-radius: 6px; text-transform: uppercase;">
                 ${meta.label}
               </div>
             </div>
           ` : `
             <div style="padding: 8px 12px 0 12px; display: flex; align-items: center; justify-content: space-between;">
-              <span style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: #7A1018;">${meta.label}</span>
-              <span style="font-size: 10px; color: #777;">${pin.date}</span>
+              <span style="font-size: 10px; font-weight: bold; text-transform: uppercase; color: var(--theme-brand-strong);">${meta.label}</span>
+              <span style="font-size: 10px; color: var(--theme-muted);">${pin.date}</span>
             </div>
           `}
           
           <div style="padding: 10px 12px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; font-size: 10px; color: #666; font-weight: 600;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; font-size: 10px; color: var(--theme-muted); font-weight: 600;">
               <span>${pin.date} ${pin.time ? `• ${pin.time}` : ''}</span>
             </div>
-            <h4 style="font-family: 'Bodoni Moda', serif; font-size: 15px; font-weight: bold; margin: 0 0 4px 0; color: #3B0A0F;">${pin.title}</h4>
-            <p style="font-size: 11px; color: #444; margin: 0 0 8px 0; line-height: 1.4;">${pin.description}</p>
+            <h4 style="font-family: 'Nunito', sans-serif; font-size: 15px; font-weight: bold; margin: 0 0 4px 0; color: var(--theme-ink);">${pin.title}</h4>
+            <p style="font-size: 11px; color: var(--theme-muted); margin: 0 0 8px 0; line-height: 1.4;">${pin.description}</p>
             <div style="margin-bottom: 8px;">${renderHeartSvgString(pin.rating)}</div>
             
-            <div style="display: flex; gap: 6px; justify-content: space-between; border-top: 1px solid rgba(122,16,24,0.15); padding-top: 8px;">
-              <span style="font-size: 9px; color: #777; align-self: center;">Oleh: <strong>${pin.addedBy}</strong></span>
+            <div style="display: flex; gap: 6px; justify-content: space-between; border-top: 1px solid var(--theme-border); padding-top: 8px;">
+              <span style="font-size: 9px; color: var(--theme-muted); align-self: center;">Oleh: <strong>${pin.addedBy}</strong></span>
               ${pin.mapUrl ? `
-                <a href="${pin.mapUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 10px; font-weight: bold; background: #7A1018; color: #EFE6DA; padding: 4px 10px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                <a href="${pin.mapUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 10px; font-weight: bold; background: var(--theme-brand); color: var(--theme-on-brand); padding: 4px 10px; border-radius: 6px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
                   Buka Maps &rarr;
                 </a>
               ` : ''}
@@ -536,6 +542,27 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
     setEditingPin(null);
   };
 
+  const applyGoogleMapsShareLink = (shareLink: string) => {
+    const coordinateMatch = shareLink.match(/@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/)
+      || shareLink.match(/[?&](?:q|query|ll)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/)
+      || shareLink.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+    const placeMatch = shareLink.match(/\/maps\/place\/([^/?]+)/);
+    let title = '';
+    if (placeMatch) {
+      try {
+        title = decodeURIComponent(placeMatch[1].replaceAll('+', ' '));
+      } catch {
+        title = placeMatch[1].replaceAll('+', ' ');
+      }
+    }
+    setFormData((current) => ({
+      ...current,
+      mapUrl: shareLink,
+      ...(coordinateMatch ? { lat: Number(coordinateMatch[1]), lng: Number(coordinateMatch[2]) } : {}),
+      ...(title && !current.title ? { title } : {})
+    }));
+  };
+
   return (
     <section id="peta-kenangan" className="py-12 px-3 sm:px-6 bg-[#EFE6DA] dark:bg-[#1a0507] border-b border-[#7A1018]/15 transition-colors">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -580,7 +607,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
                   date: new Date().toISOString().split('T')[0],
                   time: '20:00',
                   description: '',
-                  photos: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80',
+                  photos: '',
                   rating: 5,
                   tags: 'Semarang, Kencan',
                   category: 'kafe',
@@ -693,7 +720,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
         </div>
 
         {/* Map Viewport Container */}
-        <div className="relative w-full h-[520px] rounded-3xl overflow-hidden border-2 border-[#7A1018]/30 shadow-2xl">
+        <div className="relative w-full h-[min(60dvh,520px)] sm:h-[520px] rounded-3xl overflow-hidden border-2 border-[#7A1018]/30 shadow-2xl">
           <div ref={mapContainerRef} className="w-full h-full z-0" />
 
           {/* Replay HUD Overlay */}
@@ -741,7 +768,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
                   <div>
                     {pin.photos && pin.photos[0] && (
                       <div className="w-full h-32 rounded-xl overflow-hidden mb-2 relative">
-                        <img src={pin.photos[0]} alt={pin.title} className="w-full h-full object-cover" />
+                        <ManagedImage src={pin.photos[0]} alt={pin.title} className="w-full h-full object-cover" />
                         <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-[#7A1018] text-[#EFE6DA]">
                           {meta.label}
                         </span>
@@ -905,15 +932,16 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
 
                   <div>
                     <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">
-                      Tautan Google Maps Asli (Opsional)
+                      Tautan berbagi Google Maps
                     </label>
                     <input
                       type="url"
                       value={formData.mapUrl}
-                      onChange={(e) => setFormData({ ...formData, mapUrl: e.target.value })}
+                      onChange={(e) => applyGoogleMapsShareLink(e.target.value)}
                       placeholder="https://maps.app.goo.gl/..."
                       className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20 text-xs"
                     />
+                    <p className="text-[10px] text-gray-500 mt-1">Tempel tautan tempat dari Google Maps. Koordinat akan terisi otomatis bila tersedia.</p>
                   </div>
 
                   {/* Rating Selector using SVG Hearts (Zero Emojis) */}

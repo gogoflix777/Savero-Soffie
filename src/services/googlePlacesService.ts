@@ -167,12 +167,6 @@ export async function fetchGooglePlacesCafes(params: {
         });
       }
 
-      // If no photo came back from Google, use verified authentic photo matching theme
-      if (photoUrls.length === 0) {
-        const fallbacks = getFallbackPhoto(name, p.primaryType);
-        photoUrls.push(...fallbacks);
-      }
-
       const weekdayDescriptions = p.regularOpeningHours?.weekdayDescriptions || [];
       const isOpenNow = p.regularOpeningHours?.openNow;
       const nextOpenTime = p.regularOpeningHours?.nextOpenTime;

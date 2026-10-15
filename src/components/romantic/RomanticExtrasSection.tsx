@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { ManagedImage } from '../common/ManagedImage';
 import { motion, AnimatePresence } from 'motion/react';
 import confetti from 'canvas-confetti';
 import {
@@ -18,9 +19,9 @@ import {
   Award,
   Volume2,
   VolumeX,
-  FileText,
-  X
+  FileText
 } from 'lucide-react';
+import { CloseButton } from '../common/CloseButton';
 import { LockedLetter, LoveSong, MemoryPin, MovieItem, AppSettings } from '../../types';
 import { soundManager } from '../../utils/audio';
 import { HeartRating } from '../common/AnimatedIcons';
@@ -361,7 +362,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
                   <div className="flex flex-col md:flex-row gap-6 items-center">
                     {matchedPin.photos && matchedPin.photos[0] && (
                       <div className="w-full md:w-64 h-56 rounded-2xl overflow-hidden shadow-md flex-shrink-0">
-                        <img
+                        <ManagedImage
                           src={matchedPin.photos[0]}
                           alt={matchedPin.title}
                           className="w-full h-full object-cover"
@@ -499,7 +500,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
             {allPhotos.length > 0 ? (
               <div className="space-y-4">
                 <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-2xl bg-black">
-                  <img
+                  <ManagedImage
                     src={allPhotos[slideshowIdx]}
                     alt="Kenangan Savero & Soffie"
                     className="w-full h-full object-cover transition-all duration-700"
@@ -554,7 +555,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
                   className="p-4 rounded-2xl bg-white/70 dark:bg-black/30 border border-[#7A1018]/15 shadow-sm flex items-center justify-between"
                 >
                   <div className="flex items-center space-x-4">
-                    <img
+                    <ManagedImage
                       src={song.albumArt}
                       alt={song.title}
                       className="w-14 h-14 rounded-xl object-cover shadow-sm"
@@ -606,13 +607,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
                 transition={{ type: 'spring', damping: 25, stiffness: 350 }}
                 className="bg-[#EFE6DA] dark:bg-[#250709] max-w-lg w-full rounded-3xl p-8 border border-[#7A1018]/30 shadow-2xl relative my-8"
               >
-                <button
-                  onClick={() => setReadingLetter(null)}
-                  className="absolute top-4 right-4 text-xs font-sans-clean font-bold uppercase tracking-wider bg-[#7A1018] text-white px-3 py-1.5 rounded-full hover:bg-black transition flex items-center space-x-1"
-                >
-                  <X className="w-3.5 h-3.5" />
-                  <span>Tutup</span>
-                </button>
+                <CloseButton onClick={() => setReadingLetter(null)} label="Tutup surat" className="absolute right-4 top-4" />
 
                 <div className="text-[10px] font-sans-clean font-bold tracking-[0.25em] uppercase text-[#7A1018] dark:text-[#F4B6C2] mb-1">
                   SURAT CINTA • {readingLetter.unlockDate}
@@ -660,13 +655,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
                   <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
                     Tulis Surat Terkunci
                   </h3>
-                  <button
-                    type="button"
-                    onClick={() => setIsNewLetterOpen(false)}
-                    className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 hover:text-black dark:hover:text-white transition"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <CloseButton onClick={() => setIsNewLetterOpen(false)} />
                 </div>
 
                 <form onSubmit={handleSaveLetter} className="space-y-3 font-sans-clean text-xs">

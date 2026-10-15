@@ -63,8 +63,9 @@ export interface CycleRecord {
 export interface MovieItem {
   id: string;
   tmdbId?: number;
+  tmdbMetadataFetched?: boolean;
   title: string;
-  year: number;
+  year?: number;
   posterUrl: string;
   backdropUrl?: string;
   genres: string[];
@@ -85,6 +86,7 @@ export interface MovieItem {
 export interface ActorItem {
   id: string;
   tmdbId?: number;
+  tmdbMetadataFetched?: boolean;
   name: string;
   photoUrl: string;
   birthDate?: string;
@@ -104,11 +106,18 @@ export interface MovieCollection {
 
 export interface TvSeries {
   id: string;
+  tmdbId?: number;
+  tmdbMetadataFetched?: boolean;
   title: string;
   posterUrl: string;
   totalSeasons: number;
   totalEpisodes: number;
   watchedEpisodes: number;
+  firstAirDate?: string;
+  overview?: string;
+  tmdbRating?: number;
+  genres?: string[];
+  cast?: string[];
   notes?: string;
   status: 'watching' | 'completed' | 'watchlist';
 }

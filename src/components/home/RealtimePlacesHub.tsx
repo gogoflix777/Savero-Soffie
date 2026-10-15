@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { ManagedImage } from '../common/ManagedImage';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Coffee,
@@ -61,27 +62,12 @@ function buildPhotoUrl(photoName: string): string {
   return `/api/places/photo?name=${encodeURIComponent(photoName)}`;
 }
 
-// Fallback Unsplash per kategori
-const FALLBACKS = {
-  cafe: [
-    'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=80',
-    'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&q=80',
-    'https://images.unsplash.com/photo-1559925393-8be0ec4767c8?w=800&q=80',
-  ],
-  hotel: [
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
-    'https://images.unsplash.com/photo-1582719508461-905c673771fd?w=800&q=80',
-    'https://images.unsplash.com/photo-1455587734955-081b22074882?w=800&q=80',
-  ]
-};
-
 async function fetchPlaces(
   textQuery: string,
   userLat: number,
   userLng: number,
   tag: string,
-  tagLabel: string,
-  fallbackCategory: 'cafe' | 'hotel'
+  tagLabel: string
 ): Promise<PlaceResult[]> {
   try {
     const res = await fetch('/api/places/search', {
@@ -118,12 +104,6 @@ async function fetchPlaces(
           if (ph.name) photos.push(buildPhotoUrl(ph.name));
         });
       }
-      // Fallback if no Google photos
-      if (photos.length === 0) {
-        const fb = FALLBACKS[fallbackCategory];
-        photos.push(fb[idx % fb.length]);
-      }
-
       return {
         id: p.id || `place-${idx}-${Date.now()}`,
         name,
@@ -179,14 +159,12 @@ export const RealtimePlacesHub: React.FC<RealtimePlacesHubProps> = ({
         fetchPlaces(
           'cafe coffee shop aesthetic hits terbaik Semarang',
           userLat, userLng,
-          'sedang_tren', 'Kafe Populer Semarang',
-          'cafe'
+          'sedang_tren', 'Kafe Populer Semarang'
         ),
         fetchPlaces(
           'hotel penginapan kost guest house Semarang',
           userLat, userLng,
-          'penginapan', 'Penginapan Semarang',
-          'hotel'
+          'penginapan', 'Penginapan Semarang'
         )
       ]);
       setCafes(cafeResults);
@@ -254,7 +232,7 @@ export const RealtimePlacesHub: React.FC<RealtimePlacesHubProps> = ({
           <div>
             <div className="flex items-center space-x-2 text-[11px] font-sans-clean font-bold tracking-[0.25em] uppercase text-[#7A1018] dark:text-[#F4B6C2] mb-1">
               <Sparkles className="w-4 h-4" />
-              <span>GOOGLE PLACES API • REALTIME</span>
+              <span>JELAJAHI SEMARANG</span>
               <span className="flex items-center space-x-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full text-[9px] border border-emerald-500/25">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
                 <span>LIVE</span>
@@ -264,7 +242,7 @@ export const RealtimePlacesHub: React.FC<RealtimePlacesHubProps> = ({
               Rekomendasi Kafe & Penginapan
             </h2>
             <p className="font-editorial italic text-xs sm:text-sm text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 mt-0.5">
-              Foto & data realtime langsung dari Google Places API · Semarang
+              Temukan tempat nyaman untuk kencan berikutnya.
             </p>
           </div>
 
@@ -324,7 +302,7 @@ export const RealtimePlacesHub: React.FC<RealtimePlacesHubProps> = ({
         {loading && (
           <div className="flex items-center justify-center space-x-3 py-12 text-sm font-sans-clean text-[#7A1018] dark:text-[#F4B6C2]">
             <RefreshCw className="w-5 h-5 animate-spin" />
-            <span>Memuat data realtime dari Google Places API...</span>
+            <span>Mencari tempat menarik di sekitar...</span>
           </div>
         )}
 
@@ -342,7 +320,7 @@ export const RealtimePlacesHub: React.FC<RealtimePlacesHubProps> = ({
               {currentList.length === 0 && !loading && (
                 <div className="col-span-full text-center py-12 text-sm font-sans-clean text-gray-500 dark:text-gray-400">
                   <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p>Data belum tersedia. Pastikan API key aktif dan coba refresh.</p>
+                  <p>Belum ada rekomendasi saat ini. Coba muat ulang sebentar lagi.</p>
                 </div>
               )}
 
@@ -361,13 +339,13 @@ export const RealtimePlacesHub: React.FC<RealtimePlacesHubProps> = ({
                   >
                     {/* Photo */}
                     <div className="relative h-48 w-full bg-gray-100 dark:bg-black/40 overflow-hidden flex-shrink-0">
-                      <img
-                        src={hasPhotoError ? FALLBACKS[activeTab === 'kafe' ? 'cafe' : 'hotel'][idx % 3] : mainPhoto}
+                      {mainPhoto && !hasPhotoError ? <ManagedImage
+                        src={mainPhoto}
                         alt={place.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                         loading="lazy"
                         onError={() => setPhotoErrors(prev => ({ ...prev, [place.id]: true }))}
-                      />
+                      /> : <div className="w-full h-full flex items-center justify-center text-center px-6 text-sm text-gray-500 bg-[#e8ddd0] dark:bg-white/5">Foto Google belum tersedia untuk tempat ini</div>}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
                       {/* Status badge */}

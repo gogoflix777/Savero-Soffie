@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { ManagedImage } from '../common/ManagedImage';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Compass,
@@ -13,7 +14,6 @@ import {
   Plus,
   Check,
   Star,
-  X,
   Flame,
   Camera,
   Share2,
@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Info
 } from 'lucide-react';
+import { CloseButton } from '../common/CloseButton';
 import {
   RealtimeCafeRecommendation,
   WishlistPlace,
@@ -607,12 +608,7 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
             className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white dark:bg-black/40 border border-[#7A1018]/20 focus:outline-hidden focus:ring-2 focus:ring-[#7A1018] text-xs font-sans-clean text-[#3B0A0F] dark:text-[#EFE6DA]"
           />
           {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-3 text-gray-400 hover:text-black dark:hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <CloseButton onClick={() => setSearchQuery('')} label="Hapus pencarian" className="absolute right-1.5 top-1" />
           )}
         </div>
 
@@ -753,7 +749,7 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
               {/* Image & Badges */}
               <div>
                 <div className="relative h-48 w-full rounded-2xl overflow-hidden mb-3.5 bg-gray-100 dark:bg-black/40">
-                  <img
+                  <ManagedImage
                     src={cafe.photoUrl}
                     alt={cafe.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
@@ -921,16 +917,11 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
               className="bg-[#EFE6DA] dark:bg-[#250709] max-w-lg w-full rounded-3xl p-5 sm:p-6 border-2 border-[#7A1018]/30 shadow-2xl relative my-8 text-left max-h-[90vh] overflow-y-auto scrollbar-none"
             >
               {/* Close Button */}
-              <button
-                onClick={() => setSelectedCafe(null)}
-                className="absolute top-4 right-4 p-1.5 rounded-full bg-black/30 text-white hover:bg-black/50 transition z-20 backdrop-blur-xs"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <CloseButton onClick={() => setSelectedCafe(null)} label="Tutup detail tempat" className="absolute right-4 top-4 z-20" />
 
               {/* Photo Cover & Gallery */}
               <div className="relative h-56 sm:h-64 w-full rounded-2xl overflow-hidden mb-4 shadow-md bg-gray-900">
-                <img
+                <ManagedImage
                   src={
                     selectedCafe.photos && selectedCafe.photos.length > 0
                       ? selectedCafe.photos[modalPhotoIndex] || selectedCafe.photoUrl
@@ -1011,7 +1002,7 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
                           : 'border-transparent opacity-60 hover:opacity-100'
                       }`}
                     >
-                      <img src={ph} alt="" className="w-full h-full object-cover" />
+                      <ManagedImage src={ph} alt="" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>

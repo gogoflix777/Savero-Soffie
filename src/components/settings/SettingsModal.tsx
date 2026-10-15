@@ -12,10 +12,12 @@ import {
   ShieldAlert,
   Wine,
   Film,
-  X
+  Moon
 } from 'lucide-react';
 import { AppSettings } from '../../types';
 import { appStorage } from '../../utils/storage';
+import { CloseButton } from '../common/CloseButton';
+import { PhotoLibrary } from './PhotoLibrary';
 
 interface SettingsModalProps {
   settings: AppSettings;
@@ -85,13 +87,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               Pengaturan Aplikasi
             </h3>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 hover:text-black dark:hover:text-white transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 text-xs font-sans-clean">
@@ -133,6 +129,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <Lock className="w-3.5 h-3.5" />
               <span>Keamanan PIN & Mode Tamu</span>
             </h4>
+
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xl bg-white/50 px-3 dark:bg-white/5">
+              <input
+                type="checkbox"
+                checked={formData.darkMode}
+                onChange={(e) => setFormData({ ...formData, darkMode: e.target.checked })}
+                className="rounded text-[#7A1018]"
+              />
+              <Moon className="h-4 w-4" />
+              <span className="font-medium">Gunakan tampilan gelap</span>
+            </label>
 
             <div>
               <label className="block font-bold mb-1">4-Digit PIN Pembuka</label>
@@ -214,6 +221,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </label>
             </div>
           </div>
+
+          {/* Backup & Restore */}
+          <PhotoLibrary />
 
           {/* Backup & Restore */}
           <div className="p-4 rounded-2xl bg-white/60 dark:bg-black/30 border border-[#7A1018]/15 space-y-3">

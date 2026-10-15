@@ -13,12 +13,12 @@ import {
   Heart,
   Star,
   MapPin,
-  CupSoda,
-  X
+  CupSoda
 } from 'lucide-react';
+import { CloseButton } from '../common/CloseButton';
 import { WishlistPlace, WishlistDrink, PinCategory, AppSettings, MemoryPin } from '../../types';
 import { AnimatedMatcha, AnimatedCoffee, HeartRating } from '../common/AnimatedIcons';
-import { RealtimeCafeRecommendations } from './RealtimeCafeRecommendations';
+import { RealtimePlacesHub } from '../home/RealtimePlacesHub';
 
 interface WishlistSectionProps {
   places: WishlistPlace[];
@@ -177,7 +177,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
     .sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
   return (
-    <section id="wishlist-section" className="py-12 px-4 bg-[#EFE6DA] dark:bg-[#1a0507] border-b border-[#7A1018]/15 transition-colors">
+    <section id="wishlist-section" className="min-h-[70vh] bg-[#fffaf0] px-4 py-8 transition-colors dark:bg-[#21151a] sm:py-12">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
@@ -186,39 +186,39 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
               <Compass className="w-3.5 h-3.5" />
               <span>DAFTAR IMPIAN KITA</span>
             </div>
-            <h2 className="font-serif-title text-3xl sm:text-4xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
-              Wishlist Tempat & Minuman
+            <h2 className="font-sans-clean text-2xl font-extrabold text-[#57202c] dark:text-rose-50 sm:text-4xl">
+              Wishlist Kita
             </h2>
             <p className="font-editorial italic text-xs sm:text-sm text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 mt-0.5">
-              Target destinasi kencan Semarang berikutnya, ranking Matcha Soffie, dan Kopi Savero.
+              Simpan tempat impian dan rencana kencan dalam satu daftar.
             </p>
           </div>
 
-          <div className="flex items-center space-x-1.5 overflow-x-auto max-w-full bg-white/50 dark:bg-black/30 p-1.5 rounded-2xl border border-[#7A1018]/15 text-xs font-sans-clean font-bold scrollbar-none">
+          <div className="-mx-1 flex max-w-full items-center gap-1.5 overflow-x-auto rounded-2xl border border-rose-200/80 bg-white/65 p-1.5 text-xs font-sans-clean font-bold shadow-sm scrollbar-none dark:border-white/10 dark:bg-white/5">
             <button
               onClick={() => setActiveTab('tempat')}
               className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap ${
-                activeTab === 'tempat' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
+                activeTab === 'tempat' ? 'bg-[#df7890] text-white shadow-sm' : 'text-[#75414c] dark:text-rose-100'
               }`}
             >
-              Wishlist Tempat ({places.length})
+              Tempat ({places.length})
             </button>
             <button
               onClick={() => setActiveTab('rekomendasi')}
               className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap flex items-center space-x-1.5 ${
-                activeTab === 'rekomendasi' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
+                activeTab === 'rekomendasi' ? 'bg-[#df7890] text-white shadow-sm' : 'text-[#75414c] dark:text-rose-100'
               }`}
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span>✨ Kafe Realtime & Baru</span>
+              <span>Jelajahi Kafe & Penginapan</span>
             </button>
             <button
               onClick={() => setActiveTab('minuman')}
               className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap ${
-                activeTab === 'minuman' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
+                activeTab === 'minuman' ? 'bg-[#df7890] text-white shadow-sm' : 'text-[#75414c] dark:text-rose-100'
               }`}
             >
               Ranking Minuman
@@ -226,7 +226,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
             <button
               onClick={() => setActiveTab('roulette')}
               className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap flex items-center space-x-1 ${
-                activeTab === 'roulette' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
+                activeTab === 'roulette' ? 'bg-[#df7890] text-white shadow-sm' : 'text-[#75414c] dark:text-rose-100'
               }`}
             >
               <Shuffle className="w-3.5 h-3.5" />
@@ -238,54 +238,25 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
         {/* Tab 1: Wishlist Tempat */}
         {activeTab === 'tempat' && (
           <div className="space-y-6">
-            {/* Realtime Recommendation Teaser Banner */}
-            <div
-              onClick={() => setActiveTab('rekomendasi')}
-              className="cursor-pointer bg-gradient-to-r from-[#7A1018]/10 via-[#F4B6C2]/20 to-[#D9B26F]/20 dark:from-white/5 dark:via-white/10 dark:to-white/5 p-4 rounded-2xl border border-[#7A1018]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs hover:shadow-md transition group"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-[#7A1018] text-[#EFE6DA] flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition">
-                  <Sparkles className="w-5 h-5 text-[#D9B26F]" />
-                </div>
-                <div>
-                  <div className="flex items-center space-x-1.5">
-                    <span className="text-[10px] font-sans-clean font-bold tracking-wider uppercase bg-[#7A1018] text-white px-2 py-0.5 rounded-md">
-                      FITUR BARU
-                    </span>
-                    <h4 className="font-serif-title font-bold text-sm sm:text-base text-[#3B0A0F] dark:text-[#EFE6DA]">
-                      Radar Kafe Realtime & Paling Dekat
-                    </h4>
-                  </div>
-                  <p className="font-editorial text-xs text-[#3B0A0F]/80 dark:text-[#EFE6DA]/80 mt-0.5">
-                    Lihat kafe yang buka sekarang, kafe yang akan segera buka, dan jarak live GPS dari posisimu.
-                  </p>
-                </div>
-              </div>
-
-              <span className="inline-flex items-center space-x-1 text-xs font-sans-clean font-bold text-[#7A1018] dark:text-[#F4B6C2] group-hover:underline self-end sm:self-auto">
-                <span>Buka Radar Kafe</span>
-                <span className="text-base">→</span>
-              </span>
-            </div>
-
             <div className="flex justify-end">
               <button
                 onClick={() => setIsNewPlaceOpen(true)}
-                className="px-4 py-2 bg-[#7A1018] hover:bg-[#5e0a11] text-[#EFE6DA] text-xs font-sans-clean font-bold rounded-xl shadow transition flex items-center space-x-1.5"
+                className="flex min-h-11 w-full items-center justify-center space-x-1.5 rounded-full bg-[#d66783] px-5 py-2 text-xs font-sans-clean font-bold text-white shadow-[0_4px_0_#a9435b] transition hover:-translate-y-0.5 hover:bg-[#ca5875] active:translate-y-1 active:shadow-none sm:ml-auto sm:w-auto"
               >
                 <Plus className="w-4 h-4" />
                 <span>Tambah Wishlist Tempat</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {places.length === 0 && <div className="rounded-3xl border border-dashed border-rose-300 bg-white/60 px-5 py-10 text-center dark:border-white/15 dark:bg-white/5"><Sparkles className="mx-auto mb-2 h-7 w-7 text-[#c35f78]"/><h3 className="font-sans-clean font-bold text-[#57202c] dark:text-rose-50">Wishlist masih kosong</h3><p className="mt-1 text-xs text-[#956d74] dark:text-rose-100/60">Simpan kafe, penginapan, atau tempat yang ingin kalian kunjungi.</p></div>}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {places.map((place) => (
                 <div
                   key={place.id}
-                  className={`p-5 rounded-2xl border transition-all ${
+                  className={`rounded-3xl border p-4 transition-all ${
                     place.isVisited
                       ? 'bg-white/40 dark:bg-black/10 border-gray-300 dark:border-white/5 opacity-70'
-                      : 'bg-white/80 dark:bg-black/30 border-[#7A1018]/15 shadow-sm hover:shadow-md'
+                          : 'bg-white/80 dark:bg-white/5 border-rose-200/80 dark:border-white/10 shadow-[0_5px_18px_rgba(105,35,49,.06)] hover:-translate-y-0.5 hover:shadow-md'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -342,7 +313,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
 
         {/* Tab Rekomendasi: Kafe Realtime, Akan Buka, Baru, & Terdekat */}
         {activeTab === 'rekomendasi' && (
-          <RealtimeCafeRecommendations
+          <RealtimePlacesHub
             existingPlaces={places}
             onAddPlace={onAddPlace}
             settings={settings}
@@ -566,13 +537,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                   <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
                     Tambah Wishlist Tempat
                   </h3>
-                  <button
-                    type="button"
-                    onClick={() => setIsNewPlaceOpen(false)}
-                    className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 hover:text-black dark:hover:text-white transition"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <CloseButton onClick={() => setIsNewPlaceOpen(false)} />
                 </div>
 
               <form onSubmit={handleSavePlace} className="space-y-3 font-sans-clean text-xs">
@@ -712,13 +677,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                 <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
                   Tambah Ulasan Minuman
                 </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsNewDrinkOpen(false)}
-                  className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 hover:text-black dark:hover:text-white transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <CloseButton onClick={() => setIsNewDrinkOpen(false)} />
               </div>
 
               <form onSubmit={handleSaveDrink} className="space-y-3 font-sans-clean text-xs">

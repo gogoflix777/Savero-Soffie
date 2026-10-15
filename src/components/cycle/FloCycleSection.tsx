@@ -14,11 +14,11 @@ import {
   Clock,
   MapPin,
   Smile,
-  X,
   Lock,
   Share2,
   Pill
 } from 'lucide-react';
+import { CloseButton } from '../common/CloseButton';
 import { CycleRecord, IntimateLog, MemoryPin, AppSettings, ProtectionType } from '../../types';
 import { MoodBadge, MOOD_DEFINITIONS, AnimatedHeart } from '../common/AnimatedIcons';
 import {
@@ -162,10 +162,19 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
   };
 
   return (
-    <section id="siklus-intim" className="py-12 px-4 bg-[#fbf8f5] dark:bg-[#160305] border-b border-[#7A1018]/15 transition-colors">
+    <section id="siklus-intim" className="cycle-clay-section py-10 px-4 bg-[#fbf8f5] dark:bg-[#160305] border-b border-[#7A1018]/15 transition-colors sm:py-12">
       <div className="max-w-4xl mx-auto">
+        <header className="mb-6 text-center">
+          <span className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full bg-[#f5e0e2] px-3 py-1 font-sans-clean text-[10px] font-bold uppercase tracking-[0.18em] text-[#a94761] shadow-sm dark:bg-[#49353d] dark:text-rose-200">
+            <CalendarIcon className="h-3.5 w-3.5" /> Kalender perawatan
+          </span>
+          <h1 className="font-sans-clean text-2xl font-extrabold text-[#43252d] dark:text-rose-50 sm:text-3xl">Siklus & Kasih</h1>
+          <p className="mx-auto mt-1 max-w-lg text-xs leading-relaxed text-[#80646a] dark:text-rose-100/70 sm:text-sm">
+            Catat kalender, lihat ringkasan, dan kelola privasi dalam satu tempat.
+          </p>
+        </header>
         {/* Flo-styled Top Bar */}
-        <div className="bg-white dark:bg-[#200508] rounded-3xl p-5 shadow-lg border border-[#7A1018]/15 mb-6">
+        <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-3xl p-4 sm:p-5 shadow-lg border border-[#7A1018]/15 mb-5">
           <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-white/10">
             {/* View Mode Toggle: Bulan | Tahun */}
             <div className="inline-flex rounded-full bg-gray-100 dark:bg-black/30 p-1 text-xs font-sans-clean font-bold">
@@ -214,7 +223,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
           </div>
 
           {/* Sub Navigation Tabs */}
-          <div className="flex items-center justify-center space-x-2 mt-4 text-xs font-sans-clean">
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-[11px] sm:text-xs font-sans-clean">
             <button
               onClick={() => setActiveTab('kalender')}
               className={`px-3 py-1 rounded-lg font-bold transition ${
@@ -253,7 +262,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
 
         {/* Tab 1: Kalender (Bulan & Tahun) */}
         {activeTab === 'kalender' && (
-          <div className="bg-white dark:bg-[#200508] rounded-3xl p-6 shadow-md border border-[#7A1018]/15 relative">
+          <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-3xl p-4 sm:p-6 shadow-md border border-[#7A1018]/15 relative">
             {/* Legend / Shape Guide (Dibedakan bentuk, bukan hanya warna) */}
             <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-[11px] font-sans-clean font-medium pb-4 mb-6 border-b border-gray-100 dark:border-white/10">
               <div className="flex items-center space-x-1.5">
@@ -286,7 +295,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
 
             {/* Continuous Vertical Scroll of Months */}
             {viewMode === 'month' ? (
-              <div className="space-y-10 max-h-[600px] overflow-y-auto pr-2 scrollbar-none">
+              <div className="cycle-month-stack space-y-10 max-h-[600px] overflow-y-auto pr-2 scrollbar-none">
                 {monthsToRender.map((monthDate, mIdx) => {
                   const monthName = monthDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
                   const year = monthDate.getFullYear();
@@ -501,7 +510,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
 
         {/* Tab 2: Ringkasan & Statistik Privat */}
         {activeTab === 'ringkasan' && (
-          <div className="bg-white dark:bg-[#200508] rounded-3xl p-6 shadow-md border border-[#7A1018]/15 space-y-6">
+          <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-3xl p-4 sm:p-6 shadow-md border border-[#7A1018]/15 space-y-6">
             <div>
               <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
                 Ringkasan Siklus & Log Intim
@@ -621,7 +630,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
 
         {/* Tab 3: Kartu Informasi Medis & Kesehatan Netral */}
         {activeTab === 'edukasi' && (
-          <div className="bg-white dark:bg-[#200508] rounded-3xl p-6 shadow-md border border-[#7A1018]/15 space-y-5 font-sans-clean text-xs">
+          <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-3xl p-4 sm:p-6 shadow-md border border-[#7A1018]/15 space-y-5 font-sans-clean text-xs">
             <div className="flex items-center space-x-2 text-[#7A1018] dark:text-[#F4B6C2]">
               <Info className="w-5 h-5 flex-shrink-0" />
               <h3 className="font-serif-title text-xl font-bold">
@@ -719,13 +728,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                       Catat Hubungan Intim
                     </h3>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsLogModalOpen(false)}
-                    className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 hover:text-black dark:hover:text-white transition"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <CloseButton onClick={() => setIsLogModalOpen(false)} />
                 </div>
 
               <form onSubmit={handleSaveIntimateLog} className="space-y-4 font-sans-clean text-xs">
@@ -925,13 +928,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                     Catat Periode Haid
                   </h3>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsPeriodEditModalOpen(false)}
-                  className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 hover:text-black dark:hover:text-white transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <CloseButton onClick={() => setIsPeriodEditModalOpen(false)} />
               </div>
 
               <form onSubmit={handleSavePeriod} className="space-y-4 font-sans-clean text-xs">

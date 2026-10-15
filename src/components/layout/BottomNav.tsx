@@ -6,7 +6,6 @@ import {
   HeartPulse,
   Sparkles,
   Film,
-  Award,
   Heart,
   Clock
 } from 'lucide-react';
@@ -38,7 +37,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     { id: 'siklus', label: 'Siklus', icon: HeartPulse, sensitive: true },
     { id: 'wishlist', label: 'Wishlist', icon: Sparkles },
     { id: 'film', label: 'Film', icon: Film },
-    { id: 'piala', label: 'Medali 3D', icon: Award },
     { id: 'romantis', label: 'Romantis', icon: Heart }
   ];
 
@@ -65,11 +63,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <nav
       aria-label="Navigasi Utama Aplikasi"
-      className="fixed bottom-0 left-0 right-0 z-40 bg-[#EFE6DA]/95 dark:bg-[#1a0507]/95 backdrop-blur-xl border-t border-[#7A1018]/15 shadow-2xl transition-colors duration-300 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      className="bottom-dock-3d fixed bottom-0 left-0 right-0 z-40 rounded-t-[24px] border-t border-[#f6c4ca] bg-[#f2a0ad] shadow-[0_-5px_20px_rgba(136,50,66,.15)] transition-colors duration-300 pb-[max(0.45rem,env(safe-area-inset-bottom))] dark:border-white/10 dark:bg-[#542b37]"
     >
       <div
         ref={containerRef}
-        className="max-w-lg mx-auto flex items-center justify-between px-2 pt-1.5 overflow-x-auto scrollbar-none"
+        className="mx-auto flex max-w-lg items-center justify-between gap-1 px-2 pt-1.5 overflow-x-auto scrollbar-none"
       >
         {visibleItems.map((item) => {
           const isActive = activeSection === item.id;
@@ -80,7 +78,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               key={item.id}
               data-tab-id={item.id}
               onClick={() => handleTabClick(item.id)}
-              className="relative flex flex-col items-center justify-center py-1 px-2 min-w-[50px] sm:min-w-[58px] min-h-[46px] rounded-2xl transition-all duration-200 group focus:outline-hidden"
+              className="relative flex min-h-[62px] min-w-[58px] flex-1 flex-col items-center justify-center rounded-[20px] px-2 py-1 transition-all duration-200 group focus:outline-hidden sm:min-w-[64px]"
               title={item.label}
             >
               {/* Active Tab Glow & Background Pill */}
@@ -88,7 +86,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 <motion.div
                   layoutId="bottomNavTabIndicator"
                   transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                  className="absolute inset-0 bg-[#7A1018] dark:bg-[#7A1018]/90 rounded-2xl shadow-md -z-10"
+                  className="absolute inset-x-1 inset-y-0 rounded-[20px] bg-[#ffe1e5] shadow-[0_3px_10px_rgba(130,48,64,.12)] -z-10 dark:bg-[#a94860]"
                 />
               )}
 
@@ -98,8 +96,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
                 transition={{ duration: 0.3 }}
                 className={`transition-colors duration-200 ${
                   isActive
-                    ? 'text-[#F4B6C2]'
-                    : 'text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 group-hover:text-[#7A1018] dark:group-hover:text-[#F4B6C2]'
+                    ? 'text-[#963f55]'
+                    : 'text-[#9a6870] dark:text-rose-100/60 group-hover:text-[#c35f78] dark:group-hover:text-rose-200'
                 }`}
               >
                 <Icon className="w-5 h-5 stroke-[2.2]" />
@@ -107,22 +105,15 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
               {/* Tiny Mobile Label */}
               <span
-                className={`text-[10px] font-sans-clean font-semibold tracking-tight mt-0.5 transition-colors duration-200 truncate max-w-[62px] ${
+                  className={`mt-0.5 max-w-[62px] truncate font-sans-clean text-[10px] font-semibold tracking-tight transition-colors duration-200 ${
                   isActive
-                    ? 'text-[#EFE6DA] font-bold'
-                    : 'text-[#3B0A0F]/65 dark:text-[#EFE6DA]/65 group-hover:text-[#3B0A0F] dark:group-hover:text-white'
+                    ? 'font-bold text-[#42151e]'
+                    : 'text-[#51212a] dark:text-rose-100/75 group-hover:text-[#57202c] dark:group-hover:text-white'
                 }`}
               >
                 {item.label}
               </span>
 
-              {/* Tiny active pip dot */}
-              {isActive && (
-                <motion.span
-                  layoutId="bottomNavActiveDot"
-                  className="w-1 h-1 rounded-full bg-[#D9B26F] mt-0.5"
-                />
-              )}
             </button>
           );
         })}

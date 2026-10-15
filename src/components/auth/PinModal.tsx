@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Lock, Heart, Shield, KeyRound, EyeOff, Sparkles, CheckCircle2 } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { EyeOff } from 'lucide-react';
+import { motion } from 'motion/react';
 import { soundManager } from '../../utils/audio';
-import { AnimatedHeart, AnimatedSparkles } from '../common/AnimatedIcons';
 
 interface PinModalProps {
   correctPin: string;
@@ -10,163 +9,115 @@ interface PinModalProps {
   onEnterGuestMode: () => void;
 }
 
-export const PinModal: React.FC<PinModalProps> = ({
-  correctPin,
-  onSuccess,
-  onEnterGuestMode
-}) => {
+export const PinModal: React.FC<PinModalProps> = ({ correctPin, onSuccess, onEnterGuestMode }) => {
   const [pinInput, setPinInput] = useState('');
   const [hasError, setHasError] = useState(false);
 
-  const handleDigit = (digit: string) => {
+  const handleDigit = useCallback((digit: string) => {
     soundManager.playTap();
-    if (pinInput.length < 4) {
-      const next = pinInput + digit;
-      setPinInput(next);
-      setHasError(false);
-
-      if (next.length === 4) {
-        if (next === correctPin) {
+    if (pinInput.length >= 4) return;
+    const next = pinInput + digit;
+    setPinInput(next);
+    setHasError(false);
+    if (next.length === 4) {
+      if (next === correctPin) {
+        window.setTimeout(() => {
           soundManager.playChime();
           onSuccess();
-        } else {
-          setHasError(true);
-          setTimeout(() => {
-            setPinInput('');
-          }, 600);
-        }
+        }, 140);
+      } else {
+        setHasError(true);
+        window.setTimeout(() => {
+          setPinInput('');
+          setHasError(false);
+        }, 700);
       }
     }
-  };
+  }, [correctPin, onSuccess, pinInput]);
 
-  const handleBackspace = () => {
+  const handleBackspace = useCallback(() => {
     soundManager.playTap();
-    setPinInput((prev) => prev.slice(0, -1));
+    setPinInput((current) => current.slice(0, -1));
     setHasError(false);
-  };
+  }, []);
 
-  const handleAutoFillDefault = () => {
-    soundManager.playChime();
-    setPinInput(correctPin);
-    setTimeout(() => {
-      onSuccess();
-    }, 200);
-  };
+  useEffect(() => {
+    const handleKeyboardInput = (event: KeyboardEvent) => {
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (/^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        handleDigit(event.key);
+      } else if (event.key === 'Backspace' || event.key === 'Delete') {
+        event.preventDefault();
+        handleBackspace();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyboardInput);
+    return () => window.removeEventListener('keydown', handleKeyboardInput);
+  }, [handleBackspace, handleDigit]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1f0507]/90 backdrop-blur-xl">
+    <div className="pin-modal-backdrop fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pin-modal-title"
+        initial={{ opacity: 0, scale: 0.94, y: 14 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-[#EFE6DA] dark:bg-[#250709] max-w-sm w-full rounded-3xl p-7 border-2 border-[#7A1018]/30 shadow-2xl text-center relative"
+        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        transition={{ type: 'spring', stiffness: 360, damping: 30 }}
+        className="pin-modal-card my-auto w-full max-w-[360px] rounded-[28px] px-5 pb-5 pt-6 text-center sm:px-7 sm:pb-6 sm:pt-7"
       >
-        {/* Top Heart Emblem */}
-        <div className="w-16 h-16 rounded-full bg-[#7A1018] text-[#EFE6DA] flex items-center justify-center mx-auto mb-3 shadow-lg border-2 border-[#D9B26F]/50">
-          <AnimatedHeart className="w-8 h-8 fill-[#F4B6C2] text-[#F4B6C2]" />
+        <div className="pin-modal-logo mx-auto mb-3 flex h-[78px] w-[78px] items-center justify-center rounded-full p-1.5">
+          <img src="/logo/logo%20couple%203d.png" alt="Logo Savero dan Soffie" className="h-full w-full object-contain" />
         </div>
 
-        <h2 className="font-serif-title text-2xl font-bold text-[#7A1018] dark:text-[#F4B6C2] tracking-wider uppercase">
-          Savero & Soffie
+        <h2 id="pin-modal-title" className="font-sans-clean text-xl font-extrabold tracking-tight text-[var(--theme-ink)] sm:text-2xl">
+          Savero &amp; Soffie
         </h2>
-        <p className="font-editorial italic text-xs text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 mt-1 mb-4">
-          Ruang privat cinta di Semarang. Masukkan 4 digit PIN untuk membuka kenangan.
+        <p className="mx-auto mb-5 mt-1 max-w-[270px] font-sans-clean text-xs leading-relaxed text-[var(--theme-muted)]">
+          Masukkan PIN 4 digit untuk membuka kenangan.
         </p>
 
-        {/* PIN Banner Callout */}
-        <div className="mb-5 bg-[#7A1018]/10 dark:bg-white/10 p-2.5 rounded-2xl border border-[#7A1018]/20 flex items-center justify-between text-xs font-sans-clean">
-          <div className="text-left">
-            <span className="text-[10px] uppercase font-bold text-[#7A1018] dark:text-[#F4B6C2] block">
-              KUNCI PIN RAHASIA:
-            </span>
-            <span className="font-mono font-black text-[#7A1018] dark:text-[#EFE6DA] tracking-widest text-sm">
-              {correctPin || '2608'}
-            </span>
-            <span className="text-[9px] text-gray-500 block">
-              (Tanggal Jadian 26 Agustus)
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleAutoFillDefault}
-            className="px-3 py-1.5 bg-[#7A1018] text-[#EFE6DA] rounded-xl font-bold text-[11px] shadow-sm hover:bg-[#5e0a11] transition flex items-center space-x-1"
-          >
-            <Sparkles className="w-3 h-3 text-[#D9B26F]" />
-            <span>Buka Langsung</span>
-          </button>
-        </div>
-
-        {/* PIN Dots Indicator */}
-        <div className="flex items-center justify-center space-x-4 mb-6">
-          {[0, 1, 2, 3].map((idx) => {
-            const isFilled = idx < pinInput.length;
-            return (
-              <div
-                key={idx}
-                className={`w-4 h-4 rounded-full transition-all duration-200 ${
-                  hasError
-                    ? 'bg-red-500 animate-bounce'
-                    : isFilled
-                    ? 'bg-[#7A1018] dark:bg-[#F4B6C2] scale-125 shadow-md'
-                    : 'border-2 border-[#7A1018]/40 dark:border-white/20'
-                }`}
-              />
-            );
-          })}
+        <div className="mb-5 flex items-center justify-center gap-4" role="status" aria-label={`${pinInput.length} dari 4 digit PIN terisi`}>
+          {[0, 1, 2, 3].map((index) => (
+            <span
+              key={index}
+              className={`pin-entry-dot ${hasError ? 'is-error' : index < pinInput.length ? 'is-filled' : ''}`}
+            />
+          ))}
         </div>
 
         {hasError && (
-          <p className="text-xs font-sans-clean font-bold text-red-600 mb-3 animate-shake">
-            PIN salah. Coba lagi atau gunakan PIN {correctPin}.
+          <p role="alert" className="mb-3 font-sans-clean text-xs font-bold text-[var(--theme-brand-strong)]">
+            PIN salah. Silakan coba lagi.
           </p>
         )}
 
-        {/* Numeric Keypad */}
-        <div className="grid grid-cols-3 gap-2.5 mb-5">
+        <div className="grid grid-cols-3 gap-2 sm:gap-2.5" aria-label="Keypad PIN">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
-            <button
-              key={digit}
-              type="button"
-              onClick={() => handleDigit(digit)}
-              className="h-13 rounded-2xl bg-white/70 dark:bg-black/30 hover:bg-[#7A1018] hover:text-[#EFE6DA] dark:hover:bg-[#7A1018] text-[#3B0A0F] dark:text-[#EFE6DA] text-xl font-bold font-serif-title border border-[#7A1018]/15 shadow-xs active:scale-95 transition-all"
-            >
+            <button key={digit} type="button" onClick={() => handleDigit(digit)} className="pin-key" aria-label={`Angka ${digit}`}>
               {digit}
             </button>
           ))}
-          <div />
-          <button
-            type="button"
-            onClick={() => handleDigit('0')}
-            className="h-13 rounded-2xl bg-white/70 dark:bg-black/30 hover:bg-[#7A1018] hover:text-[#EFE6DA] text-[#3B0A0F] dark:text-[#EFE6DA] text-xl font-bold font-serif-title border border-[#7A1018]/15 shadow-xs active:scale-95 transition-all"
-          >
-            0
-          </button>
-          <button
-            type="button"
-            onClick={handleBackspace}
-            className="h-13 rounded-2xl bg-white/40 dark:bg-black/20 text-[#3B0A0F] dark:text-[#EFE6DA] text-xs font-sans-clean font-bold tracking-wider uppercase border border-[#7A1018]/15 active:scale-95 transition-all flex items-center justify-center"
-          >
-            HAPUS
-          </button>
+          <span aria-hidden="true" />
+          <button type="button" onClick={() => handleDigit('0')} className="pin-key" aria-label="Angka 0">0</button>
+          <button type="button" onClick={handleBackspace} className="pin-key pin-key-delete" aria-label="Hapus satu angka">Hapus</button>
         </div>
 
-        {/* Guest Mode Fallback */}
-        <div className="pt-3 border-t border-[#7A1018]/15 flex items-center justify-between text-xs font-sans-clean">
-          <span className="text-[10px] text-gray-500">
-            Situs Privat Savero & Soffie
-          </span>
-
+        <div className="mt-5 flex items-center justify-between gap-2 border-t border-[var(--theme-border)] pt-3 font-sans-clean">
+          <span className="text-[10px] text-[var(--theme-muted)]">Situs privat Savero &amp; Soffie</span>
           <button
             type="button"
             onClick={() => {
               soundManager.playTap();
               onEnterGuestMode();
             }}
-            className="text-[#7A1018] dark:text-[#F4B6C2] font-bold hover:underline flex items-center space-x-1"
+            className="pin-guest-button inline-flex min-h-11 items-center gap-1.5 rounded-xl px-2.5 text-[11px] font-bold text-[var(--theme-brand-strong)] transition-colors"
           >
-            <EyeOff className="w-3.5 h-3.5" />
-            <span>Mode Tamu &rarr;</span>
+            <EyeOff className="h-3.5 w-3.5" />
+            <span>Mode Tamu</span>
           </button>
         </div>
       </motion.div>

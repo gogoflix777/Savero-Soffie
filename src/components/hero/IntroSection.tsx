@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppSettings } from '../../types';
+import { getManagedPhotoUrl } from '../../lib/supabase';
 
 interface IntroSectionProps {
   settings: AppSettings;
@@ -9,33 +10,43 @@ const saveroProfilePhoto = 'https://scontent.cdninstagram.com/v/t51.2885-19/2963
 const soffieProfilePhoto = 'https://scontent.cdninstagram.com/v/t51.82787-19/652001432_18013647809820522_221030891397855465_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=105&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=7wYiSONEqDcQ7kNvwFzsbz1&_nc_oc=AdrH3loWCVRdgZC09vDFRi5aly3IuQyUgrM9_Zp1dG4QF58anMcmAP98rPBBNxSMhj8&_nc_zt=24&_nc_ht=scontent.cdninstagram.com&_nc_gid=z9m4nPWAN8tkno0H5k_PPg&_nc_ss=7b689&oh=00_AQP-buprgswtDCJuuBeLM2w6HM1H4x967n3aV2E-czH4Ew&oe=6AD660B2';
 
 export const IntroSection: React.FC<IntroSectionProps> = ({ settings }) => {
+  const [saveroPhoto, setSaveroPhoto] = useState(saveroProfilePhoto);
+  const [soffiePhoto, setSoffiePhoto] = useState(soffieProfilePhoto);
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      getManagedPhotoUrl('profil:savero', saveroProfilePhoto),
+      getManagedPhotoUrl('profil:soffie', soffieProfilePhoto)
+    ]).then(([savero, soffie]) => { if (active) { setSaveroPhoto(savero); setSoffiePhoto(soffie); } });
+    return () => { active = false; };
+  }, []);
   return (
-    <section className="bg-[#7A1018] text-[#EFE6DA] py-16 px-4 relative overflow-hidden border-b border-[#3B0A0F]">
+    <section className="relative overflow-hidden border-y border-rose-200/70 bg-[#fff5f3] px-4 py-12 text-[#57202c] dark:border-white/10 dark:bg-[#281c21] dark:text-rose-50 sm:py-16">
       {/* Decorative ambient background accents */}
       <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-[#F4B6C2]/10 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-[#D9B26F]/10 blur-3xl pointer-events-none" />
 
       <div className="max-w-5xl mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-12">
-          <span className="text-[11px] font-sans-clean font-bold tracking-[0.25em] uppercase text-[#D9B26F] block mb-2">
+            <span className="mb-2 block font-sans-clean text-[11px] font-bold tracking-[0.2em] uppercase text-[#b46b79] dark:text-rose-200">
             BAB SATU • AWAL SEGALANYA
           </span>
-          <h2 className="font-serif-title text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white mb-2">
+          <h2 className="mb-2 font-sans-clean text-2xl font-extrabold tracking-tight text-[#57202c] dark:text-rose-50 sm:text-4xl">
             Perkenalan Dua Hati
           </h2>
-          <div className="font-script text-2xl sm:text-3xl text-[#F4B6C2]">
+          <div className="font-script text-3xl text-[#c35f78] dark:text-[#f0a8b7] sm:text-4xl">
             dua dunia yang bertaut di sudut Semarang
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           {/* Polaroid Photos with slight tilt & cream border */}
-          <div className="flex items-center justify-center space-x-[-24px] sm:space-x-[-36px] py-4">
+          <div className="polaroid-photo-row flex items-center justify-center space-x-[-24px] py-4 sm:space-x-[-36px]">
             {/* Savero's Polaroid */}
-            <div className="transform -rotate-6 hover:rotate-0 transition-transform duration-300 w-44 sm:w-56 bg-[#EFE6DA] p-3 rounded shadow-2xl border border-black/10">
+            <div className="polaroid-3d transform -rotate-6 hover:rotate-0 transition-transform duration-300 w-44 sm:w-56 bg-[#EFE6DA] p-3 rounded shadow-2xl border border-black/10">
               <div className="w-full h-48 sm:h-64 overflow-hidden rounded bg-[#C9A58B]/30 flex items-center justify-center relative">
                 <img
-                  src={saveroProfilePhoto}
+                  src={saveroPhoto}
                   alt="Savero Pramudika Arya Wibowo"
                   className="w-full h-full object-cover"
                 />
@@ -49,10 +60,10 @@ export const IntroSection: React.FC<IntroSectionProps> = ({ settings }) => {
             </div>
 
             {/* Soffie's Polaroid */}
-            <div className="transform rotate-6 hover:rotate-0 transition-transform duration-300 w-44 sm:w-56 bg-[#EFE6DA] p-3 rounded shadow-2xl border border-black/10 z-10">
+            <div className="polaroid-3d transform rotate-6 hover:rotate-0 transition-transform duration-300 w-44 sm:w-56 bg-[#EFE6DA] p-3 rounded shadow-2xl border border-black/10 z-10">
               <div className="w-full h-48 sm:h-64 overflow-hidden rounded bg-[#BFD8B8]/30 flex items-center justify-center relative">
                 <img
-                  src={soffieProfilePhoto}
+                  src={soffiePhoto}
                   alt="Soffie Aulia Fatikhasari"
                   className="w-full h-full object-cover"
                 />
@@ -67,7 +78,7 @@ export const IntroSection: React.FC<IntroSectionProps> = ({ settings }) => {
           </div>
 
           {/* Romantic Story Narrative & Calligraphy Signature */}
-          <div className="space-y-4 text-[#EFE6DA]/90 font-editorial text-base sm:text-lg leading-relaxed">
+          <div className="space-y-4 font-sans-clean text-sm leading-relaxed text-[#75414c] dark:text-rose-50/80 sm:text-base">
             <p>
               Ada keindahan tersendiri saat seorang calon penegak hukum yang terbiasa dengan argumen tegas dan pasal-pasal keadilan, luluh di hadapan kelembutan seorang mahasiswi keperawatan yang terbiasa merawat dengan kasih dan ketulusan hati.
             </p>

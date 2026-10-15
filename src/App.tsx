@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Heart, Moon, Sun } from 'lucide-react';
 import {
   AppSettings,
   MemoryPin,
@@ -22,7 +23,6 @@ import { getGoogleMapsApiKey } from './config/env';
 const GOOGLE_MAPS_API_KEY = getGoogleMapsApiKey();
 
 // Visual Effects & Backgrounds
-import { Lock } from 'lucide-react';
 import { FloatingHearts } from './components/effects/FloatingHearts';
 
 // Layout & Navigation
@@ -41,13 +41,16 @@ import { MoviesSection } from './components/movies/MoviesSection';
 import { WishlistSection } from './components/wishlist/WishlistSection';
 import { TrophyCabinetSection } from './components/badges/TrophyCabinetSection';
 import { RomanticExtrasSection } from './components/romantic/RomanticExtrasSection';
-import { RealtimePlacesHub } from './components/home/RealtimePlacesHub';
 
 // Modals
 import { PinModal } from './components/auth/PinModal';
 import { SettingsModal } from './components/settings/SettingsModal';
+import { SupabaseLogin } from './components/auth/SupabaseLogin';
+import { isSupabaseConfigured, supabase } from './lib/supabase';
 
 export default function App() {
+  const [authReady, setAuthReady] = useState(!isSupabaseConfigured);
+  const [authenticated, setAuthenticated] = useState(!isSupabaseConfigured);
   // Application Data States initialized from Local Storage
   const [settings, setSettings] = useState<AppSettings>(() => appStorage.getSettings());
   const [pins, setPins] = useState<MemoryPin[]>(() => appStorage.getPins());
@@ -68,6 +71,47 @@ export default function App() {
   const [isWindowBlurred, setIsWindowBlurred] = useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [selectedPinIdForMap, setSelectedPinIdForMap] = useState<string | null>(null);
+  const [themeNotice, setThemeNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let alive = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (alive) { setAuthenticated(Boolean(data.session)); setAuthReady(true); }
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthenticated(Boolean(session));
+      setAuthReady(true);
+    });
+    return () => { alive = false; listener.subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (!themeNotice) return;
+    const noticeTimer = window.setTimeout(() => setThemeNotice(null), 2300);
+    return () => window.clearTimeout(noticeTimer);
+  }, [themeNotice]);
+
+  useEffect(() => {
+    const playForInteractiveTarget = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const appRoot = target.closest('.app-clay-theme');
+      const interactive = target.closest('button, a, [role="button"], input[type="checkbox"], input[type="radio"], select, [class~="cursor-pointer"]');
+      if (!appRoot || !interactive || interactive.matches(':disabled, [aria-disabled="true"]')) return;
+      if (soundManager.wasPlayedRecently()) return;
+
+      const closeButton = interactive.matches('button') && (
+        interactive.classList.contains('app-close-button') ||
+        /close|tutup|batal/i.test(`${interactive.getAttribute('aria-label') ?? ''} ${interactive.getAttribute('title') ?? ''}`)
+      );
+      if (closeButton) soundManager.playClose();
+      else soundManager.playTap();
+    };
+
+    document.addEventListener('click', playForInteractiveTarget);
+    return () => document.removeEventListener('click', playForInteractiveTarget);
+  }, []);
 
   // Inactivity Auto-Lock Timer (15 minutes)
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,6 +170,10 @@ export default function App() {
 
   // Handlers for state updates
   const handleUpdateSettings = (newSettings: AppSettings) => {
+    if (settings.darkMode !== newSettings.darkMode) {
+      setThemeNotice(newSettings.darkMode ? 'Mode malam aktif' : 'Mode terang aktif');
+      soundManager.playChime();
+    }
     setSettings(newSettings);
     appStorage.saveSettings(newSettings);
   };
@@ -140,7 +188,6 @@ export default function App() {
   const handleToggleDarkMode = () => {
     const updated = { ...settings, darkMode: !settings.darkMode };
     handleUpdateSettings(updated);
-    soundManager.playTap();
   };
 
   const handleAddPin = (pin: MemoryPin) => {
@@ -199,15 +246,34 @@ export default function App() {
   };
 
   const handleUpdateMovie = (movie: MovieItem) => {
-    const updated = movies.map((m) => (m.id === movie.id ? movie : m));
-    setMovies(updated);
-    appStorage.saveMovies(updated);
+    setMovies((current) => {
+      const updated = current.map((item) => (item.id === movie.id ? movie : item));
+      appStorage.saveMovies(updated);
+      return updated;
+    });
   };
 
   const handleToggleActorLike = (actorId: string, likedBy: 'Savero' | 'Soffie' | 'Berdua') => {
     const updated = actors.map((a) => (a.id === actorId ? { ...a, likedBy } : a));
     setActors(updated);
     appStorage.saveActors(updated);
+  };
+
+  const handleUpdateActor = (actor: ActorItem) => {
+    setActors((current) => {
+      const updated = current.map((item) => (item.id === actor.id ? actor : item));
+      appStorage.saveActors(updated);
+      return updated;
+    });
+  };
+
+  const handleAddActor = (actor: ActorItem) => {
+    setActors((current) => {
+      if (current.some((item) => item.id === actor.id || (actor.tmdbId && item.tmdbId === actor.tmdbId))) return current;
+      const updated = [actor, ...current];
+      appStorage.saveActors(updated);
+      return updated;
+    });
   };
 
   const handleAddWishlistPlace = (place: WishlistPlace) => {
@@ -230,7 +296,7 @@ export default function App() {
         date: new Date().toISOString().split('T')[0],
         time: '20:00',
         description: `Kunjungan pertama wishlist kita di ${place.name} (${place.area}). ${place.notes || ''}`,
-        photos: ['https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80'],
+        photos: [],
         rating: 5,
         tags: [place.category, 'Wishlist Tercapai', place.area],
         category: place.category,
@@ -280,12 +346,42 @@ export default function App() {
     setActiveSection(sectionId);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+  const authClient = supabase;
+  const handleSignOut = authClient ? () => { void authClient.auth.signOut(); } : undefined;
+
+  if (isSupabaseConfigured && (!authReady || !authenticated)) {
+    return authReady ? <SupabaseLogin /> : <div className="fixed inset-0 grid place-items-center bg-[#fff7f1] dark:bg-[#21151a]">Memuat sesi…</div>;
+  }
 
   return (
     <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['places', 'marker', 'geometry', 'core']}>
-      <div className="min-h-screen bg-[#EFE6DA] dark:bg-[#1f0507] text-[#3B0A0F] dark:text-[#EFE6DA] transition-colors duration-300 font-sans-clean relative overflow-x-hidden selection:bg-[#F4B6C2] selection:text-[#7A1018] flex flex-col">
+      <div className="app-clay-theme relative flex min-h-screen flex-col overflow-x-hidden bg-[#fffaf0] font-sans-clean text-[#57202c] selection:bg-[#f4b6c2] selection:text-[#7a1018] transition-colors duration-300 dark:bg-[#21151a] dark:text-rose-50">
       {/* Floating Ethereal Particles & Petals */}
       <FloatingHearts />
+
+      <AnimatePresence>
+        {themeNotice && (
+          <motion.div
+            key={themeNotice}
+            role="status"
+            aria-live="polite"
+            initial={{ opacity: 0, y: -18, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+            className="theme-toast fixed left-1/2 top-[max(1rem,env(safe-area-inset-top))] z-[90] flex -translate-x-1/2 items-center gap-3 rounded-2xl px-4 py-3"
+          >
+            <span className="theme-toast-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" aria-hidden="true">
+              {settings.darkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </span>
+            <span className="min-w-[150px]">
+              <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--theme-muted)]">Tema diperbarui</span>
+              <span className="mt-0.5 block text-sm font-extrabold text-[var(--theme-ink)]">{themeNotice}</span>
+            </span>
+            <span className="theme-toast-swatch ml-1 h-8 w-8 rounded-full" aria-hidden="true" />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Privacy Shield: Window Blur Overlay (Section J) */}
       <AnimatePresence>
@@ -297,14 +393,14 @@ export default function App() {
             transition={{ duration: 0.3 }}
             className="fixed inset-0 z-[100] bg-[#1a0507]/95 backdrop-blur-3xl flex items-center justify-center pointer-events-none"
           >
-            <div className="text-center p-6 animate-heartbeat">
-              <div className="w-16 h-16 rounded-full bg-[#7A1018] border-2 border-[#D9B26F] flex items-center justify-center mx-auto shadow-2xl mb-2">
-                <Lock className="w-8 h-8 text-[#F4B6C2]" />
+            <div className="privacy-shield-card animate-heartbeat mx-5 flex w-full max-w-sm flex-col items-center rounded-[2rem] px-7 py-8 text-center">
+              <div className="privacy-shield-logo mb-4 flex h-24 w-24 items-center justify-center rounded-full p-2.5">
+                <img src="/logo/logo%20couple%203d.png" alt="" className="h-full w-full object-contain" />
               </div>
-              <div className="font-serif-title text-2xl font-bold text-[#F4B6C2] mt-3 uppercase tracking-widest">
+              <div className="font-sans-clean text-xl font-extrabold tracking-tight text-[var(--theme-ink)] sm:text-2xl">
                 Ruang Privat Terlindungi
               </div>
-              <p className="text-xs text-[#EFE6DA]/70 font-sans-clean mt-1">
+              <p className="mt-2 max-w-[260px] font-sans-clean text-sm leading-relaxed text-[var(--theme-muted)]">
                 Beralih kembali ke aplikasi untuk melanjutkan.
               </p>
             </div>
@@ -335,6 +431,8 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onToggleDarkMode={handleToggleDarkMode}
         onGoHome={() => handleSelectSection('beranda')}
+        onOpenBadges={() => handleSelectSection('piala')}
+        onSignOut={handleSignOut}
       />
 
       {/* Page Content Viewport Container */}
@@ -350,7 +448,13 @@ export default function App() {
               transition={{ duration: 0.28, ease: 'easeOut' }}
             >
               {/* Cinematic Marquee Ribbon */}
-              <MarqueeTicker />
+              <MarqueeTicker
+                pins={settings.isGuestMode ? pins.filter((pin) => !pin.isSensitive) : pins}
+                onPinClick={(pin) => {
+                  setSelectedPinIdForMap(pin.id);
+                  document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              />
 
               {/* Hero Section */}
               <HeroSection
@@ -392,12 +496,6 @@ export default function App() {
                 }}
               />
 
-              {/* Rekomendasi Kafe & Penginapan Realtime */}
-              <RealtimePlacesHub
-                existingPlaces={wishlistPlaces}
-                onAddPlace={handleAddWishlistPlace}
-                settings={settings}
-              />
             </motion.div>
           )}
 
@@ -442,6 +540,8 @@ export default function App() {
                 settings={settings}
                 onAddMovie={handleAddMovie}
                 onUpdateMovie={handleUpdateMovie}
+                onUpdateActor={handleUpdateActor}
+                onAddActor={handleAddActor}
                 onToggleActorLike={handleToggleActorLike}
               />
             </motion.div>
@@ -528,16 +628,17 @@ export default function App() {
       </AnimatePresence>
 
       {/* Footer Note */}
-      <footer className="bg-[#7A1018] text-[#EFE6DA] py-8 px-4 border-t border-[#3B0A0F] text-center text-xs font-sans-clean relative z-10 mb-16 sm:mb-20">
-        <div className="max-w-3xl mx-auto space-y-2.5">
-          <div className="font-serif-title text-lg sm:text-xl font-bold tracking-widest text-[#F4B6C2] uppercase animate-pulse">
+      <footer className="site-footer relative z-10 mb-16 px-5 py-8 text-center sm:mb-20 sm:py-10">
+        <div className="mx-auto max-w-xl">
+          <Heart className="mx-auto mb-2 h-5 w-5 fill-current text-[var(--theme-brand)]" aria-hidden="true" />
+          <div className="font-sans-clean text-sm font-extrabold tracking-[0.16em] text-[var(--theme-ink)] sm:text-base">
             SAVERO & SOFFIE
           </div>
-          <p className="font-editorial italic text-xs sm:text-sm text-[#EFE6DA]/80">
-            "Keadilan hukum di meja hijau, ketulusan stetoskop di ruang rawat, dan satu cinta abadi di sudut Semarang."
+          <p className="mx-auto mt-3 max-w-lg font-sans-clean text-xs leading-relaxed text-[var(--theme-muted)] sm:text-sm">
+            “Keadilan hukum di meja hijau, ketulusan stetoskop di ruang rawat, dan satu cinta abadi di sudut Semarang.”
           </p>
-          <div className="text-[10px] uppercase tracking-widest text-[#D9B26F] pt-2 border-t border-white/10">
-            Dibuat secara privat • Semarang, Jawa Tengah • EST. 2026
+          <div className="site-footer-meta mt-5 border-t pt-3 font-sans-clean text-[10px] font-bold tracking-[0.12em] text-[var(--theme-muted)] sm:text-[11px]">
+            Dibuat secara privat <span aria-hidden="true">•</span> Semarang, Jawa Tengah <span aria-hidden="true">•</span> EST. 2026
           </div>
         </div>
       </footer>

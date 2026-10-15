@@ -27,7 +27,7 @@ export const AppLauncherHub: React.FC<AppLauncherHubProps> = ({
       subtitle: 'Zona Privat Sensitif',
       desc: 'Kalender ovulasi medis, reminder haid, dan log intim privat.',
       icon: HeartPulse,
-      color: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20',
+      color: 'bg-[#f9dce1] text-[#9f4d63] dark:bg-[#70404e] dark:text-rose-100 border-rose-200 dark:border-white/10',
       sensitive: true
     },
     {
@@ -36,7 +36,7 @@ export const AppLauncherHub: React.FC<AppLauncherHubProps> = ({
       subtitle: 'Daftar Kunjungan Berdua',
       desc: 'Simpan tempat impian yang ingin dikunjungi bersama.',
       icon: Sparkles,
-      color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+      color: 'bg-[#f9dce1] text-[#9f4d63] dark:bg-[#70404e] dark:text-rose-100 border-rose-200 dark:border-white/10'
     },
     {
       id: 'film',
@@ -44,7 +44,7 @@ export const AppLauncherHub: React.FC<AppLauncherHubProps> = ({
       subtitle: 'Kencan Movie Night',
       desc: 'Koleksi film ditonton berdua, watchlist, dan rating hati.',
       icon: Film,
-      color: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20'
+      color: 'bg-[#f9dce1] text-[#9f4d63] dark:bg-[#70404e] dark:text-rose-100 border-rose-200 dark:border-white/10'
     },
     {
       id: 'piala',
@@ -52,7 +52,7 @@ export const AppLauncherHub: React.FC<AppLauncherHubProps> = ({
       subtitle: 'Achievement Medals',
       desc: 'Medali 3D interaktif yang berputar & bersinar atas milestone cinta.',
       icon: Award,
-      color: 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20'
+      color: 'bg-[#f9dce1] text-[#9f4d63] dark:bg-[#70404e] dark:text-rose-100 border-rose-200 dark:border-white/10'
     },
     {
       id: 'romantis',
@@ -60,7 +60,7 @@ export const AppLauncherHub: React.FC<AppLauncherHubProps> = ({
       subtitle: 'Kapsul Waktu & Lagu',
       desc: 'Surat terkunci di masa depan, soundtrack cinta, dan Love Wrapped.',
       icon: Heart,
-      color: 'bg-pink-500/10 text-pink-700 dark:text-pink-400 border-pink-500/20'
+      color: 'bg-[#f9dce1] text-[#9f4d63] dark:bg-[#70404e] dark:text-rose-100 border-rose-200 dark:border-white/10'
     }
   ];
 
