@@ -5,6 +5,9 @@ interface IntroSectionProps {
   settings: AppSettings;
 }
 
+const saveroProfilePhoto = 'https://scontent.cdninstagram.com/v/t51.2885-19/296301338_1323455861760195_6131353476101218620_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=100&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=MxSs-zudAHgQ7kNvwGnLsAW&_nc_oc=AdrQVqZxtxkRohdsbJiawUOWS9CzAu6ttQstAlwk-53AUfTHeaU7N6-QJJUz_4K4BxE&_nc_zt=24&_nc_ht=scontent.cdninstagram.com&_nc_ss=7b689&oh=00_AQMvkB2-b-Xm9UKCLYutz_8_-bvyxLblpX5IrNPCgmDXPw&oe=6AD64304';
+const soffieProfilePhoto = 'https://scontent.cdninstagram.com/v/t51.82787-19/652001432_18013647809820522_221030891397855465_n.jpg?stp=dst-jpg_s150x150_tt6&_nc_cat=105&ccb=7-5&_nc_sid=f7ccc5&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLnd3dy4xMDgwLkMzIn0%3D&_nc_ohc=7wYiSONEqDcQ7kNvwFzsbz1&_nc_oc=AdrH3loWCVRdgZC09vDFRi5aly3IuQyUgrM9_Zp1dG4QF58anMcmAP98rPBBNxSMhj8&_nc_zt=24&_nc_ht=scontent.cdninstagram.com&_nc_gid=z9m4nPWAN8tkno0H5k_PPg&_nc_ss=7b689&oh=00_AQP-buprgswtDCJuuBeLM2w6HM1H4x967n3aV2E-czH4Ew&oe=6AD660B2';
+
 export const IntroSection: React.FC<IntroSectionProps> = ({ settings }) => {
   return (
     <section className="bg-[#7A1018] text-[#EFE6DA] py-16 px-4 relative overflow-hidden border-b border-[#3B0A0F]">
@@ -32,7 +35,7 @@ export const IntroSection: React.FC<IntroSectionProps> = ({ settings }) => {
             <div className="transform -rotate-6 hover:rotate-0 transition-transform duration-300 w-44 sm:w-56 bg-[#EFE6DA] p-3 rounded shadow-2xl border border-black/10">
               <div className="w-full h-48 sm:h-64 overflow-hidden rounded bg-[#C9A58B]/30 flex items-center justify-center relative">
                 <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&q=80"
+                  src={saveroProfilePhoto}
                   alt="Savero Pramudika Arya Wibowo"
                   className="w-full h-full object-cover"
                 />
@@ -49,7 +52,7 @@ export const IntroSection: React.FC<IntroSectionProps> = ({ settings }) => {
             <div className="transform rotate-6 hover:rotate-0 transition-transform duration-300 w-44 sm:w-56 bg-[#EFE6DA] p-3 rounded shadow-2xl border border-black/10 z-10">
               <div className="w-full h-48 sm:h-64 overflow-hidden rounded bg-[#BFD8B8]/30 flex items-center justify-center relative">
                 <img
-                  src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=600&q=80"
+                  src={soffieProfilePhoto}
                   alt="Soffie Aulia Fatikhasari"
                   className="w-full h-full object-cover"
                 />
