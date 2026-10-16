@@ -19,10 +19,8 @@ import {
   Phone
 } from 'lucide-react';
 import { WishlistPlace, AppSettings } from '../../types';
-import { getGoogleMapsApiKey } from '../../config/env';
+import { googlePlacePhotoUrl, searchGooglePlaces } from '../../services/googlePlacesService';
 import { soundManager } from '../../utils/audio';
-
-const API_KEY = getGoogleMapsApiKey();
 
 interface PlaceResult {
   id: string;
@@ -57,11 +55,6 @@ function calcDist(lat1: number, lng1: number, lat2: number, lng2: number): numbe
   return Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
 }
 
-// Build real Google Places photo URL via Vite proxy
-function buildPhotoUrl(photoName: string): string {
-  return `/api/places/photo?name=${encodeURIComponent(photoName)}`;
-}
-
 async function fetchPlaces(
   textQuery: string,
   userLat: number,
@@ -70,27 +63,19 @@ async function fetchPlaces(
   tagLabel: string
 ): Promise<PlaceResult[]> {
   try {
-    const res = await fetch('/api/places/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        textQuery,
-        maxResultCount: 12,
-        locationBias: {
-          circle: {
-            center: { latitude: userLat, longitude: userLng },
-            radius: 10000.0
-          }
+    const places = await searchGooglePlaces({
+      textQuery,
+      maxResultCount: 12,
+      locationBias: {
+        circle: {
+          center: { latitude: userLat, longitude: userLng },
+          radius: 10000.0
         }
-      })
+      }
     });
 
-    if (!res.ok) throw new Error('Proxy failed');
-    const data = await res.json();
-    if (!data.places || !Array.isArray(data.places)) return [];
-
-    return data.places.map((p: any, idx: number) => {
-      const name = p.displayName?.text || p.displayName || 'Tempat';
+    return places.map((p, idx) => {
+      const name = typeof p.displayName === 'string' ? p.displayName : p.displayName?.text || 'Tempat';
       const address = p.formattedAddress || 'Semarang';
       const parts = address.split(',');
       const area = parts.length > 2 ? (parts[parts.length - 4]?.trim() || parts[1]?.trim() || 'Semarang') : 'Semarang';
@@ -100,8 +85,8 @@ async function fetchPlaces(
       // Build real photo URLs
       const photos: string[] = [];
       if (p.photos && Array.isArray(p.photos)) {
-        p.photos.slice(0, 5).forEach((ph: any) => {
-          if (ph.name) photos.push(buildPhotoUrl(ph.name));
+        p.photos.slice(0, 5).forEach((photo) => {
+          if (photo.name) photos.push(googlePlacePhotoUrl(photo.name));
         });
       }
       return {

@@ -28,7 +28,7 @@ import { PhotoLibrary } from './PhotoLibrary';
 import { CoupleProfile, FavoriteSinger, LockedLetter, LoveSong, MemoryPin, MovieItem, AppSettings } from '../../types';
 import { soundManager } from '../../utils/audio';
 import { HeartRating } from '../common/AnimatedIcons';
-import { getGeminiApiKey } from '../../config/env';
+import { supabase } from '../../lib/supabase';
 import { getMusicArtistMetadata, getMusicRecordingMetadata, MusicArtistSearchResult, MusicRecordingSearchResult, searchMusicArtists, searchMusicRecordings } from '../../lib/musicBrainz';
 
 interface RomanticExtrasProps {
@@ -100,6 +100,8 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
     content: '',
     unlockDate: '2026-12-31'
   });
+  const [isGeneratingLoveNote, setIsGeneratingLoveNote] = useState(false);
+  const [loveNoteError, setLoveNoteError] = useState('');
   const [songForm, setSongForm] = useState({
     musicBrainzId: '',
     title: '',
@@ -206,6 +208,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
 
   const handleEditLetter = (letter: LockedLetter) => {
     setEditingLetterId(letter.id);
+    setLoveNoteError('');
     setLetterForm({
       sender: letter.sender,
       recipient: letter.recipient,
@@ -377,30 +380,33 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
   };
 
   const handleGenerateLoveNote = async () => {
-    const apiKey = getGeminiApiKey();
-    if (!apiKey || !letterForm.title.trim()) return;
-
+    if (!supabase) {
+      setLoveNoteError('Supabase belum dikonfigurasi. Surat AI tidak dapat dibuat.');
+      return;
+    }
+    if (!letterForm.title.trim()) {
+      setLoveNoteError('Isi judul surat terlebih dahulu.');
+      return;
+    }
+    setIsGeneratingLoveNote(true);
+    setLoveNoteError('');
     try {
-      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Tulis satu surat singkat romantis dalam bahasa Indonesia, berjudul "${letterForm.title}". Surat itu ditulis dari ${letterForm.sender} untuk ${letterForm.recipient}. Gunakan nada hangat, manis, personal, dan menggambarkan kebahagiaan bersama.`
-            }]
-          }]
-        })
+      const { data, error } = await supabase.functions.invoke('generate-love-note', {
+        body: {
+          title: letterForm.title,
+          sender: letterForm.sender,
+          recipient: letterForm.recipient
+        }
       });
-
-      if (!res.ok) throw new Error('Gemini request failed');
-      const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-      if (text) {
-        setLetterForm((prev) => ({ ...prev, content: text.trim() }));
-      }
+      if (error) throw error;
+      const text = typeof data?.text === 'string' ? data.text : '';
+      if (!text) throw new Error('Gemini tidak mengembalikan isi surat.');
+      setLetterForm((prev) => ({ ...prev, content: text.trim() }));
     } catch (error) {
-      console.warn('Gemini note generation failed:', error);
+      console.error('Gemini note generation failed:', error);
+      setLoveNoteError(error instanceof Error ? error.message : 'Surat AI gagal dibuat. Coba lagi.');
+    } finally {
+      setIsGeneratingLoveNote(false);
     }
   };
 
@@ -499,6 +505,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
               <button
                 onClick={() => {
                   setEditingLetterId(null);
+                  setLoveNoteError('');
                   setLetterForm({
                     sender: 'Savero',
                     recipient: 'Soffie',
@@ -1258,6 +1265,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
                     />
                   </div>
 
+                  {loveNoteError && <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-200">{loveNoteError}</p>}
                   <div className="flex flex-wrap justify-end gap-2 border-t border-[#7A1018]/15 pt-3">
                     <button
                       type="button"
@@ -1274,10 +1282,11 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={handleGenerateLoveNote}
-                      className="min-h-10 w-full rounded-xl border border-[#7A1018]/25 bg-white/65 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[#7A1018] dark:bg-white/5 dark:text-rose-100 sm:w-auto"
+                      disabled={isGeneratingLoveNote}
+                      onClick={() => void handleGenerateLoveNote()}
+                      className="min-h-10 w-full rounded-xl border border-[#7A1018]/25 bg-white/65 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[#7A1018] disabled:opacity-60 dark:bg-white/5 dark:text-rose-100 sm:w-auto"
                     >
-                      Generate AI Love Note
+                      {isGeneratingLoveNote ? 'Membuat surat…' : 'Generate AI Love Note'}
                     </button>
                   </div>
                 </form>

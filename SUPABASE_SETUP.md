@@ -2,6 +2,8 @@
 
 Fitur check-in ini memakai dua akun Supabase yang berbeda. Satu akun diikat permanen ke Savero dan satu ke Soffie. Setelah masuk pertama kali, pilih profil yang sesuai; pemilih profil biasa akan terkunci. Ini yang membuat streak bersama dan konfirmasi bertemu tidak bisa dipalsukan dengan berganti profil pada satu akun.
 
+Sesi login disimpan di `sessionStorage` per tab browser, bukan cache `localStorage` lintas tab. Tab baru meminta login sendiri; reload pada tab yang sama tetap mempertahankan sesi sampai sesi browser berakhir atau pengguna keluar.
+
 ## 1. Siapkan project dan aplikasi
 
 Di Supabase, buka **Project Settings → API** dan salin Project URL serta publishable key (atau anon key lama) ke `.env` di root project:
@@ -12,6 +14,26 @@ VITE_SUPABASE_ANON_KEY="YOUR_PUBLISHABLE_OR_ANON_KEY"
 ```
 
 Jangan masukkan `service_role` key ke `.env` atau kode browser. Setelah menyimpan `.env`, mulai ulang Vite dengan `Ctrl+C`, lalu `npm run dev`.
+
+### Environment variable saat deploy
+
+File `.env` sengaja masuk `.gitignore`, jadi tidak akan ikut `git push`. Ini mencegah key dan konfigurasi lokal tersebar ke repository. Untuk website hasil build, nilai `.env` harus tersedia **di environment proses build pada penyedia hosting**; file `.env` di komputer lokal tidak otomatis tersedia di website yang sudah ter-deploy.
+
+Di dashboard Cloudflare pada project seperti yang terlihat di tangkapan layar, buka **Settings → Builds** (atau klik **Builds** di daftar navigasi Settings), lalu tambahkan variable di **Build variables and secrets**. Jangan gunakan bagian **Runtime variables and secrets**: project ini hanya menyajikan static assets, dan variable di situ tidak tersedia untuk Worker static-only. Selain itu, variable `VITE_*` harus ada saat build karena nilainya ditanam ke bundle browser.
+
+Tambahkan variable berikut untuk build Production (dan Preview jika digunakan):
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+VITE_GOOGLE_MAPS_API_KEY
+VITE_TMDB_API_KEY
+VITE_CARTO_API_KEY
+```
+
+Isi value dari konfigurasi project masing-masing, simpan, lalu buka **Deployments** dan jalankan **Retry deployment** untuk deployment Production terbaru (atau push commit baru). Environment variable yang baru diatur hanya dipakai oleh build berikutnya; deployment lama tidak berubah. Untuk hosting lain, atur nama-nama variable yang sama pada build/deployment settings. Jika build dijalankan dari GitHub Actions, pasang nilainya di **Repository Settings → Secrets and variables → Actions**, lalu workflow harus meneruskannya ke langkah build.
+
+Hanya variable dengan awalan `VITE_` yang dimasukkan ke bundle browser. URL Supabase, publishable/anon key, dan key Maps/TMDB yang dipakai browser dapat dilihat oleh pengguna; batasi key provider ke API/domain yang diperlukan dan jangan pernah gunakan `service_role` di sini. Key Gemini adalah rahasia server-side dan dipasang sebagai Supabase Function secret pada bagian Gemini di bawah.
 
 ### Aktifkan login dengan Google
 
@@ -58,11 +80,30 @@ Berikutnya, ganti `PROJECT_REF` pada perintah berikut dengan **Project Ref** dar
 ```powershell
 npx.cmd supabase link --project-ref PROJECT_REF
 npx.cmd supabase functions deploy musicbrainz
+npx.cmd supabase functions deploy google-places
 ```
 
 Gunakan `npx.cmd` di PowerShell Windows. Perintah ini menjalankan shim Command Prompt dan menghindari error Execution Policy pada `npx.ps1`; tidak perlu mengubah Execution Policy.
 
 Fungsi menggunakan secret `SUPABASE_URL` dan `SUPABASE_ANON_KEY` yang tersedia otomatis pada Supabase Edge Functions. Pencarian rekaman/artis memakai MusicBrainz; sampul album diisi dari Cover Art Archive jika tersedia. Deskripsi lagu dan penyanyi favorit dapat diisi atau diedit manual.
+
+Pencarian Google Places pada website production menggunakan Edge Function `google-places` (middleware proxy di `vite.config.ts` hanya berjalan saat development). Buat key Google Cloud khusus server dengan **Places API (New)** aktif dan API restriction ke Places API, lalu simpan dan deploy:
+
+```powershell
+npx.cmd supabase functions deploy google-places
+```
+
+Sebelum deploy, tambahkan `GOOGLE_MAPS_API_KEY` pada **Supabase Dashboard → Edge Functions → Secrets**. Jangan gunakan key server tersebut sebagai `VITE_GOOGLE_MAPS_API_KEY`. Untuk Google Maps JavaScript/tiles serta foto Places, tetap gunakan key browser terpisah di environment build hosting dan batasi dengan HTTP referrer/domain serta hanya API yang diperlukan (Maps JavaScript API dan Places API bila dipakai untuk foto). Key Places server hanya disimpan sebagai Supabase secret.
+
+### Secret Gemini untuk membuat surat
+
+Jangan memakai `GEMINI_API_KEY` dari kode browser atau menggantinya menjadi `VITE_GEMINI_API_KEY`; key yang diekspos melalui Vite dapat dibaca oleh siapa pun dari bundle website. Simpan key sebagai secret Supabase, kemudian deploy fungsi yang memanggil Gemini di server:
+
+```powershell
+npx.cmd supabase functions deploy generate-love-note
+```
+
+Sebelum deploy, tambahkan `GEMINI_API_KEY` pada **Supabase Dashboard → Edge Functions → Secrets**. Fungsi hanya menerima permintaan dari pengguna yang sudah login dan terikat ke profil pasangan. Key tidak dikirim ke browser. Tidak perlu menambahkan Gemini key ke GitHub, `.env` production browser, atau kode aplikasi.
 
 ## 3. Buat dua akun dan pasangkan profil
 

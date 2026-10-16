@@ -37,8 +37,7 @@ import {
 } from '../../data/realtimeCafes';
 import {
   fetchGooglePlacesCafes,
-  GooglePlaceCafe,
-  GOOGLE_MAPS_API_KEY
+  GooglePlaceCafe
 } from '../../services/googlePlacesService';
 import { soundManager } from '../../utils/audio';
 

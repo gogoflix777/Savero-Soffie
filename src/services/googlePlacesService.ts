@@ -1,6 +1,7 @@
 // Google Places API (New) Service for Semarang Cafe Recommendations
 
 import { getGoogleMapsApiKey } from '../config/env';
+import { supabase } from '../lib/supabase';
 
 export interface GooglePlaceCafe {
   id: string;
@@ -24,7 +25,67 @@ export interface GooglePlaceCafe {
   isFromGoogleApi: boolean;
 }
 
-export const GOOGLE_MAPS_API_KEY = getGoogleMapsApiKey();
+export interface GooglePlacesApiPlace {
+  id?: string;
+  displayName?: { text?: string } | string;
+  formattedAddress?: string;
+  location?: { latitude?: number; longitude?: number };
+  rating?: number;
+  userRatingCount?: number;
+  photos?: Array<{ name?: string }>;
+  regularOpeningHours?: {
+    openNow?: boolean;
+    weekdayDescriptions?: string[];
+    nextOpenTime?: string;
+  };
+  googleMapsUri?: string;
+  priceLevel?: string;
+  primaryType?: string;
+  editorialSummary?: { text?: string };
+}
+
+const GOOGLE_MAPS_API_KEY = getGoogleMapsApiKey();
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+export async function searchGooglePlaces(requestBody: {
+  textQuery: string;
+  maxResultCount: number;
+  locationBias?: unknown;
+}): Promise<GooglePlacesApiPlace[]> {
+  let result: unknown;
+  if (import.meta.env.DEV) {
+    const response = await fetch('/api/places/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
+    if (!response.ok) throw new Error(`Google Places proxy merespons ${response.status}.`);
+    result = await response.json();
+  } else {
+    if (!supabase) throw new Error('Supabase belum dikonfigurasi untuk pencarian Google Places.');
+    const { data, error } = await supabase.functions.invoke('google-places', { body: requestBody });
+    if (error) throw error;
+    result = data;
+  }
+
+  if (!isRecord(result) || !Array.isArray(result.places)) {
+    throw new Error('Respons Google Places tidak valid.');
+  }
+  return result.places.filter(isRecord) as GooglePlacesApiPlace[];
+}
+
+export function googlePlacePhotoUrl(photoName: string): string {
+  if (import.meta.env.DEV) return `/api/places/photo?name=${encodeURIComponent(photoName)}`;
+  const params = new URLSearchParams({
+    maxHeightPx: '800',
+    maxWidthPx: '1200',
+    key: GOOGLE_MAPS_API_KEY
+  });
+  return `https://places.googleapis.com/v1/${photoName}/media?${params.toString()}`;
+}
 
 // Authentic high-quality fallback photo gallery for Semarang cafes
 const SEMARANG_CAFE_STOCK_PHOTOS: Record<string, string[]> = {
@@ -113,36 +174,20 @@ export async function fetchGooglePlacesCafes(params: {
   }
 
   try {
-    // 1. First attempt: call via local Vite proxy with internal solution attribution
-    const res = await fetch('/api/places/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        textQuery,
-        maxResultCount: 16,
-        locationBias: {
-          circle: {
-            center: { latitude: userLat, longitude: userLng },
-            radius: 8000.0
-          }
+    const places = await searchGooglePlaces({
+      textQuery,
+      maxResultCount: 16,
+      locationBias: {
+        circle: {
+          center: { latitude: userLat, longitude: userLng },
+          radius: 8000.0
         }
-      })
+      }
     });
 
-    if (!res.ok) {
-      throw new Error(`Proxy error: ${res.statusText}`);
-    }
-
-    const data = await res.json();
-    if (!data.places || !Array.isArray(data.places)) {
-      return [];
-    }
-
-    return data.places.map((p: any, idx: number) => {
+    return places.map((p, idx) => {
       const placeId = p.id || `gplace-${idx}-${Date.now()}`;
-      const name = p.displayName?.text || p.displayName || 'Kafe Semarang';
+      const name = typeof p.displayName === 'string' ? p.displayName : p.displayName?.text || 'Kafe Semarang';
       const address = p.formattedAddress || 'Semarang, Jawa Tengah';
       
       // Extract district/area
@@ -160,9 +205,7 @@ export async function fetchGooglePlacesCafes(params: {
       if (p.photos && Array.isArray(p.photos) && p.photos.length > 0) {
         p.photos.slice(0, 4).forEach((ph: any) => {
           if (ph.name) {
-            photoUrls.push(
-              `https://places.googleapis.com/v1/${ph.name}/media?maxHeightPx=800&maxWidthPx=1200&key=${GOOGLE_MAPS_API_KEY}&solution_id=gmp_git_agentskills_v1`
-            );
+            photoUrls.push(googlePlacePhotoUrl(ph.name));
           }
         });
       }

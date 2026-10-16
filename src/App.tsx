@@ -70,9 +70,9 @@ import { CoupleProfileSetup } from './components/auth/CoupleProfileSetup';
 import { deleteFavoriteSinger, loadFavoriteSingers, saveFavoriteSinger } from './lib/favoriteSingers';
 
 export default function App() {
-  const [authReady, setAuthReady] = useState(!isSupabaseConfigured);
-  const [authenticated, setAuthenticated] = useState(!isSupabaseConfigured);
-  const [profileReady, setProfileReady] = useState(!isSupabaseConfigured);
+  const [authReady, setAuthReady] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [profileReady, setProfileReady] = useState(false);
   const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [profileLoadError, setProfileLoadError] = useState<string | null>(null);
   const [profileLoadAttempt, setProfileLoadAttempt] = useState(0);
@@ -125,7 +125,10 @@ export default function App() {
   const [themeNotice, setThemeNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase) {
+      setAuthReady(true);
+      return;
+    }
     let alive = true;
     void supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
@@ -1040,7 +1043,19 @@ export default function App() {
   const authClient = supabase;
   const handleSignOut = authClient ? () => { void authClient.auth.signOut(); } : undefined;
 
-  if (isSupabaseConfigured && (!authReady || !authenticated)) {
+  if (!isSupabaseConfigured) {
+    return (
+      <div className="fixed inset-0 grid place-items-center bg-[#fff7f1] px-5 text-center text-[#57202c] dark:bg-[#21151a] dark:text-rose-50">
+        <div className="max-w-md">
+          <p className="text-lg font-bold">Konfigurasi login belum tersedia</p>
+          <p className="mt-2 text-sm text-[#80646a] dark:text-rose-100/70">
+            Akses aplikasi dikunci sampai VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY dipasang pada environment build hosting, lalu aplikasi di-build dan di-deploy ulang.
+          </p>
+        </div>
+      </div>
+    );
+  }
+  if (!authReady || !authenticated) {
     return authReady ? <SupabaseLogin /> : <div className="fixed inset-0 grid place-items-center bg-[#fff7f1] dark:bg-[#21151a]">Memuat sesi…</div>;
   }
   if (isSupabaseConfigured && authenticated && profileLoadError) {

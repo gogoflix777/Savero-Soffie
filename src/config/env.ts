@@ -17,7 +17,3 @@ export const getTmdbApiKey = (): string => {
 export const getCartoApiKey = (): string => {
   return (import.meta.env.VITE_CARTO_API_KEY ?? '').trim();
 };
-
-export const getGeminiApiKey = (): string => {
-  return (import.meta.env.GEMINI_API_KEY ?? '').trim();
-};
