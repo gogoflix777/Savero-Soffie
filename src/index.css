@@ -575,6 +575,27 @@
 .app-clay-theme [class~="from-amber-700"], .app-clay-theme [class~="to-amber-900"], .app-clay-theme [class~="from-slate-400"], .app-clay-theme [class~="to-slate-600"] { --tw-gradient-from: var(--theme-brand) !important; --tw-gradient-to: var(--theme-brand-strong) !important; }
 .dark .app-clay-theme [class~="dark:bg-amber-950/40"], .dark .app-clay-theme [class~="dark:bg-amber-900/30"] { background-color: var(--theme-card-soft) !important; }
 
+html:not(.dark) .app-clay-theme [class~="text-rose-100"],
+html:not(.dark) .app-clay-theme [class~="text-rose-200"],
+html:not(.dark) .app-clay-theme [class~="text-rose-300"],
+html:not(.dark) .app-clay-theme [class~="text-rose-400"],
+html:not(.dark) .app-clay-theme [class~="text-rose-500"],
+html:not(.dark) .app-clay-theme [class~="text-pink-100"],
+html:not(.dark) .app-clay-theme [class~="text-pink-200"],
+html:not(.dark) .app-clay-theme [class~="text-pink-300"],
+html:not(.dark) .app-clay-theme [class~="text-pink-400"],
+html:not(.dark) .app-clay-theme [class~="text-pink-500"],
+html:not(.dark) .app-clay-theme [class~="text-[#f0a8b7]"],
+html:not(.dark) .app-clay-theme [class~="text-[#df8ba0]"],
+html:not(.dark) .app-clay-theme [class~="text-[#d69aa9]"],
+html:not(.dark) .app-clay-theme [class~="text-[#f4b6c2]"],
+html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-brand-strong) !important; }
+
+.meeting-cancel-button { border: 1px solid #bd7182; background: #fffdfb; color: #713143 !important; }
+.meeting-cancel-button:hover { background: #f8e5e9 !important; }
+.dark .meeting-cancel-button { border-color: #9a5367; background: #39242b; color: #ffe4eb !important; }
+.dark .meeting-cancel-button:hover { background: #50303b !important; }
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -840,10 +861,7 @@
 
 /* Transformasi Fisika Pegas (Spring Squash & Stretch) pada SVG */
 .heart-jelly-svg {
-  transform: perspective(580px)
-    rotateX(var(--gyro-y, 0deg))
-    rotateY(var(--gyro-x, 0deg))
-    rotateZ(var(--jelly-rot, 0deg))
+  transform: rotateZ(var(--jelly-rot, 0deg))
     scale(var(--jelly-sx, 1), var(--jelly-sy, 1));
   transform-origin: 50% 62%;
   transition: filter 220ms ease;
@@ -1233,8 +1251,8 @@
 }
 
 @keyframes heart-liquid-sway {
-  0%, 100% { transform: translateX(calc(var(--liquid-sway, 0px) - 4px)) rotate(calc(var(--slosh-deg, 0deg) - 1.4deg)); }
-  50% { transform: translateX(calc(var(--liquid-sway, 0px) + 4px)) rotate(calc(var(--slosh-deg, 0deg) + 1.4deg)); }
+  0%, 100% { transform: translateX(-4px) rotate(calc(var(--slosh-deg, 0deg) - 1.4deg)); }
+  50% { transform: translateX(4px) rotate(calc(var(--slosh-deg, 0deg) + 1.4deg)); }
 }
 
 @keyframes jelly-pop {

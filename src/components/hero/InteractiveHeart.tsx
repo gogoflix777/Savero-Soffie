@@ -264,7 +264,6 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
   const targetPercentageRef = useRef(percentage ?? 0);
   const visualMeetingPercentageRef = useRef(meetingProgress);
   const targetMeetingPercentageRef = useRef(meetingProgress);
-  const deviceTiltRef = useRef(0);
   const lastAnimationFrameRef = useRef(0);
 
   const holdFrameRef = useRef<number | null>(null);
@@ -281,7 +280,6 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
   const meetingConfirmationHoldRef = useRef(false);
   const suppressClickRef = useRef(false);
   const popTimer = useRef<number | null>(null);
-  const tiltListenerRef = useRef<((event: DeviceOrientationEvent) => void) | null>(null);
   const previousMeetingCountRef = useRef(meetingCount);
 
   // State Fisika Pegas (Spring Squash & Stretch) + Guncangan Cairan
@@ -335,7 +333,6 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
   const isFullClimax = meetingCount >= 2 || fillLevel >= 2 || celebrating;
 
   useEffect(() => () => {
-    if (tiltListenerRef.current) window.removeEventListener('deviceorientation', tiltListenerRef.current);
     if (holdFrameRef.current !== null) window.cancelAnimationFrame(holdFrameRef.current);
     if (holdDelayRef.current !== null) window.clearTimeout(holdDelayRef.current);
     if (physicsFrameRef.current !== null) window.cancelAnimationFrame(physicsFrameRef.current);
@@ -409,16 +406,15 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
         s.wavePhaseBack -= dt * (2.8 + s.waveEnergy * 1.1) * levelMultiplier;
         const liquidY = 184 - (level / 100) * 172;
         const amplitude = (3.4 + s.waveEnergy * 2.2) * (level > 98 ? 0.35 : 1);
-        const sensorTilt = deviceTiltRef.current;
-        waveFrontRef.current?.setAttribute('d', buildReferenceWavePath(liquidY, s.wavePhaseFront, amplitude, 0.045, sensorTilt * 0.11));
-        waveBackRef.current?.setAttribute('d', buildReferenceWavePath(liquidY - 3.5, s.wavePhaseBack, amplitude * 1.15, 0.038, sensorTilt * 0.11));
+        waveFrontRef.current?.setAttribute('d', buildReferenceWavePath(liquidY, s.wavePhaseFront, amplitude, 0.045));
+        waveBackRef.current?.setAttribute('d', buildReferenceWavePath(liquidY - 3.5, s.wavePhaseBack, amplitude * 1.15, 0.038));
         if (level >= 100) {
           s.meetingWavePhaseFront += dt * (0.9 + s.waveEnergy * 0.22);
           s.meetingWavePhaseBack -= dt * (0.72 + s.waveEnergy * 0.18);
           const secondLiquidY = 184 - (meetingLevel / 100) * 172;
           const secondAmplitude = (1.7 + Math.min(1.2, s.waveEnergy * 0.4)) * (meetingLevel > 98 ? 0.25 : 1);
-          meetingWaveFrontRef.current?.setAttribute('d', buildReferenceWavePath(secondLiquidY, s.meetingWavePhaseFront, secondAmplitude, 0.032, sensorTilt * 0.035));
-          meetingWaveBackRef.current?.setAttribute('d', buildReferenceWavePath(secondLiquidY - 2, s.meetingWavePhaseBack, secondAmplitude * 1.15, 0.028, sensorTilt * 0.035));
+          meetingWaveFrontRef.current?.setAttribute('d', buildReferenceWavePath(secondLiquidY, s.meetingWavePhaseFront, secondAmplitude, 0.032));
+          meetingWaveBackRef.current?.setAttribute('d', buildReferenceWavePath(secondLiquidY - 2, s.meetingWavePhaseBack, secondAmplitude * 1.15, 0.028));
         }
 
         const speedBoost = (holdActiveRef.current ? 2.2 : 1) * levelMultiplier;
@@ -485,32 +481,6 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
       if (physicsFrameRef.current !== null) window.cancelAnimationFrame(physicsFrameRef.current);
     };
   }, [celebrating]);
-
-  const requestTilt = async () => {
-    if (tiltListenerRef.current || !('DeviceOrientationEvent' in window)) return;
-    try {
-      const orientation = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
-        requestPermission?: () => Promise<'granted' | 'denied'>;
-      };
-      if (orientation.requestPermission && (await orientation.requestPermission()) !== 'granted') return;
-      const listener = (event: DeviceOrientationEvent) => {
-        const gamma = Math.max(-22, Math.min(22, event.gamma ?? 0));
-        const beta = Math.max(-22, Math.min(22, (event.beta ?? 0) - 35));
-        const nextTilt = gamma / 22;
-        springRef.current.sloshVel = Math.max(-7, Math.min(7, springRef.current.sloshVel + (nextTilt - deviceTiltRef.current) * 3.5));
-        deviceTiltRef.current = nextTilt;
-        const element = buttonRef.current;
-        if (!element) return;
-        element.style.setProperty('--gyro-x', `${gamma * 0.38}deg`);
-        element.style.setProperty('--gyro-y', `${-beta * 0.3}deg`);
-        element.style.setProperty('--liquid-sway', `${gamma * 0.28}px`);
-      };
-      tiltListenerRef.current = listener;
-      window.addEventListener('deviceorientation', listener, { passive: true });
-    } catch {
-      // Tetap gunakan animasi mengambang CSS jika sensor orientasi perangkat tidak tersedia.
-    }
-  };
 
   const cancelHoldFrame = () => {
     if (holdFrameRef.current !== null) window.cancelAnimationFrame(holdFrameRef.current);
@@ -605,7 +575,6 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
   const beginHold = (clientX?: number) => {
     const meetingConfirmationHold = isProfileProgressHeart && currentPercentage >= 100;
     if (readOnly || (isProfileProgressHeart && meetingConfirmationHold && meetingLocked) || (meetingLocked && !isProfileProgressHeart) || holdActiveRef.current) return;
-    void requestTilt();
     heartAudio.playSquishDown();
 
     // Hitung kemiringan berdasarkan titik sentuh kiri/kanan pada hati
@@ -762,8 +731,6 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
       return;
     }
     if (readOnly) return;
-    void requestTilt();
-
     // Efek pegas kenyal saat diketuk cepat (Tap)
     springRef.current.velX += 0.28;
     springRef.current.velY -= 0.26;

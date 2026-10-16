@@ -217,8 +217,11 @@ export async function saveDailyCheckin(input: {
 
   let photoPath = previous?.photo_path ?? null;
   if (input.photo) {
-    photoPath = `${user.id}/${logDate}/${crypto.randomUUID()}.webp`;
-    const { error: uploadError } = await supabase.storage.from('daily-diary').upload(photoPath, input.photo, { contentType: 'image/webp', cacheControl: '3600', upsert: false });
+    const extensionByMime: Record<string, string> = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg' };
+    const extension = extensionByMime[input.photo.type];
+    if (!extension) throw new Error(`Format foto ${input.photo.type || 'tidak diketahui'} tidak didukung.`);
+    photoPath = `${user.id}/${logDate}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await supabase.storage.from('daily-diary').upload(photoPath, input.photo, { contentType: input.photo.type, cacheControl: '3600', upsert: false });
     if (uploadError) throw uploadError;
   }
 

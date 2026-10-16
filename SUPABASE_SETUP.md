@@ -47,7 +47,7 @@ Jika pendaftaran publik dimatikan, siapkan akun pengguna lewat **Authentication 
 
 ## 2. Jalankan SQL
 
-Untuk project Supabase baru, buka file `supabase/SQL_EDITOR_SETUP.sql`, salin seluruh isinya ke **Supabase → SQL Editor → New query**, lalu tekan **Run** satu kali. File tersebut menggabungkan migration 001–011 sesuai urutan dependensinya, termasuk tabel, kebijakan akses, bucket foto, seed pin, dan Realtime.
+Untuk project Supabase baru, buka file `supabase/SQL_EDITOR_SETUP.sql`, salin seluruh isinya ke **Supabase → SQL Editor → New query**, lalu tekan **Run** satu kali. File tersebut menggabungkan migration 001–012 sesuai urutan dependensinya, termasuk tabel, kebijakan akses, bucket foto, seed pin, dan Realtime.
 
 Jangan jalankan file gabungan ini jika sebagian migration sudah pernah dijalankan. Untuk project yang sudah berisi setup, cocokkan migration yang sudah diterapkan dan jalankan hanya migration yang masih belum diterapkan, satu per satu dari `supabase/migrations/`.
 
@@ -72,6 +72,8 @@ SQL kesepuluh menambahkan pembatalan konfirmasi bertemu hari ini untuk pemilik p
 Setelah migration kesepuluh diterapkan, tombol **Batalkan konfirmasi bertemu** muncul di bawah hati profil yang sudah mengonfirmasi hari ini. Pembatalan meminta konfirmasi, menghapus hanya catatan pertemuan hari ini untuk profil tersebut, dan mengulang liquid kedua; liquid pertama tetap penuh.
 
 SQL kesebelas mempertahankan teks dan foto diary agar riwayat harian dapat ditelusuri, serta menambahkan waktu perubahan terakhir. Tetap hanya ada satu check-in per profil per tanggal: menyimpan ulang pada hari yang sama menimpa log hari itu, sedangkan log dari tanggal lain tetap tersedia. Terapkan `202610170011_preserve_diary_history.sql` setelah migration sebelumnya. Foto dan teks yang sudah dihapus oleh cleanup sebelum migration ini tidak dapat dipulihkan.
+
+SQL kedua belas mengizinkan MIME WebP, PNG, dan JPEG pada bucket diary. Browser tertentu dapat mengembalikan PNG saat aplikasi meminta kompresi WebP; aplikasi kini mengunggah sesuai MIME hasil sebenarnya. Untuk project yang sudah disiapkan, jalankan `202610170012_support_diary_image_mime_types.sql` di SQL Editor.
 
 Setelah SQL Editor setup selesai, buka PowerShell di folder project. CLI perlu login ke akun Supabase terlebih dahulu. Jalankan:
 

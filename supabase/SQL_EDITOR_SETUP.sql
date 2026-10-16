@@ -1250,6 +1250,15 @@ end;
 $$;
 
 -- ============================================================================
+-- 202610170012_support_diary_image_mime_types.sql
+-- ============================================================================
+update storage.buckets
+set public = false,
+    file_size_limit = 786432,
+    allowed_mime_types = array['image/webp', 'image/png', 'image/jpeg']
+where id = 'daily-diary';
+
+-- ============================================================================
 -- OPTIONAL PROJECT-SPECIFIC SQL (edit values and run separately when needed)
 -- ============================================================================
 -- Admin enrollment: create the admin Auth user first, replace the email, then

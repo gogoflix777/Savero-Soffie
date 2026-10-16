@@ -68,7 +68,15 @@ async function compressSquareImage(file: File): Promise<Blob> {
   canvas.width = size; canvas.height = size;
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Foto tidak dapat diproses di perangkat ini.');
-  const encode = (quality: number) => new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Kompresi foto gagal.')), 'image/webp', quality));
+  const encode = (quality: number) => new Promise<Blob>((resolve, reject) => canvas.toBlob((blob) => {
+    if (!blob) {
+      reject(new Error('Kompresi foto gagal.'));
+    } else if (['image/webp', 'image/png', 'image/jpeg'].includes(blob.type)) {
+      resolve(blob);
+    } else {
+      reject(new Error(`Format foto hasil kompresi tidak didukung (${blob.type || 'tidak diketahui'}).`));
+    }
+  }, 'image/webp', quality));
   try {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       canvas.width = size; canvas.height = size;
@@ -380,7 +388,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ settings, activeProfil
           <button
             type="button"
             onClick={() => void handleCancelMeeting()}
-            className="mb-2 min-h-9 rounded-full border border-rose-300/70 bg-white/75 px-3 text-[11px] font-bold text-[#8b4052] shadow-sm transition hover:bg-rose-50 active:scale-95 dark:border-rose-200/20 dark:bg-white/5 dark:text-rose-100 dark:hover:bg-white/10"
+            className="meeting-cancel-button mb-2 min-h-9 rounded-full px-3 text-[11px] font-bold shadow-sm transition hover:bg-rose-50 active:scale-95 dark:hover:bg-white/10"
           >
             Batalkan konfirmasi bertemu
           </button>
