@@ -1,5 +1,5 @@
 import React, { CSSProperties, useEffect, useState } from 'react';
-import { Camera, Compass, Flower2, Heart, Sparkles, Star, X } from 'lucide-react';
+import { Camera, ChevronLeft, ChevronRight, Compass, Flower2, Heart, Sparkles, Star, X } from 'lucide-react';
 import { InteractiveHeart } from './InteractiveHeart';
 import { AppSettings } from '../../types';
 import { CoupleMoodLog, CoupleProfile, DailyCheckin, DailyHeartProgress, MeetingConfirmation, MoodDiaryEntry, MoodExpression, StreakRestore } from '../../types';
@@ -22,6 +22,7 @@ interface HeroSectionProps {
   onSaveDailyCheckin: (input: { expression: MoodExpression; rating: number; diaryText: string; photo?: Blob | null }) => Promise<void>;
   onRestoreStreak: () => Promise<void>;
   onConfirmMeeting: () => Promise<void>;
+  onCancelMeeting: () => Promise<void>;
   onHeartProgressChange: (percentage: number) => void;
   onMeetingFillProgressChange: (percentage: number) => void;
   onExploreClick: () => void;
@@ -80,13 +81,14 @@ async function compressSquareImage(file: File): Promise<Blob> {
   } finally { image.close(); }
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ settings, activeProfile, coupleMoodLog, moodDiary, dailyCheckins, streakRestores, meetingConfirmations, heartProgress, dailyHeartProgress, meetingFillProgress, dailyActionError, onMoodChange, onSaveMoodDiary, onSaveDailyCheckin, onRestoreStreak, onConfirmMeeting, onHeartProgressChange, onMeetingFillProgressChange, onExploreClick, onAddMemoryClick }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ settings, activeProfile, coupleMoodLog, moodDiary, dailyCheckins, streakRestores, meetingConfirmations, heartProgress, dailyHeartProgress, meetingFillProgress, dailyActionError, onMoodChange, onSaveMoodDiary, onSaveDailyCheckin, onRestoreStreak, onConfirmMeeting, onCancelMeeting, onHeartProgressChange, onMeetingFillProgressChange, onExploreClick, onAddMemoryClick }) => {
   const [timeTogether, setTimeTogether] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [heartParticles, setHeartParticles] = useState<HeartParticle[]>([]);
   const [isMoodPickerOpen, setIsMoodPickerOpen] = useState(false);
   const [wigglingProfile, setWigglingProfile] = useState<'Savero' | 'Soffie' | null>(null);
   const [moodChangedProfile, setMoodChangedProfile] = useState<'Savero' | 'Soffie' | null>(null);
   const [diaryBubbleProfile, setDiaryBubbleProfile] = useState<'Savero' | 'Soffie' | null>(null);
+  const [diaryHistoryIndex, setDiaryHistoryIndex] = useState(0);
   const [selectedExpression, setSelectedExpression] = useState<MoodExpression>(coupleMoodLog[activeProfile].expression);
   const [diaryDraft, setDiaryDraft] = useState('');
   const [dailyRating, setDailyRating] = useState(5);
@@ -98,26 +100,27 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ settings, activeProfil
 
   const handleChibiTap = (profile: 'Savero' | 'Soffie') => {
     soundManager.playTap();
-    if (profile === activeProfile) {
-      openDiaryEditor();
-      return;
-    }
+    setDiaryHistoryIndex(0);
     setDiaryBubbleProfile((current) => current === profile ? null : profile);
     setWigglingProfile(profile);
     window.setTimeout(() => setWigglingProfile((current) => current === profile ? null : current), 650);
   };
 
   const openDiaryEditor = () => {
-    setSelectedExpression(coupleMoodLog[activeProfile].expression);
-    const today = localDateKey();
-    const existing = dailyCheckins.find((entry) => entry.profile === activeProfile && entry.log_date === today);
-    setDiaryDraft(existing?.diary_text ?? moodDiary.find((entry) => entry.profile === activeProfile && entry.date === today)?.content ?? '');
+    const existing = dailyCheckins.find((entry) => entry.profile === activeProfile && entry.log_date === localDateKey());
+    setSelectedExpression(existing?.expression ?? coupleMoodLog[activeProfile].expression);
+    setDiaryDraft(existing?.diary_text ?? moodDiary.find((entry) => entry.profile === activeProfile && entry.date === localDateKey())?.content ?? '');
     setDailyRating(existing?.rating ?? 5);
     setPhotoFile(null);
-    setPhotoPreview(null);
+    setPhotoPreview(existing?.photo_url ?? null);
     setIsMoodPickerOpen(true);
     setDiaryBubbleProfile(null);
   };
+
+  useEffect(() => {
+    if (!photoPreview?.startsWith('blob:')) return;
+    return () => URL.revokeObjectURL(photoPreview);
+  }, [photoPreview]);
 
   const saveMoodAndDiary = async () => {
     setSavingDaily(true); setDailyNotice('');
@@ -181,6 +184,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ settings, activeProfil
     } catch (error) {
       setDailyNotice(error instanceof Error ? error.message : 'Konfirmasi belum tersimpan.');
       return false;
+    }
+  };
+  const handleCancelMeeting = async () => {
+    if (!window.confirm('Batalkan konfirmasi bertemu hari ini? Progres liquid kedua akan kembali ke 0%.')) return;
+    setDailyNotice('');
+    setMeetingNotice('');
+    try {
+      await onCancelMeeting();
+      setMeetingNotice('Konfirmasi bertemu dibatalkan. Progres liquid kedua direset.');
+      window.setTimeout(() => setMeetingNotice(''), 3200);
+    } catch (error) {
+      setDailyNotice(error instanceof Error ? error.message : 'Konfirmasi bertemu belum bisa dibatalkan.');
     }
   };
 
@@ -257,8 +272,42 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ settings, activeProfil
           <span className="hero-cloud hero-cloud-left" aria-hidden="true" />
           <span className="hero-cloud hero-cloud-right" aria-hidden="true" />
           {(['Soffie', 'Savero'] as const).map((profile) => {
-            const latestDaily = dailyCheckins.find((entry) => entry.profile === profile && entry.expires_at && new Date(entry.expires_at).getTime() > Date.now());
-            const latestDiary = latestDaily ? { date: latestDaily.log_date, content: latestDaily.diary_text, expression: latestDaily.expression, photo_url: latestDaily.photo_url, rating: latestDaily.rating } : moodDiary.find((entry) => entry.profile === profile);
+            const profileCheckins = dailyCheckins
+              .filter((entry) => entry.profile === profile)
+              .sort((left, right) => right.log_date.localeCompare(left.log_date));
+            const checkinDates = new Set(profileCheckins.map((entry) => entry.log_date));
+            const localDiaryHistory = moodDiary
+              .filter((entry) => entry.profile === profile && !checkinDates.has(entry.date))
+              .map((entry) => ({
+                date: entry.date,
+                content: entry.content,
+                expression: entry.expression,
+                photo_url: null,
+                rating: null,
+                created_at: entry.updatedAt || entry.createdAt
+              }));
+            const diaryHistory = [
+              ...profileCheckins.map((entry) => ({
+                date: entry.log_date,
+                content: entry.diary_text,
+                expression: entry.expression,
+                photo_url: entry.photo_url,
+                rating: entry.rating,
+                created_at: entry.photo_uploaded_at || entry.updated_at || entry.created_at
+              })),
+              ...localDiaryHistory
+            ].sort((left, right) => right.date.localeCompare(left.date));
+            const selectedHistoryIndex = Math.min(diaryHistoryIndex, Math.max(0, diaryHistory.length - 1));
+            const latestDiary = diaryHistory[selectedHistoryIndex];
+            const historyTime = latestDiary?.created_at
+              ? new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' }).format(new Date(latestDiary.created_at))
+              : null;
+            const historyDateLabel = latestDiary?.date === localDateKey()
+              ? 'Catatan hari ini'
+              : latestDiary?.date
+                ? new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${latestDiary.date}T12:00:00+07:00`))
+                : 'Belum ada catatan';
+            const historyTimeLabel = latestDiary?.photo_url ? 'Foto diunggah' : 'Disimpan';
             const isActive = activeProfile === profile;
             const sideClass = profile === 'Soffie' ? 'hero-character-wrap-left' : 'hero-character-wrap-right';
             const orbClipId = `profile-orb-clip-${profile.toLowerCase()}`;
@@ -279,20 +328,25 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ settings, activeProfil
                   </svg>
                   <span className="profile-heart-indicator-copy"><strong>{profile}</strong><span>{Math.round(heartProgress[profile])}%</span></span>
                 </span>
-                {diaryBubbleProfile === profile && <div className="hero-diary-bubble" role="status">
+                {diaryBubbleProfile === profile && <div className="hero-diary-bubble" role="dialog" aria-label={`Catatan perasaan ${profile}`}>
                   <div className="hero-diary-bubble-header">
                     <img src={moodImage(profile, latestDiary?.expression ?? coupleMoodLog[profile].expression)} alt="" />
                     <div className="hero-diary-bubble-heading">
                       <strong>{profile}</strong>
-                      <span>{latestDiary?.date === localDateKey() ? 'Catatan hari ini' : 'Catatan terbaru'}</span>
+                      <span>{historyDateLabel}{historyTime ? ` · ${historyTimeLabel} ${historyTime} WIB` : ''}</span>
                     </div>
                     <button type="button" onClick={() => setDiaryBubbleProfile(null)} aria-label="Tutup cerita" className="hero-diary-bubble-close"><X className="h-3.5 w-3.5" /></button>
                   </div>
-                  <div className="hero-diary-mood-pill"><Heart aria-hidden="true" />{moodOptions.find((option) => option.id === (latestDiary?.expression ?? coupleMoodLog[profile].expression))?.label}</div>
+                  <div className="hero-diary-bubble-nav">
+                    <button type="button" aria-label="Catatan lebih baru" disabled={selectedHistoryIndex <= 0} onClick={() => setDiaryHistoryIndex((index) => Math.max(0, index - 1))}><ChevronLeft /></button>
+                    <span>{diaryHistory.length ? `${selectedHistoryIndex + 1} / ${diaryHistory.length}` : '0 catatan'}</span>
+                    <button type="button" aria-label="Catatan lebih lama" disabled={selectedHistoryIndex >= diaryHistory.length - 1} onClick={() => setDiaryHistoryIndex((index) => Math.min(diaryHistory.length - 1, index + 1))}><ChevronRight /></button>
+                  </div>
+                  <div className="hero-diary-mood-pill"><Heart aria-hidden="true" />{moodOptions.find((option) => option.id === (latestDiary?.expression ?? coupleMoodLog[profile].expression))?.label ?? 'Belum dicatat'}</div>
                   <p className="hero-diary-bubble-content">{latestDiary?.content || 'Belum ada cerita hari ini.'}</p>
-                  {latestDiary && 'photo_url' in latestDiary && latestDiary.photo_url && <img src={latestDiary.photo_url} alt={`Foto diary ${profile}`} className="hero-diary-bubble-photo" />}
-                  {latestDiary && 'rating' in latestDiary && <p className="hero-diary-bubble-rating"><span>Rating hari ini</span><strong>{latestDiary.rating}<span>/5</span> ♥</strong></p>}
-                  {isActive && <button type="button" onClick={openDiaryEditor} className="hero-diary-bubble-action">{latestDiary?.date === localDateKey() ? 'Ubah catatan' : 'Tulis cerita hari ini'}<span aria-hidden="true">→</span></button>}
+                  {latestDiary?.photo_url && <img src={latestDiary.photo_url} alt={`Foto diary ${profile}`} className="hero-diary-bubble-photo" />}
+                  {latestDiary?.rating !== null && latestDiary?.rating !== undefined && <p className="hero-diary-bubble-rating"><span>Rating hari ini</span><strong>{latestDiary.rating}<span>/5</span> ♥</strong></p>}
+                  {isActive && <button type="button" onClick={openDiaryEditor} className="hero-diary-bubble-action">{latestDiary?.date === localDateKey() ? 'Edit catatan hari ini' : 'Tulis / ubah catatan hari ini'}<span aria-hidden="true">→</span></button>}
                 </div>}
               <button type="button" onClick={() => handleChibiTap(profile)} aria-label={`Perasaan ${profile}: ${moodOptions.find((option) => option.id === coupleMoodLog[profile].expression)?.label}`} className={`hero-character-sticker ${heartProgress[profile] >= 70 ? 'hero-character-sticker-fever' : ''} ${heartProgress[profile] >= 100 ? 'hero-character-sticker-party' : ''} ${wigglingProfile === profile ? 'hero-character-sticker-wiggle' : ''} ${moodChangedProfile === profile ? 'hero-character-sticker-mood-change' : ''}`}>
                 <img src={moodImage(profile, coupleMoodLog[profile].expression)} alt="" />
@@ -319,9 +373,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ settings, activeProfil
           {meetingNotice ? <span role="status">{meetingNotice}</span> : meetingToday.has(activeProfile)
             ? 'Konfirmasi bertemu profil ini sudah tersimpan hari ini.'
             : heartProgress[activeProfile] >= 100
-              ? `Tahan hati penuh untuk isi kedua (${Math.round(meetingFillProgress[activeProfile])}%). Saat penuh, konfirmasi bertemu tersimpan.`
+              ? `Liquid pertama tetap penuh. Tahan untuk mengisi liquid kedua (${Math.round(meetingFillProgress[activeProfile])}%).`
               : 'Isi hati hingga 100% untuk progres harian. Setelah penuh, tahan lagi untuk konfirmasi bertemu.'}
         </p>
+        {meetingToday.has(activeProfile) && (
+          <button
+            type="button"
+            onClick={() => void handleCancelMeeting()}
+            className="mb-2 min-h-9 rounded-full border border-rose-300/70 bg-white/75 px-3 text-[11px] font-bold text-[#8b4052] shadow-sm transition hover:bg-rose-50 active:scale-95 dark:border-rose-200/20 dark:bg-white/5 dark:text-rose-100 dark:hover:bg-white/10"
+          >
+            Batalkan konfirmasi bertemu
+          </button>
+        )}
         <p className="mb-2 -mt-1 flex items-center justify-center gap-1.5 font-sans-clean text-[11px] font-semibold text-[#80646a] dark:text-rose-100/75" aria-live="polite">
           <span className="font-extrabold text-[#a94761] dark:text-rose-200">{streak} hari streak</span>
         </p>
@@ -358,33 +421,33 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ settings, activeProfil
       })}
 
       {isMoodPickerOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#29151d]/45 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsMoodPickerOpen(false); }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="mood-modal-title" className="w-full max-w-[360px] rounded-[1.75rem] border border-[#efc8ce] bg-[#fffaf5] p-4 shadow-[0_18px_60px_rgba(54,20,32,.25)] dark:border-white/10 dark:bg-[#2b1c22]">
+        <div className="clay-diary-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setIsMoodPickerOpen(false); }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="mood-modal-title" className="clay-diary-modal">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2.5">
                 <img src={moodImage(activeProfile, selectedExpression)} alt="" className="h-11 w-11 rounded-full object-cover object-top" />
-                <div><h2 id="mood-modal-title" className="font-sans-clean text-sm font-extrabold text-[#57202c] dark:text-rose-50">Perasaan {activeProfile}</h2><p className="text-[10px] text-[#956d74] dark:text-rose-100/65">Bagaimana perasaanmu hari ini?</p></div>
+                <div><h2 id="mood-modal-title" className="font-sans-clean text-sm font-extrabold">Perasaan {activeProfile}</h2><p className="text-[10px]">Bagaimana perasaanmu hari ini?</p></div>
               </div>
-              <button type="button" aria-label="Tutup" onClick={() => { soundManager.playTap(); setIsMoodPickerOpen(false); }} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#f8e5e8] text-[#8b4052] transition hover:bg-[#f2d2d9] active:scale-95 dark:bg-white/10 dark:text-rose-100"><X className="h-4 w-4" /></button>
+              <button type="button" aria-label="Tutup" onClick={() => { soundManager.playTap(); setIsMoodPickerOpen(false); }} className="clay-diary-close"><X className="h-4 w-4" /></button>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {moodOptions.map((option) => {
                 const selected = selectedExpression === option.id;
-                return <button key={option.id} type="button" aria-pressed={selected} onClick={() => { setSelectedExpression(option.id); soundManager.playTap(); }} className={`flex min-h-12 items-center gap-2 rounded-2xl px-2.5 py-2 text-left transition active:scale-[.97] ${selected ? 'bg-[#f5dce0] ring-1 ring-[#d995a4] dark:bg-white/10 dark:ring-rose-200/40' : 'bg-white hover:bg-[#fbedee] dark:bg-white/5 dark:hover:bg-white/10'}`}>
-                  <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[#fae9e8] dark:bg-white/10"><img src={moodImage(activeProfile, option.id)} alt="" className="h-full w-full object-cover object-top" /></span>
-                  <span className="text-xs font-bold text-[#70414b] dark:text-rose-100">{option.label}</span>
+                return <button key={option.id} type="button" aria-pressed={selected} onClick={() => { setSelectedExpression(option.id); soundManager.playTap(); }} className={`clay-diary-mood-option ${selected ? 'is-selected' : ''}`}>
+                  <span><img src={moodImage(activeProfile, option.id)} alt="" /></span>
+                  <span>{option.label}</span>
                 </button>;
               })}
             </div>
-            <label htmlFor="mood-diary-entry" className="mb-1.5 mt-4 block text-xs font-bold text-[#70414b] dark:text-rose-100">Ceritakan harimu <span className="font-normal opacity-60">(opsional)</span></label>
-            <div className="mb-1.5 mt-3 flex items-center justify-between"><label className="text-xs font-bold text-[#70414b] dark:text-rose-100">Beri rating harimu</label><span className="text-[10px] text-[#956d74]">{dailyRating}/5</span></div>
-            <div className="mb-3 flex gap-1" role="group" aria-label="Rating harian 1 sampai 5"><span className="sr-only">Pilih rating</span>{[1,2,3,4,5].map((rating) => <button key={rating} type="button" aria-label={`${rating} dari 5`} aria-pressed={dailyRating === rating} onClick={() => setDailyRating(rating)} className="rounded-lg p-1"><Star className={`h-6 w-6 ${rating <= dailyRating ? 'fill-[#e7a04f] text-[#d38a36]' : 'text-[#d9c7c6]'}`} /></button>)}</div>
-            <textarea id="mood-diary-entry" value={diaryDraft} onChange={(event) => setDiaryDraft(event.target.value)} maxLength={500} rows={3} placeholder="Apa hal yang paling kamu rasakan hari ini?" className="w-full resize-none rounded-2xl border border-[#edcbd0] bg-white/85 px-3 py-2.5 text-xs leading-relaxed text-[#57202c] outline-none transition placeholder:text-[#b9949a] focus:border-[#d88799] focus:ring-2 focus:ring-[#eebdc7]/50 dark:border-white/10 dark:bg-black/15 dark:text-rose-50 dark:placeholder:text-rose-100/35" />
-            <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-rose-300 px-3 py-2 text-[11px] font-bold text-[#8d3d52] dark:border-white/20 dark:text-rose-100"><Camera className="h-4 w-4" />{photoFile ? 'Ganti foto' : 'Tambah foto hari ini'}<input type="file" accept="image/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; setPhotoFile(file); setPhotoPreview(URL.createObjectURL(file)); }} /></label>
-            {photoPreview && <img src={photoPreview} alt="Pratinjau foto diary" className="mt-2 aspect-square w-24 rounded-xl object-cover" />}
-            <div className="mt-1 flex items-center justify-between gap-3 text-[9px] text-[#a27b81] dark:text-rose-100/55"><span>Catatan tersimpan sebagai diary {activeProfile}</span><span>{diaryDraft.length}/500</span></div>
+            <label htmlFor="mood-diary-entry" className="clay-diary-label">Ceritakan harimu <span>(opsional)</span></label>
+            <textarea id="mood-diary-entry" value={diaryDraft} onChange={(event) => setDiaryDraft(event.target.value)} maxLength={500} rows={3} placeholder="Apa hal yang paling kamu rasakan hari ini?" className="clay-diary-textarea" />
+            <div className="clay-diary-rating-heading"><label>Beri rating harimu</label><span>{dailyRating}/5</span></div>
+            <div className="clay-diary-rating" role="group" aria-label="Rating harian 1 sampai 5"><span className="sr-only">Pilih rating</span>{[1,2,3,4,5].map((rating) => <button key={rating} type="button" aria-label={`${rating} dari 5`} aria-pressed={dailyRating === rating} onClick={() => setDailyRating(rating)}><Star className={rating <= dailyRating ? 'is-filled' : ''} /></button>)}</div>
+            <label className="clay-diary-upload"><Camera className="h-4 w-4" />{photoPreview ? 'Ganti foto' : 'Tambah foto hari ini'}<input type="file" accept="image/*" className="sr-only" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; setPhotoFile(file); setPhotoPreview(URL.createObjectURL(file)); event.currentTarget.value = ''; }} /></label>
+            {photoPreview && <div className="clay-diary-preview"><img src={photoPreview} alt="Pratinjau foto diary" /><span>{photoFile ? 'Foto baru, menggantikan foto hari ini saat disimpan' : 'Foto tersimpan hari ini'}</span></div>}
+            <div className="clay-diary-footnote"><span>Log harian {activeProfile}</span><span>{diaryDraft.length}/500</span></div>
             {dailyNotice && <p role="alert" className="mt-2 text-[10px] text-red-700 dark:text-red-300">{dailyNotice}</p>}
-            <button type="button" disabled={savingDaily} onClick={() => void saveMoodAndDiary()} className="mt-3 min-h-11 w-full rounded-full bg-[#d46480] px-4 py-2.5 text-xs font-extrabold text-white shadow-[0_3px_0_#a94761] transition hover:bg-[#ca5875] active:translate-y-0.5 active:shadow-none disabled:opacity-60">{savingDaily ? 'Menyimpan…' : 'Simpan log harian'}</button>
+            <button type="button" disabled={savingDaily} onClick={() => void saveMoodAndDiary()} className="clay-diary-submit">{savingDaily ? 'Menyimpan…' : 'Simpan log harian'}</button>
           </div>
         </div>
       )}

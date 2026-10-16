@@ -1112,6 +1112,144 @@ end;
 $$;
 
 -- ============================================================================
+-- 202610170010_cancel_meeting_confirmation.sql
+-- ============================================================================
+create or replace function public.cancel_my_meeting_confirmation()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  bound_profile text;
+  today_date date := public.jakarta_today();
+begin
+  if auth.uid() is null then raise exception 'Silakan masuk terlebih dahulu.'; end if;
+  select profile_name into bound_profile
+  from public.couple_profiles
+  where user_id = auth.uid();
+  if bound_profile is null then raise exception 'Profil akun belum terhubung.'; end if;
+
+  delete from public.meeting_confirmations
+  where user_id = auth.uid()
+    and profile = bound_profile
+    and meeting_date = today_date;
+
+  update public.meeting_fill_progress
+  set percentage = 0, updated_at = now()
+  where profile = bound_profile
+    and progress_date = today_date;
+end;
+$$;
+revoke all on function public.cancel_my_meeting_confirmation() from public, anon;
+grant execute on function public.cancel_my_meeting_confirmation() to authenticated;
+
+create or replace function public.admin_cancel_meeting_confirmation(requested_profile text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  profile_owner uuid;
+  today_date date := public.jakarta_today();
+begin
+  if not public.is_app_admin() then raise exception 'Akses admin diperlukan.'; end if;
+  if requested_profile not in ('Savero', 'Soffie') then raise exception 'Profil tidak valid.'; end if;
+  select user_id into profile_owner
+  from public.couple_profiles
+  where profile_name = requested_profile;
+  if profile_owner is null then raise exception 'Akun pemilik profil belum terhubung.'; end if;
+
+  delete from public.meeting_confirmations
+  where user_id = profile_owner
+    and profile = requested_profile
+    and meeting_date = today_date;
+
+  update public.meeting_fill_progress
+  set percentage = 0, updated_at = now()
+  where profile = requested_profile
+    and progress_date = today_date;
+end;
+$$;
+revoke all on function public.admin_cancel_meeting_confirmation(text) from public, anon;
+grant execute on function public.admin_cancel_meeting_confirmation(text) to authenticated;
+
+-- ============================================================================
+-- 202610170011_preserve_diary_history.sql
+-- ============================================================================
+alter table public.daily_checkins
+  add column if not exists updated_at timestamptz;
+
+alter table public.daily_checkins
+  add column if not exists photo_uploaded_at timestamptz;
+
+do $$
+begin
+  execute 'alter table public.daily_checkins disable trigger daily_checkin_identity_guard';
+
+  update public.daily_checkins
+  set updated_at = created_at
+  where updated_at is null;
+
+  execute 'alter table public.daily_checkins alter column updated_at set default now(), alter column updated_at set not null';
+
+  update public.daily_checkins
+  set photo_uploaded_at = created_at
+  where photo_path is not null and photo_uploaded_at is null;
+
+  update public.daily_checkins
+  set expires_at = now() + interval '100 years';
+
+  execute 'alter table public.daily_checkins enable trigger daily_checkin_identity_guard';
+exception when others then
+  execute 'alter table public.daily_checkins enable trigger daily_checkin_identity_guard';
+  raise;
+end;
+$$;
+
+create or replace function public.enforce_daily_checkin_identity()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  bound_profile text;
+  profile_owner uuid;
+begin
+  if auth.uid() is null then raise exception 'Silakan masuk terlebih dahulu.'; end if;
+
+  if public.is_app_admin() then
+    if new.profile not in ('Savero', 'Soffie') then raise exception 'Profil tidak valid.'; end if;
+    select user_id into profile_owner from public.couple_profiles where profile_name = new.profile;
+    if profile_owner is null or new.user_id <> profile_owner then
+      raise exception 'Log admin harus disimpan untuk pemilik profil yang dipilih.';
+    end if;
+  else
+    if new.user_id <> auth.uid() then raise exception 'Log hanya dapat dibuat oleh akun sendiri.'; end if;
+    select profile_name into bound_profile from public.couple_profiles where user_id = auth.uid();
+    if bound_profile is null then raise exception 'Pilih profil akun terlebih dahulu.'; end if;
+    if new.profile <> bound_profile then raise exception 'Profil log tidak cocok dengan akun.'; end if;
+  end if;
+
+  if new.log_date <> public.jakarta_today() then raise exception 'Log hanya dapat dicatat untuk tanggal hari ini.'; end if;
+  if tg_op = 'UPDATE' then
+    if old.user_id <> new.user_id or old.profile <> new.profile or old.log_date <> new.log_date then
+      raise exception 'Identitas dan tanggal log tidak dapat diubah.';
+    end if;
+    new.created_at := old.created_at;
+    if new.photo_path is distinct from old.photo_path then
+      new.photo_uploaded_at := case when new.photo_path is null then null else now() end;
+    else
+      new.photo_uploaded_at := old.photo_uploaded_at;
+    end if;
+  else
+    new.photo_uploaded_at := case when new.photo_path is null then null else now() end;
+  end if;
+  new.updated_at := now();
+  new.expires_at := now() + interval '100 years';
+  return new;
+end;
+$$;
+
+-- ============================================================================
 -- OPTIONAL PROJECT-SPECIFIC SQL (edit values and run separately when needed)
 -- ============================================================================
 -- Admin enrollment: create the admin Auth user first, replace the email, then
@@ -1122,17 +1260,7 @@ $$;
 -- where lower(email) = lower('admin@example.com')
 -- on conflict (user_id) do nothing;
 --
--- Diary cleanup schedule: first deploy cleanup-expired-diary from the CLI,
--- enable pg_cron, pg_net, and Vault in Database > Extensions, and set the
--- CLEANUP_SECRET Edge Function secret. Replace both values below and run
--- these statements separately in SQL Editor. Never commit or share the token.
---
--- select vault.create_secret('https://PROJECT_REF.supabase.co', 'diary_cleanup_project_url');
--- select vault.create_secret('REPLACE_WITH_THE_SAME_RANDOM_CLEANUP_SECRET', 'diary_cleanup_secret');
--- select cron.schedule(
---   'cleanup-expired-diary-every-15-minutes', '*/15 * * * *',
---   $job$ select net.http_post(
---     url := (select decrypted_secret from vault.decrypted_secrets where name = 'diary_cleanup_project_url') || '/functions/v1/cleanup-expired-diary',
---     headers := jsonb_build_object('Content-Type', 'application/json', 'x-cleanup-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'diary_cleanup_secret')), body := '{}'::jsonb
---   ); $job$
--- );
+-- If the old diary cleanup schedule exists, disable it after deploying the
+-- updated no-op cleanup-expired-diary function:
+-- select cron.unschedule(jobid) from cron.job
+-- where jobname = 'cleanup-expired-diary-every-15-minutes';

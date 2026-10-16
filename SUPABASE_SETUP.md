@@ -47,7 +47,7 @@ Jika pendaftaran publik dimatikan, siapkan akun pengguna lewat **Authentication 
 
 ## 2. Jalankan SQL
 
-Untuk project Supabase baru, buka file `supabase/SQL_EDITOR_SETUP.sql`, salin seluruh isinya ke **Supabase → SQL Editor → New query**, lalu tekan **Run** satu kali. File tersebut menggabungkan migration 001–009 sesuai urutan dependensinya, termasuk tabel, kebijakan akses, bucket foto, seed pin, dan Realtime.
+Untuk project Supabase baru, buka file `supabase/SQL_EDITOR_SETUP.sql`, salin seluruh isinya ke **Supabase → SQL Editor → New query**, lalu tekan **Run** satu kali. File tersebut menggabungkan migration 001–011 sesuai urutan dependensinya, termasuk tabel, kebijakan akses, bucket foto, seed pin, dan Realtime.
 
 Jangan jalankan file gabungan ini jika sebagian migration sudah pernah dijalankan. Untuk project yang sudah berisi setup, cocokkan migration yang sudah diterapkan dan jalankan hanya migration yang masih belum diterapkan, satu per satu dari `supabase/migrations/`.
 
@@ -66,6 +66,12 @@ SQL ketujuh membuat katalog film, serial TV, dan aktor bersama yang diambil dari
 SQL kedelapan membuat tabel pin peta bersama, mengimpor delapan titik kenangan yang sebelumnya menjadi data awal aplikasi, membatasi akses ke anggota pasangan/admin, dan mengaktifkan Realtime. Setelah migration ini dijalankan, pin dibaca dan disimpan dari Supabase; tambah/edit/hapus pin membutuhkan migration tersebut.
 
 SQL kesembilan membuat daftar penyanyi favorit terpisah untuk profil Savero dan Soffie, dengan akses baca bersama, perubahan yang dibatasi ke pemilik profil/admin, Realtime, dan antrean global untuk mematuhi batas satu permintaan per detik MusicBrainz. Terapkan migration ini setelah migration pasangan/admin.
+
+SQL kesepuluh menambahkan pembatalan konfirmasi bertemu hari ini untuk pemilik profil dan admin. Pembatalan menghapus konfirmasi hari ini dan mengatur progres liquid kedua kembali ke 0%, tanpa mengubah progres liquid pertama atau riwayat hari sebelumnya. Jalankan `202610170010_cancel_meeting_confirmation.sql` pada project yang sudah menerapkan migration sebelumnya.
+
+Setelah migration kesepuluh diterapkan, tombol **Batalkan konfirmasi bertemu** muncul di bawah hati profil yang sudah mengonfirmasi hari ini. Pembatalan meminta konfirmasi, menghapus hanya catatan pertemuan hari ini untuk profil tersebut, dan mengulang liquid kedua; liquid pertama tetap penuh.
+
+SQL kesebelas mempertahankan teks dan foto diary agar riwayat harian dapat ditelusuri, serta menambahkan waktu perubahan terakhir. Tetap hanya ada satu check-in per profil per tanggal: menyimpan ulang pada hari yang sama menimpa log hari itu, sedangkan log dari tanggal lain tetap tersedia. Terapkan `202610170011_preserve_diary_history.sql` setelah migration sebelumnya. Foto dan teks yang sudah dihapus oleh cleanup sebelum migration ini tidak dapat dipulihkan.
 
 Setelah SQL Editor setup selesai, buka PowerShell di folder project. CLI perlu login ke akun Supabase terlebih dahulu. Jalankan:
 
@@ -137,53 +143,25 @@ join auth.users u on u.id = a.user_id;
 
 Jangan memberikan akses admin ke akun Savero/Soffie biasa kecuali memang diperlukan. Status admin hanya dapat diberikan lewat SQL tepercaya, tidak ada tombol di aplikasi yang dapat mendaftarkan dirinya sendiri. Setelah login dengan akun terdaftar, buka **Pengaturan Aplikasi → Akses administrator terverifikasi**, aktifkan Mode Admin, lalu pilih profil dari menu profil.
 
-## 4. Deploy penghapus diary 24 jam
+## 4. Pertahankan riwayat diary
 
-Foto disimpan di bucket privat sebagai WebP persegi yang dikompres browser (maksimum 768×768). Catatan dan foto tersedia selama 24 jam sejak dibuat atau sejak foto diganti. Check-in, tanggal streak, rating, dan ekspresi tetap disimpan setelah teks/foto dibersihkan.
+Foto disimpan privat sebagai WebP persegi yang dikompres browser (maksimum 768×768). Migration kesebelas menghentikan masa kedaluwarsa diary. Chibi membuka bubble riwayat dengan panah untuk berpindah tanggal dan waktu simpan/perubahan; pemilik profil dapat mengedit catatan hari ini dari bubble tersebut. Saat mengganti foto hari ini, foto sebelumnya untuk tanggal yang sama diganti; catatan dan foto tanggal-tanggal terdahulu tetap tersimpan.
 
-Setelah project di-link pada langkah metadata musik di atas, deploy fungsi cleanup dari PowerShell di folder project:
+Setelah menerapkan migration kesebelas, deploy pembaruan fungsi cleanup supaya deployment lama tidak bisa menghapus diary:
 
 ```powershell
 npx.cmd supabase functions deploy cleanup-expired-diary
 ```
 
-Buat token acak panjang khusus untuk fungsi cleanup, lalu pasang sebagai secret. Jangan gunakan publishable key sebagai token ini:
-
-```powershell
-npx.cmd supabase secrets set CLEANUP_SECRET="GANTI_DENGAN_TOKEN_ACAK_PANJANG"
-```
-
-URL project dan `SUPABASE_SERVICE_ROLE_KEY` tersedia otomatis untuk Edge Function. Pastikan key service role tidak pernah ditambahkan ke Vite.
-
-### Jadwalkan cleanup setiap 15 menit
-
-Di SQL Editor, aktifkan ekstensi **pg_cron**, **pg_net**, dan **Vault** dari **Database → Extensions**. Simpan URL project dan token cleanup ke Vault melalui SQL berikut, ganti nilai contoh:
+Jika fungsi sebelumnya dipanggil oleh jadwal Cron, fungsi baru ini aman (tidak menghapus data). Jadwalnya dapat dinonaktifkan di SQL Editor:
 
 ```sql
-select vault.create_secret('https://PROJECT_REF.supabase.co', 'diary_cleanup_project_url');
-select vault.create_secret('GANTI_DENGAN_TOKEN_ACAK_PANJANG_YANG_SAMA', 'diary_cleanup_secret');
+select cron.unschedule(jobid)
+from cron.job
+where jobname = 'cleanup-expired-diary-every-15-minutes';
 ```
 
-Lalu jadwalkan pemanggilan (jalankan sekali saja):
-
-```sql
-select cron.schedule(
-  'cleanup-expired-diary-every-15-minutes',
-  '*/15 * * * *',
-  $$
-  select net.http_post(
-    url := (select decrypted_secret from vault.decrypted_secrets where name = 'diary_cleanup_project_url') || '/functions/v1/cleanup-expired-diary',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'x-cleanup-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'diary_cleanup_secret')
-    ),
-    body := '{}'::jsonb
-  );
-  $$
-);
-```
-
-Pastikan URL hanya punya satu slash sebelum `/functions`. Cek **Database → Cron Jobs** untuk melihat jadwal. Jangan tempelkan token di chat atau commit ke Git.
+Foto tetap dibatasi oleh bucket privat dan signed URL. Jangan mengubah bucket menjadi publik.
 
 ## 5. Nyalakan update realtime
 
@@ -197,7 +175,7 @@ Migration dalam SQL Editor setup mendaftarkan tabel-tabel terkait ke `supabase_r
 - Pemulihan mengisi tanggal streak yang terlewat tanpa membuat log palsu dari pasangan. Hanya tanggal kemarin yang dapat dipulihkan, jika streak sebelum tanggal itu masih tersambung; kuotanya sekali per tujuh hari.
 - Konfirmasi bertemu tersimpan saat pengisian hati kedua selesai. Efek perayaan bersama hanya dipicu sekali ketika kedua profil sudah mengonfirmasi pada tanggal Jakarta yang sama.
 - Pengingat 7 dan 14 hari ditampilkan di beranda saat aplikasi dibuka. Browser push memerlukan izin/notifikasi server tambahan dan tidak disertakan.
-- Saat Supabase belum dikonfigurasi, aplikasi tetap dapat dicoba secara lokal di browser ini. Untuk sinkronisasi dua akun/perangkat dan penghapusan terjadwal, selesaikan setup di atas.
+- Saat Supabase belum dikonfigurasi, aplikasi tetap dapat dicoba secara lokal di browser ini. Untuk sinkronisasi dua akun/perangkat, selesaikan setup Supabase di atas.
 - Katalog media bersama memerlukan migration ketujuh. Jalankan `202610170007_shared_tmdb_catalog.sql` di SQL Editor setelah migration pasangan/admin; jika belum diterapkan atau akun belum dipasangkan, aplikasi menampilkan kesalahan sinkronisasi.
 - Data lama dari localStorage tidak otomatis dipindahkan ke Supabase. Data diary lokal lama tetap ada di browser; mulai check-in Supabase setelah akun dipasangkan.
 - Mode Admin hanya mengelola data per profil yang saat ini sudah disimpan di Supabase (check-in/diary, konfirmasi bertemu, progres hati, dan pemulihan streak). Fitur lain yang masih memakai localStorage bersifat lokal pada browser dan belum memiliki pemisahan akses/sinkronisasi per profil.

@@ -48,6 +48,8 @@ export interface DailyCheckin {
   photo_url?: string | null;
   expires_at: string;
   created_at: string;
+  updated_at?: string;
+  photo_uploaded_at?: string | null;
 }
 export interface MeetingConfirmation {
   id: string;

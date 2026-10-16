@@ -164,6 +164,10 @@
 .hero-diary-bubble-heading { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; }
 .hero-diary-bubble-heading strong { color: #672b3b; font-size: 12px; font-weight: 900; line-height: 1.1; }
 .hero-diary-bubble-heading > span { color: #a17a81; font-size: 9px; font-weight: 700; }
+.hero-diary-bubble-nav { display: flex; align-items: center; justify-content: space-between; margin: -3px 0; color: #81515c; font-size: 9px; font-weight: 800; }
+.hero-diary-bubble-nav button { display: grid; width: 27px; height: 27px; place-items: center; border: 1px solid rgba(199,107,128,.18); border-radius: 9px; background: rgba(255,255,255,.72); color: #8c4053; }
+.hero-diary-bubble-nav button svg { width: 15px; height: 15px; }
+.hero-diary-bubble-nav button:disabled { opacity: .35; cursor: not-allowed; }
 .hero-diary-bubble-close { display: grid; width: 27px; height: 27px; flex: none; place-items: center; border: 1px solid rgba(199,107,128,.14); border-radius: 10px; background: linear-gradient(145deg,#fff,#f7e4e8); color: #965064; box-shadow: 0 2px 4px rgba(100,42,57,.09); transition: transform .18s ease,background .18s ease; }
 .hero-diary-bubble-close:hover { transform: rotate(8deg) scale(1.06); background: #f7dce3; }
 .hero-diary-mood-pill { display: inline-flex; width: fit-content; align-items: center; gap: 5px; border: 1px solid rgba(205,113,137,.2); border-radius: 999px; background: linear-gradient(145deg,#fff,#ffeaf0); padding: 4px 9px; color: #a24460; font-size: 9px; font-weight: 900; box-shadow: 0 2px 5px rgba(143,65,86,.08),inset 0 1px 0 #fff; }
@@ -181,10 +185,59 @@
 .dark .hero-diary-bubble::after { border-color: rgba(245,178,194,.28); background: #40252f; }
 .dark .hero-diary-bubble-heading strong { color: #fff1f5; }
 .dark .hero-diary-bubble-heading > span { color: #d4a8b3; }
+.dark .hero-diary-bubble-nav { color: #f1cbd5; }
+.dark .hero-diary-bubble-nav button { border-color: rgba(245,178,194,.2); background: rgba(255,255,255,.08); color: #ffe4eb; }
 .dark .hero-diary-bubble-close { border-color: rgba(255,255,255,.08); background: linear-gradient(145deg,#52333d,#432a34); color: #f8cfda; }
 .dark .hero-diary-mood-pill { border-color: rgba(245,178,194,.18); background: linear-gradient(145deg,#56343f,#482b35); color: #ffdce5; }
 .dark .hero-diary-bubble-content { border-color: rgba(255,255,255,.07); background: rgba(20,10,14,.2); color: #f4dce2; }
 .dark .hero-diary-bubble-rating { background: rgba(255,255,255,.07); color: #d4a8b3; }
+.clay-diary-overlay { position: fixed; z-index: 100; inset: 0; display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: 16px; background: rgba(41,21,29,.58); backdrop-filter: blur(8px); }
+.clay-diary-modal { width: 100%; max-width: 380px; max-height: min(90dvh, 760px); overflow-y: auto; border: 1px solid #e8c0ca; border-radius: 28px; background: linear-gradient(155deg,#fffefa 0%,#fff6f3 54%,#ffedf1 100%); padding: 17px; color: #502631; box-shadow: 0 22px 65px rgba(54,20,32,.32),inset 0 2px 0 rgba(255,255,255,.95); }
+.clay-diary-modal h2 { color: #502631; }
+.clay-diary-modal > div:first-child p { margin: 2px 0 0; color: #815d65; }
+.clay-diary-close { display: grid; width: 36px; height: 36px; flex: none; place-items: center; border: 1px solid #ebc7ce; border-radius: 50%; background: #f8e5e8; color: #713a49; }
+.clay-diary-mood-option { display: flex; min-height: 48px; align-items: center; gap: 9px; border: 1px solid #eed7da; border-radius: 16px; background: #fffdfb; padding: 7px 9px; color: #57313a; text-align: left; transition: background .18s ease,border-color .18s ease,transform .18s ease; }
+.clay-diary-mood-option:hover { background: #fff1f3; }
+.clay-diary-mood-option:active { transform: scale(.97); }
+.clay-diary-mood-option.is-selected { border-color: #c56a7e; background: #f8e3e7; box-shadow: 0 0 0 2px rgba(197,106,126,.17); }
+.clay-diary-mood-option > span:first-child { display: grid; width: 32px; height: 32px; flex: none; overflow: hidden; place-items: center; border-radius: 50%; background: #fae9e8; }
+.clay-diary-mood-option img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.clay-diary-mood-option > span:last-child { font-size: 11px; font-weight: 800; }
+.clay-diary-label { display: block; margin: 15px 0 7px; color: #57313a; font-size: 12px; font-weight: 900; }
+.clay-diary-label > span { color: #815d65; font-weight: 500; }
+.clay-diary-rating-heading { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 3px; color: #57313a; font-size: 11px; font-weight: 900; }
+.clay-diary-rating-heading > span { color: #815d65; font-size: 10px; }
+.clay-diary-rating { display: flex; gap: 3px; margin-bottom: 6px; }
+.clay-diary-rating button { border-radius: 9px; padding: 4px; }
+.clay-diary-rating svg { width: 23px; height: 23px; color: #967c80; }
+.clay-diary-rating svg.is-filled { fill: #e7a04f; color: #b66d21; }
+.clay-diary-textarea { width: 100%; resize: vertical; border: 1px solid #d9aab3; border-radius: 16px; background: #fff; padding: 10px 12px; color: #40212a; font-size: 12px; line-height: 1.55; outline: none; }
+.clay-diary-textarea::placeholder { color: #86666d; opacity: 1; }
+.clay-diary-textarea:focus { border-color: #b95770; box-shadow: 0 0 0 3px rgba(185,87,112,.16); }
+.clay-diary-upload { display: flex; min-height: 40px; align-items: center; justify-content: center; gap: 8px; margin-top: 9px; border: 1px dashed #b95770; border-radius: 14px; background: #fff9f8; color: #713a49; font-size: 11px; font-weight: 900; cursor: pointer; }
+.clay-diary-preview { display: flex; align-items: center; gap: 10px; margin-top: 9px; border: 1px solid #ead1d4; border-radius: 14px; background: rgba(255,255,255,.72); padding: 7px; color: #67434a; font-size: 10px; font-weight: 700; }
+.clay-diary-preview img { width: 64px; height: 64px; flex: none; border-radius: 10px; object-fit: cover; }
+.clay-diary-footnote { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: #77565e; font-size: 9px; }
+.clay-diary-submit { width: 100%; min-height: 44px; margin-top: 12px; border-radius: 999px; background: linear-gradient(145deg,#d8758d,#c55370); padding: 10px 16px; color: #fff; font-size: 12px; font-weight: 900; box-shadow: 0 3px 0 #963c55,0 7px 14px rgba(128,43,61,.15); }
+.clay-diary-submit:hover { background: linear-gradient(145deg,#ce6680,#b94763); }
+.clay-diary-submit:disabled { opacity: .6; cursor: wait; }
+.dark .clay-diary-modal { border-color: #68414d; background: linear-gradient(155deg,#34232a 0%,#2c1d24 54%,#3b252e 100%); color: #fff0f4; box-shadow: 0 22px 65px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.08); }
+.dark .clay-diary-modal h2, .dark .clay-diary-label, .dark .clay-diary-rating-heading { color: #fff0f4; }
+.dark .clay-diary-modal > div:first-child p, .dark .clay-diary-label > span, .dark .clay-diary-rating-heading > span, .dark .clay-diary-footnote { color: #e0bdc7; }
+.dark .clay-diary-close { border-color: #68414d; background: #51343e; color: #fff0f4; }
+.dark .clay-diary-mood-option { border-color: #68414d; background: #392831; color: #fff0f4; }
+.dark .clay-diary-mood-option:hover { background: #4a303a; }
+.dark .clay-diary-mood-option.is-selected { border-color: #e1849b; background: #53323d; box-shadow: 0 0 0 2px rgba(225,132,155,.22); }
+.dark .clay-diary-mood-option > span:first-child { background: #51343e; }
+.dark .clay-diary-textarea { border-color: #76505b; background: #21171c; color: #fff4f7; }
+.dark .clay-diary-textarea::placeholder { color: #d3b2bb; }
+.dark .clay-diary-textarea:focus { border-color: #e1849b; }
+.dark .clay-diary-upload { border-color: #d78699; background: #3a2730; color: #ffeaf0; }
+.dark .clay-diary-preview { border-color: #68414d; background: rgba(20,10,14,.3); color: #ffeaf0; }
+@media (max-width: 480px) {
+  .clay-diary-overlay { align-items: flex-end; padding: 8px; }
+  .clay-diary-modal { max-height: min(88dvh, 720px); border-radius: 25px 25px 18px 18px; padding: 15px; }
+}
 @keyframes diary-bubble-pop { from { opacity: 0; transform: translateY(9px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .reunion-main-heart { animation: none; }
 .reunion-main-heart > .heart-ambient-aura { opacity: .82; transform: scale(1.08); animation: aura-pulse 2.4s ease-in-out infinite; }
@@ -889,6 +942,21 @@
   filter: drop-shadow(0 0 8px rgba(255, 104, 151, 0.55));
 }
 
+.heart-liquid-second-layer {
+  opacity: .92;
+  filter: drop-shadow(0 0 5px rgba(255, 233, 163, .5));
+  pointer-events: none;
+}
+
+.heart-liquid-second-layer-filling {
+  animation: viscous-liquid-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes viscous-liquid-glow {
+  0%, 100% { opacity: .88; filter: drop-shadow(0 0 6px rgba(255, 232, 154, .58)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 13px rgba(255, 239, 168, .92)); }
+}
+
 /* Guncangan Cairan (Liquid Slosh) */
 .heart-liquid-slosh {
   transform-origin: 100px 20px;
@@ -1033,6 +1101,25 @@
   backdrop-filter: blur(4px);
 }
 
+.profile-heart-center-label .profile-heart-layer-label {
+  margin-top: 5px;
+  border: 0;
+  background: rgba(30, 5, 15, .54);
+  padding: 2px 8px;
+  color: #fff2cb;
+  font-size: 9px;
+}
+
+.profile-heart-center-label .profile-heart-layer-progress {
+  margin-top: 3px;
+  border-color: rgba(255, 232, 177, .55);
+  background: rgba(72, 12, 31, .78);
+  padding: 3px 9px;
+  color: #fff8e7;
+  font-size: 10px;
+  text-shadow: 0 1px 5px rgba(72, 12, 31, .8);
+}
+
 .profile-progress-heart {
   --heart-glow-level: 0;
   filter: drop-shadow(0 10px 24px rgba(255, 45, 115, .25))
@@ -1056,6 +1143,15 @@
   filter: drop-shadow(0 10px 24px rgba(255, 133, 179, .28))
     drop-shadow(0 0 calc(var(--heart-glow-level) * 38px) rgba(255, 133, 179, calc(var(--heart-glow-level) * .8)))
     drop-shadow(0 0 calc(var(--heart-glow-level) * 52px) rgba(255, 229, 143, calc(var(--heart-glow-level) * .4)));
+}
+
+.interactive-puffy-heart.profile-progress-heart > .profile-heart-center-label {
+  z-index: 3;
+  isolation: isolate;
+}
+
+.interactive-puffy-heart.profile-progress-heart > .heart-jelly-svg {
+  z-index: 1;
 }
 
 .interactive-puffy-heart.meeting-fill-active .heart-ambient-aura {

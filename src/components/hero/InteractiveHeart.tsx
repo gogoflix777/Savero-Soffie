@@ -23,10 +23,10 @@ const HEART_PROGRESS_PER_SECOND = 30;
 const HEART_PATH =
   'M100,178 C100,178 22,126 22,68 C22,36 47,16 74,16 C91,16 100,28 100,36 C100,28 109,16 126,16 C153,16 178,36 178,68 C178,126 100,178 100,178 Z';
 
-const buildReferenceWavePath = (levelY: number, phase: number, amplitude: number, frequency: number) => {
+const buildReferenceWavePath = (levelY: number, phase: number, amplitude: number, frequency: number, slope = 0) => {
   let path = `M -20 210 L -20 ${levelY}`;
   for (let x = -20; x <= 220; x += 12) {
-    path += ` L ${x} ${(levelY + Math.sin(x * frequency + phase) * amplitude).toFixed(1)}`;
+    path += ` L ${x} ${(levelY + (x - 100) * slope + Math.sin(x * frequency + phase) * amplitude).toFixed(1)}`;
   }
   return `${path} L 220 210 Z`;
 };
@@ -240,8 +240,11 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
   const waveFrontRef = useRef<SVGPathElement>(null);
   const waveCrestRef = useRef<SVGPathElement>(null);
   const meetingWaveRef = useRef<SVGPathElement>(null);
+  const meetingWaveBackRef = useRef<SVGPathElement>(null);
+  const meetingWaveFrontRef = useRef<SVGPathElement>(null);
   const upwellingRef = useRef<SVGCircleElement>(null);
   const percentageLabelRef = useRef<HTMLElement>(null);
+  const meetingPercentageLabelRef = useRef<HTMLElement>(null);
   const bubbleRefs = useRef<Array<SVGCircleElement | null>>([]);
   const characterParticleRefs = useRef<Array<SVGTextElement | null>>([]);
   const bubbles = useRef<FloatingParticle[]>(Array.from({ length: 14 }, () => ({
@@ -259,6 +262,9 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
   })));
   const visualPercentageRef = useRef(percentage ?? 0);
   const targetPercentageRef = useRef(percentage ?? 0);
+  const visualMeetingPercentageRef = useRef(meetingProgress);
+  const targetMeetingPercentageRef = useRef(meetingProgress);
+  const deviceTiltRef = useRef(0);
   const lastAnimationFrameRef = useRef(0);
 
   const holdFrameRef = useRef<number | null>(null);
@@ -292,6 +298,8 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
     wavePhase: 0,
     wavePhaseFront: 0,
     wavePhaseBack: Math.PI,
+    meetingWavePhaseFront: Math.PI * 0.7,
+    meetingWavePhaseBack: 0,
     waveEnergy: 1,
     visualFillRatio: 0,
     visualMeetingRatio: 0
@@ -306,12 +314,16 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
   const currentPercentage = Math.min(100, Math.max(0, percentage ?? 0));
   const currentMeetingProgress = Math.min(100, Math.max(0, meetingProgress));
   const isMeetingFillStage = isProfileProgressHeart && currentPercentage >= 100 && !meetingLocked;
-  const visiblePercentage = isMeetingFillStage
-    ? Math.max(currentMeetingProgress, Math.round(holdBaseMeetingPercentageRef.current + holdProgress * (100 - holdBaseMeetingPercentageRef.current)))
-    : isProfileProgressHeart && isHolding
-      ? Math.max(currentPercentage, Math.round(holdBasePercentageRef.current + holdProgress * (100 - holdBasePercentageRef.current)))
-      : currentPercentage;
+  const visiblePercentage = isProfileProgressHeart && currentPercentage < 100 && isHolding && !isConfirmingMeetingHold
+    ? Math.max(currentPercentage, Math.round(holdBasePercentageRef.current + holdProgress * (100 - holdBasePercentageRef.current)))
+    : currentPercentage;
+  const visibleMeetingPercentage = isProfileProgressHeart && currentPercentage >= 100
+    ? Math.max(currentMeetingProgress, isHolding && isConfirmingMeetingHold
+      ? Math.round(holdBaseMeetingPercentageRef.current + holdProgress * (100 - holdBaseMeetingPercentageRef.current))
+      : currentMeetingProgress)
+    : currentMeetingProgress;
   targetPercentageRef.current = visiblePercentage;
+  targetMeetingPercentageRef.current = visibleMeetingPercentage;
 
   // Target rasio cairan dari logika asli:
   // 1) fillLevel (0, 1, atau 2 log harian dari Savero & Soffie)
@@ -360,8 +372,8 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
       lastAnimationFrameRef.current = now;
       if (isProfileProgressHeart && buttonRef.current) {
         const time = now * 0.001;
-        buttonRef.current.style.setProperty('translate', `0 ${(Math.sin(time * 2.1) * 10).toFixed(2)}px`);
-        buttonRef.current.style.setProperty('rotate', `${(Math.sin(time * 1.35) * 2).toFixed(2)}deg`);
+        buttonRef.current.style.setProperty('translate', `0 ${(Math.sin(time * 2.1) * 6).toFixed(2)}px`);
+        buttonRef.current.style.setProperty('rotate', `${(Math.sin(time * 1.35) * 1.4).toFixed(2)}deg`);
       }
 
       // Kekenyalan pegas (Hooke's Law dengan redaman kenyal seperti jeli)
@@ -381,10 +393,15 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
         const targetLevel = targetPercentageRef.current;
         visualPercentageRef.current += (targetLevel - visualPercentageRef.current) * Math.min(1, dt * 7.5);
         if (Math.abs(targetLevel - visualPercentageRef.current) < 0.05) visualPercentageRef.current = targetLevel;
+        const targetMeetingLevel = targetMeetingPercentageRef.current;
+        visualMeetingPercentageRef.current += (targetMeetingLevel - visualMeetingPercentageRef.current) * Math.min(1, dt * 4.2);
+        if (Math.abs(targetMeetingLevel - visualMeetingPercentageRef.current) < 0.05) visualMeetingPercentageRef.current = targetMeetingLevel;
         const level = visualPercentageRef.current;
+        const meetingLevel = visualMeetingPercentageRef.current;
         const glowLevel = Math.min(1, Math.max(0, level / 100));
         if (buttonRef.current) buttonRef.current.style.setProperty('--heart-glow-level', glowLevel.toFixed(3));
         if (percentageLabelRef.current) percentageLabelRef.current.textContent = `${Math.round(level)}%`;
+        if (meetingPercentageLabelRef.current) meetingPercentageLabelRef.current.textContent = `${Math.round(meetingLevel)}%`;
         const levelMultiplier = level >= 70 ? 1.35 : level >= 30 ? 1.15 : 1;
         if (holdActiveRef.current) s.waveEnergy = Math.min(2.6, s.waveEnergy + 3.8 * dt);
         s.waveEnergy = Math.max(1, s.waveEnergy - dt * 1.2);
@@ -392,8 +409,17 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
         s.wavePhaseBack -= dt * (2.8 + s.waveEnergy * 1.1) * levelMultiplier;
         const liquidY = 184 - (level / 100) * 172;
         const amplitude = (3.4 + s.waveEnergy * 2.2) * (level > 98 ? 0.35 : 1);
-        waveFrontRef.current?.setAttribute('d', buildReferenceWavePath(liquidY, s.wavePhaseFront, amplitude, 0.045));
-        waveBackRef.current?.setAttribute('d', buildReferenceWavePath(liquidY - 3.5, s.wavePhaseBack, amplitude * 1.15, 0.038));
+        const sensorTilt = deviceTiltRef.current;
+        waveFrontRef.current?.setAttribute('d', buildReferenceWavePath(liquidY, s.wavePhaseFront, amplitude, 0.045, sensorTilt * 0.11));
+        waveBackRef.current?.setAttribute('d', buildReferenceWavePath(liquidY - 3.5, s.wavePhaseBack, amplitude * 1.15, 0.038, sensorTilt * 0.11));
+        if (level >= 100) {
+          s.meetingWavePhaseFront += dt * (0.9 + s.waveEnergy * 0.22);
+          s.meetingWavePhaseBack -= dt * (0.72 + s.waveEnergy * 0.18);
+          const secondLiquidY = 184 - (meetingLevel / 100) * 172;
+          const secondAmplitude = (1.7 + Math.min(1.2, s.waveEnergy * 0.4)) * (meetingLevel > 98 ? 0.25 : 1);
+          meetingWaveFrontRef.current?.setAttribute('d', buildReferenceWavePath(secondLiquidY, s.meetingWavePhaseFront, secondAmplitude, 0.032, sensorTilt * 0.035));
+          meetingWaveBackRef.current?.setAttribute('d', buildReferenceWavePath(secondLiquidY - 2, s.meetingWavePhaseBack, secondAmplitude * 1.15, 0.028, sensorTilt * 0.035));
+        }
 
         const speedBoost = (holdActiveRef.current ? 2.2 : 1) * levelMultiplier;
         bubbles.current.forEach((bubble, index) => {
@@ -470,6 +496,9 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
       const listener = (event: DeviceOrientationEvent) => {
         const gamma = Math.max(-22, Math.min(22, event.gamma ?? 0));
         const beta = Math.max(-22, Math.min(22, (event.beta ?? 0) - 35));
+        const nextTilt = gamma / 22;
+        springRef.current.sloshVel = Math.max(-7, Math.min(7, springRef.current.sloshVel + (nextTilt - deviceTiltRef.current) * 3.5));
+        deviceTiltRef.current = nextTilt;
         const element = buttonRef.current;
         if (!element) return;
         element.style.setProperty('--gyro-x', `${gamma * 0.38}deg`);
@@ -800,7 +829,7 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
       aria-label={isProfileProgressHeart
         ? `Hati ${profileName}, terisi ${Math.round(visiblePercentage)} persen.${readOnly ? ' Hanya pemilik profil yang dapat mengisi hati ini.' : meetingLocked ? ' Konfirmasi bertemu hari ini sudah tercatat.' : currentPercentage >= 100 ? ' Tahan hingga lima detik untuk mengisi hati kedua dan mengonfirmasi bertemu. Progres dapat dilanjutkan.' : ' Ketuk untuk menambah 5 persen atau tekan-tahan untuk mengisi.'}`
         : `Jar hati: ${Math.min(2, fillLevel)} dari 2 log hari ini. Tekan-tahan selama satu setengah detik untuk konfirmasi bertemu. ${meetingLocked ? 'Konfirmasi kamu hari ini sudah tercatat.' : ''}`}
-      aria-valuetext={isHolding ? isConfirmingMeetingHold ? `Pengisian kedua ${Math.round(visiblePercentage)} persen` : `${Math.round(visiblePercentage)} persen` : isProfileProgressHeart ? `${Math.round(isMeetingFillStage ? currentMeetingProgress : currentPercentage)} persen` : undefined}
+      aria-valuetext={isHolding ? isConfirmingMeetingHold ? `Liquid kedua ${Math.round(visibleMeetingPercentage)} persen, liquid pertama tetap 100 persen` : `${Math.round(visiblePercentage)} persen` : isProfileProgressHeart ? `${Math.round(isMeetingFillStage ? currentMeetingProgress : currentPercentage)} persen` : undefined}
       aria-pressed={isProfileProgressHeart ? currentPercentage >= 100 : meetingLocked}
       className={`interactive-puffy-heart ${isProfileProgressHeart ? 'profile-progress-heart' : ''} ${visiblePercentage >= 30 ? 'profile-heart-warming' : ''} ${visiblePercentage >= 70 ? 'profile-heart-fever' : ''} ${visiblePercentage >= 100 ? 'profile-heart-charged' : ''} ${isMeetingFillStage ? 'meeting-fill-active' : ''} ${profileName === 'Soffie' ? 'profile-heart-soffie' : ''} ${readOnly ? 'profile-heart-readonly' : ''} ${isPopping ? 'jelly-active' : ''} ${
         isHolding ? 'meeting-holding' : ''
@@ -845,6 +874,21 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
             <stop offset="100%" stopColor={profileName === 'Soffie' ? '#ff7aa8' : '#b5093f'} stopOpacity=".9" />
           </linearGradient>
 
+          <linearGradient id={meetingGradId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={profileName === 'Soffie' ? '#fff1f7' : '#fff4c7'} stopOpacity=".9" />
+            <stop offset="38%" stopColor={profileName === 'Soffie' ? '#ff73a9' : '#ff8b4d'} stopOpacity=".78" />
+            <stop offset="100%" stopColor={profileName === 'Soffie' ? '#c51b59' : '#b90f39'} stopOpacity=".78" />
+          </linearGradient>
+          <linearGradient id={`${meetingGradId}-back`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fff4c7" stopOpacity=".48" />
+            <stop offset="100%" stopColor={profileName === 'Soffie' ? '#ff4f91' : '#ff5b70'} stopOpacity=".56" />
+          </linearGradient>
+          <radialGradient id={`${meetingGradId}-glow`} cx="50%" cy="72%" r="58%">
+            <stop offset="0%" stopColor="#fff5b5" stopOpacity=".7" />
+            <stop offset="55%" stopColor={profileName === 'Soffie' ? '#ff63a1' : '#ff7353'} stopOpacity=".34" />
+            <stop offset="100%" stopColor="#ff367f" stopOpacity="0" />
+          </radialGradient>
+
           <radialGradient id={`${liquidGradId}-upwelling`} cx="50%" cy="92%" r="48%">
             <stop offset="0%" stopColor="#fff0b8" stopOpacity=".95" />
             <stop offset="45%" stopColor="#ff85b3" stopOpacity=".45" />
@@ -879,6 +923,21 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
                 d={buildReferenceWavePath(184 - visiblePercentage / 100 * 172, 0, 5.6, .045)}
                 fill={`url(#${liquidGradId})`}
               />
+              {currentPercentage >= 100 && (
+                <g className={`heart-liquid-second-layer ${isHolding && isConfirmingMeetingHold ? 'heart-liquid-second-layer-filling' : ''}`}>
+                  <path
+                    ref={meetingWaveBackRef}
+                    d={buildReferenceWavePath(184 - visibleMeetingPercentage / 100 * 172 - 2, 0, 2.8, .028)}
+                    fill={`url(#${meetingGradId}-back)`}
+                  />
+                  <path
+                    ref={meetingWaveFrontRef}
+                    d={buildReferenceWavePath(184 - visibleMeetingPercentage / 100 * 172, 0, 2.3, .032)}
+                    fill={`url(#${meetingGradId})`}
+                  />
+                  <circle cx="100" cy="162" r="75" fill={`url(#${meetingGradId}-glow)`} opacity={Math.min(0.82, visibleMeetingPercentage / 100 * 0.82)} />
+                </g>
+              )}
               <circle
                 ref={upwellingRef}
                 cx="100"
@@ -958,7 +1017,14 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
       {isProfileProgressHeart && (
         <span className="profile-heart-center-label" aria-hidden="true">
           <strong ref={percentageLabelRef}>{Math.round(visiblePercentage)}%</strong>
-          <span>{currentPercentage >= 100 ? meetingLocked ? 'Sudah bertemu ♥' : 'Tahan untuk bertemu' : profileName}</span>
+          {isMeetingFillStage ? (
+            <>
+              <span className="profile-heart-layer-label">LIQUID PERTAMA • PENUH</span>
+              <span ref={meetingPercentageLabelRef} className="profile-heart-layer-progress">Liquid kedua {Math.round(visibleMeetingPercentage)}%</span>
+            </>
+          ) : (
+            <span>{currentPercentage >= 100 ? meetingLocked ? 'Bertemu ♥' : 'Tahan untuk bertemu' : profileName}</span>
+          )}
         </span>
       )}
 

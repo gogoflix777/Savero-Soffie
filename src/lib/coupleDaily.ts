@@ -43,7 +43,8 @@ export async function loadCoupleDaily() {
   const logs = (logsResult.data ?? []) as DailyCheckin[];
   const logsWithPhoto = await Promise.all(logs.map(async (log) => {
     if (!log.photo_path || new Date(log.expires_at).getTime() <= Date.now() || !supabase) return { ...log, photo_url: null };
-    const { data } = await supabase.storage.from('daily-diary').createSignedUrl(log.photo_path, 60 * 60);
+    const { data, error } = await supabase.storage.from('daily-diary').createSignedUrl(log.photo_path, 60 * 60);
+    if (error) throw error;
     return { ...log, photo_url: data?.signedUrl ?? null };
   }));
   return {
@@ -221,7 +222,7 @@ export async function saveDailyCheckin(input: {
     if (uploadError) throw uploadError;
   }
 
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await supabase.from('daily_checkins').upsert({
     user_id: dataOwnerId,
     profile: input.profile,
@@ -241,7 +242,8 @@ export async function saveDailyCheckin(input: {
   }
   let photo_url: string | null = null;
   if (photoPath) {
-    const { data: signed } = await supabase.storage.from('daily-diary').createSignedUrl(photoPath, 60 * 60);
+    const { data: signed, error: signedUrlError } = await supabase.storage.from('daily-diary').createSignedUrl(photoPath, 60 * 60);
+    if (signedUrlError) throw signedUrlError;
     photo_url = signed?.signedUrl ?? null;
   }
   return { ...(data as DailyCheckin), photo_url };
@@ -261,6 +263,7 @@ export async function confirmMeeting(profile?: CoupleProfile, adminMode = false)
     if (error) throw error;
     return data as MeetingConfirmation;
   }
+
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
   if (!user) throw new Error('Masuk ke akun terlebih dahulu.');
@@ -273,4 +276,18 @@ export async function confirmMeeting(profile?: CoupleProfile, adminMode = false)
   }, { onConflict: 'user_id,meeting_date' }).select('*').single();
   if (error) throw error;
   return data as MeetingConfirmation;
+}
+
+export async function cancelMeetingConfirmation(profile?: CoupleProfile, adminMode = false): Promise<void> {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi.');
+  if (adminMode) {
+    if (!profile) throw new Error('Pilih profil yang konfirmasinya akan dibatalkan.');
+    const { error } = await supabase.rpc('admin_cancel_meeting_confirmation', {
+      requested_profile: profile
+    });
+    if (error) throw error;
+    return;
+  }
+  const { error } = await supabase.rpc('cancel_my_meeting_confirmation');
+  if (error) throw error;
 }

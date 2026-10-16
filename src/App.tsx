@@ -63,7 +63,7 @@ import { PinModal } from './components/auth/PinModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { SupabaseLogin } from './components/auth/SupabaseLogin';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
-import { confirmMeeting, getAppAdminStatus, getBoundProfile, getJakartaDate, loadCoupleDaily, loadDailyHeartProgress, loadMeetingFillProgress, loadProfileHeartProgress, restoreStreak, saveAdminHeartProgress, saveAdminMeetingFillProgress, saveDailyCheckin, saveMyHeartProgress, saveMyMeetingFillProgress } from './lib/coupleDaily';
+import { cancelMeetingConfirmation, confirmMeeting, getAppAdminStatus, getBoundProfile, getJakartaDate, loadCoupleDaily, loadDailyHeartProgress, loadMeetingFillProgress, loadProfileHeartProgress, restoreStreak, saveAdminHeartProgress, saveAdminMeetingFillProgress, saveDailyCheckin, saveMyHeartProgress, saveMyMeetingFillProgress } from './lib/coupleDaily';
 import { loadSharedMediaCatalog, removeSharedMediaItem, saveSharedMediaItem, seedSharedMediaCatalog } from './lib/sharedMediaCatalog';
 import { deleteMemoryPin, loadMemoryPins, saveMemoryPin } from './lib/memoryPins';
 import { CoupleProfileSetup } from './components/auth/CoupleProfileSetup';
@@ -160,21 +160,6 @@ export default function App() {
       setAuthReady(true);
     });
     return () => { alive = false; listener.subscription.unsubscribe(); };
-  }, []);
-
-  useEffect(() => {
-    if (isSupabaseConfigured) return;
-    const now = Date.now();
-    setDailyCheckins((current) => {
-      let changed = false;
-      const cleaned = current.map((entry) => {
-        if (new Date(entry.expires_at).getTime() > now || (!entry.diary_text && !entry.photo_url)) return entry;
-        changed = true;
-        return { ...entry, diary_text: null, photo_path: null, photo_url: null };
-      });
-      if (changed) appStorage.saveDailyCheckins(cleaned);
-      return changed ? cleaned : current;
-    });
   }, []);
 
   useEffect(() => {
@@ -606,7 +591,8 @@ export default function App() {
             id: `local-${activeProfile}-${date}`, user_id: `local-${activeProfile}`, profile: activeProfile,
             log_date: date, expression: input.expression, rating: input.rating, diary_text: input.diaryText.trim() || null,
             photo_path: null, photo_url: input.photo ? URL.createObjectURL(input.photo) : null,
-            expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), created_at: new Date().toISOString()
+            expires_at: new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString(),
+            created_at: new Date().toISOString(), updated_at: new Date().toISOString()
           } satisfies DailyCheckin;
       setCoupleMoodLog((current) => {
         const updated = { ...current, [activeProfile]: { expression: input.expression, updatedAt: new Date().toISOString() } };
@@ -656,6 +642,26 @@ export default function App() {
     }
     const entry = await confirmMeeting();
     setMeetingConfirmations((current) => { const updated = [entry, ...current.filter((item) => item.id !== entry.id)]; appStorage.saveMeetingConfirmations(updated); return updated; });
+  };
+
+  const handleCancelMeeting = async () => {
+    if (supabase && isAdminAccount && !accountProfile && !adminMode) {
+      throw new Error('Aktifkan Mode Admin sebelum mengubah data profil.');
+    }
+    const profile = adminMode ? activeProfile : accountProfile ?? activeProfile;
+    if (supabase) await cancelMeetingConfirmation(profile, adminMode);
+    const today = getJakartaDate();
+    setMeetingConfirmations((current) => {
+      const updated = current.filter((item) => !(item.profile === profile && item.meeting_date === today));
+      appStorage.saveMeetingConfirmations(updated);
+      return updated;
+    });
+    setMeetingFillProgress((current) => {
+      const updated = { ...current, [profile]: 0 };
+      appStorage.saveMeetingFillProgress(today, updated);
+      return updated;
+    });
+    setDailyActionError(null);
   };
 
   const recordDailyHeartProgress = (profile: CoupleProfile, percentage: number) => {
@@ -1213,6 +1219,7 @@ export default function App() {
                 onSaveDailyCheckin={handleSaveDailyCheckin}
                 onRestoreStreak={handleRestoreStreak}
                 onConfirmMeeting={handleConfirmMeeting}
+                onCancelMeeting={handleCancelMeeting}
                 onHeartProgressChange={(percentage) => { void handleHeartProgressChange(percentage); }}
                 onMeetingFillProgressChange={(percentage) => { void handleMeetingFillProgressChange(percentage); }}
                 onExploreClick={() => {
