@@ -113,10 +113,16 @@ export function getDayStatus(
   for (const c of cycles) {
     const start = parseDate(c.startDate);
     const periodDays = c.periodLength || stats.averagePeriodLength || 5;
-    const diff = getDaysDiff(start, dateObj);
-    if (diff >= 0 && diff < periodDays) {
+    const periodEnd = c.endDate ? parseDate(c.endDate) : addDays(start, periodDays - 1);
+    if (dateObj >= start && dateObj <= periodEnd) {
       isRecordedPeriod = true;
-      break;
+    }
+
+    if (c.fertileStartDate && c.fertileEndDate) {
+      const fertileStart = parseDate(c.fertileStartDate);
+      const fertileEnd = parseDate(c.fertileEndDate);
+      if (dateObj >= fertileStart && dateObj <= fertileEnd) isFertile = true;
+      if (c.ovulationDate === dateStr) isOvulation = true;
     }
   }
 

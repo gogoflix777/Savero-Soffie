@@ -11,11 +11,16 @@ import {
   WishlistDrink,
   AchievementBadge,
   LockedLetter,
-  LoveSong
+  LoveSong,
+  CoupleMoodLog,
+  MoodDiaryEntry,
+  DailyCheckin,
+  MeetingConfirmation,
+  StreakRestore,
+  DailyHeartProgress
 } from '../types';
 import {
   initialSettings,
-  initialPins,
   initialCycles,
   initialIntimateLogs,
   initialMovies,
@@ -49,11 +54,60 @@ function save<T>(key: string, value: T): void {
   }
 }
 
-export const appStorage = {
-  getSettings: (): AppSettings => load<AppSettings>('settings', initialSettings),
-  saveSettings: (settings: AppSettings) => save('settings', settings),
+function loadCatalog<T extends { id: string; status?: string }>(
+  key: string,
+  fallback: T[],
+  seedPrefix: string,
+  clearWishlist = false
+): T[] {
+  const items = load<T[]>(key, fallback);
+  const clearLegacyWishlist = clearWishlist && !load<boolean>(`${key}_wishlist_cleanup_v1`, false);
+  const currentItems = items.filter((item) =>
+    !new RegExp(`^${seedPrefix}-\\d+$`).test(item.id) && !(clearLegacyWishlist && item.status === 'watchlist')
+  );
+  if (currentItems.length !== items.length) save(key, currentItems);
+  if (clearLegacyWishlist) save(`${key}_wishlist_cleanup_v1`, true);
+  return currentItems;
+}
 
-  getPins: (): MemoryPin[] => load<MemoryPin[]>('pins', initialPins),
+export const appStorage = {
+  getActiveProfile: (): 'Savero' | 'Soffie' => load<'Savero' | 'Soffie'>('active_profile', 'Soffie'),
+  saveActiveProfile: (profile: 'Savero' | 'Soffie') => save('active_profile', profile),
+  getCoupleMoodLog: (): CoupleMoodLog => load<CoupleMoodLog>('couple_mood_log', {
+    Savero: { expression: 'bahagia', updatedAt: '' },
+    Soffie: { expression: 'tenang', updatedAt: '' }
+  }),
+  saveCoupleMoodLog: (moodLog: CoupleMoodLog) => save('couple_mood_log', moodLog),
+  getMoodDiary: (): MoodDiaryEntry[] => load<MoodDiaryEntry[]>('mood_diary', []),
+  saveMoodDiary: (entries: MoodDiaryEntry[]) => save('mood_diary', entries),
+  getDailyCheckins: (): DailyCheckin[] => load<DailyCheckin[]>('daily_checkins', []),
+  saveDailyCheckins: (entries: DailyCheckin[]) => save('daily_checkins', entries),
+  getStreakRestores: (): StreakRestore[] => load<StreakRestore[]>('streak_restores', []),
+  saveStreakRestores: (entries: StreakRestore[]) => save('streak_restores', entries),
+  getMeetingConfirmations: (): MeetingConfirmation[] => load<MeetingConfirmation[]>('meeting_confirmations', []),
+  saveMeetingConfirmations: (entries: MeetingConfirmation[]) => save('meeting_confirmations', entries),
+  getMeetingFillProgress: (date: string): Record<'Savero' | 'Soffie', number> => {
+    const saved = load<{ date: string; progress: Record<'Savero' | 'Soffie', number> } | null>('meeting_fill_progress', null);
+    return saved?.date === date ? saved.progress : { Savero: 0, Soffie: 0 };
+  },
+  saveMeetingFillProgress: (date: string, progress: Record<'Savero' | 'Soffie', number>) =>
+    save('meeting_fill_progress', { date, progress }),
+  getDailyHeartProgress: (): DailyHeartProgress[] => load<DailyHeartProgress[]>('daily_heart_progress', []),
+  saveDailyHeartProgress: (entries: DailyHeartProgress[]) => save('daily_heart_progress', entries),
+  getSettings: (): AppSettings => ({
+    ...load<AppSettings>('settings', initialSettings),
+    shareCycleWithPartner: true,
+    shareOnlyPredictions: false,
+    allowAlcoholCategory: true
+  }),
+  saveSettings: (settings: AppSettings) => save('settings', {
+    ...settings,
+    shareCycleWithPartner: true,
+    shareOnlyPredictions: false,
+    allowAlcoholCategory: true
+  }),
+
+  getPins: (): MemoryPin[] => load<MemoryPin[]>('pins', []),
   savePins: (pins: MemoryPin[]) => save('pins', pins),
 
   getCycles: (): CycleRecord[] => load<CycleRecord[]>('cycles', initialCycles),
@@ -62,16 +116,16 @@ export const appStorage = {
   getIntimateLogs: (): IntimateLog[] => load<IntimateLog[]>('intimate_logs', initialIntimateLogs),
   saveIntimateLogs: (logs: IntimateLog[]) => save('intimate_logs', logs),
 
-  getMovies: (): MovieItem[] => load<MovieItem[]>('movies', initialMovies),
+  getMovies: (): MovieItem[] => loadCatalog('movies', initialMovies, 'mov', true),
   saveMovies: (movies: MovieItem[]) => save('movies', movies),
 
-  getActors: (): ActorItem[] => load<ActorItem[]>('actors', initialActors),
+  getActors: (): ActorItem[] => loadCatalog('actors', initialActors, 'act'),
   saveActors: (actors: ActorItem[]) => save('actors', actors),
 
-  getCollections: (): MovieCollection[] => load<MovieCollection[]>('collections', initialCollections),
+  getCollections: (): MovieCollection[] => loadCatalog('collections', initialCollections, 'col'),
   saveCollections: (collections: MovieCollection[]) => save('collections', collections),
 
-  getTvSeries: (): TvSeries[] => load<TvSeries[]>('tv_series', initialTvSeries),
+  getTvSeries: (): TvSeries[] => loadCatalog('tv_series', initialTvSeries, 'series', true),
   saveTvSeries: (series: TvSeries[]) => save('tv_series', series),
 
   getWishlistPlaces: (): WishlistPlace[] => load<WishlistPlace[]>('wishlist_places', initialWishlistPlaces),
@@ -100,11 +154,18 @@ export const appStorage = {
     const data = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
+      activeProfile: appStorage.getActiveProfile(),
+      coupleMoodLog: appStorage.getCoupleMoodLog(),
+      moodDiary: appStorage.getMoodDiary(),
+      dailyCheckins: appStorage.getDailyCheckins(),
+      streakRestores: appStorage.getStreakRestores(),
+      meetingConfirmations: appStorage.getMeetingConfirmations(),
       settings: appStorage.getSettings(),
       pins: appStorage.getPins(),
       cycles: appStorage.getCycles(),
       intimateLogs: appStorage.getIntimateLogs(),
       movies: appStorage.getMovies(),
+      tvSeries: appStorage.getTvSeries(),
       actors: appStorage.getActors(),
       collections: appStorage.getCollections(),
       wishlistPlaces: appStorage.getWishlistPlaces(),
@@ -127,10 +188,17 @@ export const appStorage = {
     try {
       const data = JSON.parse(jsonData);
       if (data.settings) appStorage.saveSettings(data.settings);
+      if (data.activeProfile) appStorage.saveActiveProfile(data.activeProfile);
+      if (data.coupleMoodLog) appStorage.saveCoupleMoodLog(data.coupleMoodLog);
+      if (data.moodDiary) appStorage.saveMoodDiary(data.moodDiary);
+      if (data.dailyCheckins) appStorage.saveDailyCheckins(data.dailyCheckins);
+      if (data.streakRestores) appStorage.saveStreakRestores(data.streakRestores);
+      if (data.meetingConfirmations) appStorage.saveMeetingConfirmations(data.meetingConfirmations);
       if (data.pins) appStorage.savePins(data.pins);
       if (data.cycles) appStorage.saveCycles(data.cycles);
       if (data.intimateLogs) appStorage.saveIntimateLogs(data.intimateLogs);
       if (data.movies) appStorage.saveMovies(data.movies);
+      if (data.tvSeries) appStorage.saveTvSeries(data.tvSeries);
       if (data.actors) appStorage.saveActors(data.actors);
       if (data.collections) appStorage.saveCollections(data.collections);
       if (data.wishlistPlaces) appStorage.saveWishlistPlaces(data.wishlistPlaces);

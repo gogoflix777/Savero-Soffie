@@ -25,21 +25,28 @@ import {
   CheckCircle2,
   ChevronRight,
   Route as RouteIcon,
-  Maximize2
+  Maximize2,
+  X
 } from 'lucide-react';
 import { MemoryPin, PinCategory, AppSettings } from '../../types';
 import { soundManager } from '../../utils/audio';
 import { AnimatedHeart, AnimatedSparkles } from '../common/AnimatedIcons';
 import { getGoogleMapsApiKey } from '../../config/env';
+import { getManagedPhotoUrl } from '../../lib/supabase';
+import { uploadMemoryPinPhoto } from '../../lib/memoryPins';
 
 interface MemoryMapProps {
   pins: MemoryPin[];
+  syncError: string | null;
   settings: AppSettings;
-  onAddPin: (newPin: MemoryPin) => void;
-  onUpdatePin: (updatedPin: MemoryPin) => void;
-  onDeletePin: (pinId: string) => void;
+  activeProfile: 'Savero' | 'Soffie';
+  onAddPin: (newPin: MemoryPin) => Promise<void>;
+  onUpdatePin: (updatedPin: MemoryPin) => Promise<void>;
+  onDeletePin: (pinId: string) => Promise<void>;
   selectedPinId?: string | null;
 }
+
+let lastLocationSearchAt = 0;
 
 // Sophisticated custom SVG glyphs for map markers (No standard emojis)
 const CATEGORY_SVGS: Record<PinCategory, string> = {
@@ -107,27 +114,19 @@ const MAP_TILES = {
   }
 };
 
-// Preset Quick Jumps in Semarang for effortless exploration
-const QUICK_SPOTS = [
-  { id: 'pin-1', label: 'Mie Gacoan', sub: 'Pertemuan Pertama', lat: -7.004128, lng: 110.419234 },
-  { id: 'pin-2', label: 'Kafe Unika', sub: '01.30 Dini Hari', lat: -7.0215, lng: 110.4072 },
-  { id: 'pin-3', label: 'Taichan Pleburan', sub: 'Kencan 23.23', lat: -6.9957834, lng: 110.423215 },
-  { id: 'pin-4', label: 'Jangli - Undip', sub: 'Night Ride Fajar', lat: -7.038, lng: 110.435 },
-  { id: 'pin-5', label: 'Alam Indah', sub: 'Motel Pertama', lat: -7.0392, lng: 110.4225 },
-  { id: 'pin-6', label: 'Rumah Savero', sub: 'Semarang', lat: -6.985, lng: 110.41 },
-  { id: 'pin-7', label: 'Rumah Soffie', sub: 'Semarang', lat: -7.012, lng: 110.438 },
-  { id: 'pin-8', label: 'Kos Soffie', sub: 'Turus Asri III', lat: -7.057831, lng: 110.447910 }
-];
-
 export const MemoryMapSection: React.FC<MemoryMapProps> = ({
   pins,
+  syncError,
   settings,
+  activeProfile,
   onAddPin,
   onUpdatePin,
   onDeletePin,
   selectedPinId
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const activeProfileRef = useRef(activeProfile);
+  activeProfileRef.current = activeProfile;
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
@@ -150,11 +149,31 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
   // Modal State for Add / Edit
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPin, setEditingPin] = useState<MemoryPin | null>(null);
+  const [formError, setFormError] = useState('');
+  const [savingPin, setSavingPin] = useState(false);
+  const [deletingPinId, setDeletingPinId] = useState<string | null>(null);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoUrlsEdited, setPhotoUrlsEdited] = useState(false);
+  const [locationLookupState, setLocationLookupState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [locationLookupMessage, setLocationLookupMessage] = useState('');
+  const [showMorePinDetails, setShowMorePinDetails] = useState(false);
+
+  useEffect(() => {
+    if (!isFormOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !savingPin) {
+        setIsFormOpen(false);
+        setFormError('');
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [isFormOpen, savingPin]);
 
   // Form Fields
   const [formData, setFormData] = useState({
     title: '',
-    date: '2026-10-14',
+    date: new Date().toISOString().split('T')[0],
     time: '20:00',
     description: '',
     photos: '',
@@ -163,7 +182,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
     category: 'kafe' as PinCategory,
     mapUrl: '',
     status: 'visited' as 'visited' | 'wishlist',
-    addedBy: 'Berdua' as 'Savero' | 'Soffie' | 'Berdua',
+    addedBy: activeProfile as 'Savero' | 'Soffie' | 'Berdua',
     lat: -6.9957834,
     lng: 110.423215,
     isSensitive: false
@@ -211,6 +230,8 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
     map.on('click', (e: L.LeafletMouseEvent) => {
       soundManager.playTap();
       setEditingPin(null);
+      setPhotoFiles([]);
+      setPhotoUrlsEdited(false);
       setFormData({
         title: '',
         date: new Date().toISOString().split('T')[0],
@@ -222,7 +243,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
         category: 'kafe',
         mapUrl: `https://www.google.com/maps?q=${e.latlng.lat.toFixed(6)},${e.latlng.lng.toFixed(6)}`,
         status: 'visited',
-        addedBy: 'Berdua',
+        addedBy: activeProfileRef.current,
         lat: e.latlng.lat,
         lng: e.latlng.lng,
         isSensitive: false
@@ -340,11 +361,11 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
       marker.on('dragend', (ev) => {
         const target = ev.target as L.Marker;
         const newPos = target.getLatLng();
-        onUpdatePin({
+        void onUpdatePin({
           ...pin,
           lat: newPos.lat,
           lng: newPos.lng
-        });
+        }).catch((error: unknown) => setFormError(error instanceof Error ? error.message : 'Lokasi pin gagal diperbarui.'));
       });
 
       marker.on('click', () => {
@@ -372,7 +393,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
         <div style="font-family: 'Nunito', sans-serif; min-width: 240px; color: var(--theme-ink); background: var(--theme-card); border-radius: 14px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.18);">
           ${pin.photos && pin.photos[0] ? `
             <div style="width: 100%; height: 115px; overflow: hidden; position: relative;">
-              <img src="${pin.photos[0]}" style="width: 100%; height: 100%; object-fit: cover;" />
+              <img class="pin-popup-photo" src="${pin.photos[0]}" alt="${pin.title}" style="width: 100%; height: 100%; object-fit: cover;" />
               <div style="position: absolute; top: 6px; left: 6px; background: var(--theme-brand); color: var(--theme-on-brand); font-size: 9px; font-weight: bold; padding: 2px 7px; border-radius: 6px; text-transform: uppercase;">
                 ${meta.label}
               </div>
@@ -407,6 +428,14 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
       marker.bindPopup(popupHtml, {
         className: 'romantic-leaflet-popup',
         maxWidth: 280
+      });
+      marker.on('popupopen', () => {
+        const image = marker.getPopup()?.getElement()?.querySelector<HTMLImageElement>('.pin-popup-photo');
+        const source = pin.photos?.[0];
+        if (!image || !source) return;
+        void getManagedPhotoUrl(`pin-photo:${pin.id}:0`, source)
+          .then((url) => { image.src = url; })
+          .catch((error: unknown) => console.error('Map memory photo failed to load:', error));
       });
 
       markersRef.current[pin.id] = marker;
@@ -486,39 +515,30 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
     setIsReplaying(false);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const photosArr = formData.photos
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+    setSavingPin(true);
+    setFormError('');
+    const photosArr = photoFiles.length
+      ? []
+      : editingPin && !photoUrlsEdited
+        ? editingPin.photos
+        : formData.photos.split(',').map((s) => s.trim()).filter(Boolean);
 
     const tagsArr = formData.tags
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
 
-    if (editingPin) {
-      onUpdatePin({
-        ...editingPin,
-        title: formData.title,
-        date: formData.date,
-        time: formData.time,
-        description: formData.description,
-        photos: photosArr.length > 0 ? photosArr : editingPin.photos,
-        rating: formData.rating,
-        tags: tagsArr,
-        category: formData.category,
-        mapUrl: formData.mapUrl,
-        status: formData.status,
-        addedBy: formData.addedBy,
-        lat: formData.lat,
-        lng: formData.lng,
-        isSensitive: formData.isSensitive
-      });
-    } else {
-      const newPin: MemoryPin = {
-        id: 'pin-' + Date.now(),
+    try {
+      const newPinId = editingPin?.id ?? `pin-${crypto.randomUUID()}`;
+      let savedPin: MemoryPin = {
+        ...(editingPin ?? {
+          id: newPinId,
+          photos: [],
+          routeCoords: undefined,
+          isRoute: false
+        }),
         title: formData.title,
         date: formData.date,
         time: formData.time,
@@ -534,33 +554,130 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
         lng: formData.lng,
         isSensitive: formData.isSensitive
       };
-      onAddPin(newPin);
-      setHighlightedPinId(newPin.id);
+      if (photoFiles.length) {
+        const uploadedPhotos = await Promise.all(photoFiles.map((file, index) => uploadMemoryPinPhoto(newPinId, file, index)));
+        savedPin = { ...savedPin, photos: uploadedPhotos };
+      }
+      if (editingPin) await onUpdatePin(savedPin);
+      else await onAddPin(savedPin);
+      setHighlightedPinId(savedPin.id);
+      setIsFormOpen(false);
+      setEditingPin(null);
+      setPhotoFiles([]);
+      setPhotoUrlsEdited(false);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Pin gagal disimpan.');
+    } finally {
+      setSavingPin(false);
     }
-
-    setIsFormOpen(false);
-    setEditingPin(null);
   };
 
-  const applyGoogleMapsShareLink = (shareLink: string) => {
+  const startEditingPin = (pin: MemoryPin) => {
+    setEditingPin(pin);
+    setFormError('');
+    setShowMorePinDetails(false);
+    setPhotoFiles([]);
+    setPhotoUrlsEdited(false);
+    setFormData({
+      title: pin.title,
+      date: pin.date,
+      time: pin.time ?? '',
+      description: pin.description,
+      photos: pin.photos.filter((photo) => !photo.startsWith('managed://')).join(', '),
+      rating: pin.rating,
+      tags: pin.tags.join(', '),
+      category: pin.category,
+      mapUrl: pin.mapUrl ?? '',
+      status: pin.status,
+      addedBy: pin.addedBy,
+      lat: pin.lat,
+      lng: pin.lng,
+      isSensitive: Boolean(pin.isSensitive)
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleDeletePin = async (pin: MemoryPin) => {
+    if (!window.confirm(`Hapus pin "${pin.title}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+    setDeletingPinId(pin.id);
+    setFormError('');
+    try {
+      await onDeletePin(pin.id);
+      if (highlightedPinId === pin.id) setHighlightedPinId(null);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : 'Pin gagal dihapus.');
+    } finally {
+      setDeletingPinId(null);
+    }
+  };
+
+  const resolvePinLocation = async (shareLink = formData.mapUrl) => {
     const coordinateMatch = shareLink.match(/@(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/)
-      || shareLink.match(/[?&](?:q|query|ll)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/)
+      || shareLink.match(/[?&](?:q|query|ll|destination)=(-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)/)
       || shareLink.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
-    const placeMatch = shareLink.match(/\/maps\/place\/([^/?]+)/);
-    let title = '';
-    if (placeMatch) {
-      try {
-        title = decodeURIComponent(placeMatch[1].replaceAll('+', ' '));
-      } catch {
-        title = placeMatch[1].replaceAll('+', ' ');
+    if (coordinateMatch) {
+      const lat = Number(coordinateMatch[1]);
+      const lng = Number(coordinateMatch[2]);
+      if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+        setFormData((current) => ({ ...current, lat, lng }));
+        setLocationLookupState('success');
+        setLocationLookupMessage('Koordinat ditemukan dari tautan Maps.');
+        return;
       }
     }
-    setFormData((current) => ({
-      ...current,
-      mapUrl: shareLink,
-      ...(coordinateMatch ? { lat: Number(coordinateMatch[1]), lng: Number(coordinateMatch[2]) } : {}),
-      ...(title && !current.title ? { title } : {})
-    }));
+    if (formData.isSensitive) {
+      setLocationLookupState('error');
+      setLocationLookupMessage('Demi privasi, pencarian online dinonaktifkan untuk lokasi sensitif. Klik titik langsung pada peta atau masukkan koordinat manual.');
+      return;
+    }
+
+    let placeQuery = '';
+    try {
+      const url = new URL(shareLink);
+      const placePath = url.pathname.match(/\/(?:maps\/)?place\/([^/]+)/);
+      const queryValue = url.searchParams.get('q') ?? url.searchParams.get('query') ?? url.searchParams.get('destination');
+      placeQuery = queryValue ?? (placePath ? decodeURIComponent(placePath[1].replaceAll('+', ' ')) : '');
+    } catch {
+      placeQuery = '';
+    }
+    const query = (placeQuery || formData.title).trim();
+    if (!query) {
+      setLocationLookupState('error');
+      setLocationLookupMessage('Masukkan nama tempat atau tautan Maps yang memiliki nama lokasi.');
+      return;
+    }
+    setLocationLookupState('loading');
+    setLocationLookupMessage('Mencari lokasi gratis melalui OpenStreetMap…');
+    try {
+      const delay = Math.max(0, 1100 - (Date.now() - lastLocationSearchAt));
+      if (delay) await new Promise((resolve) => window.setTimeout(resolve, delay));
+      lastLocationSearchAt = Date.now();
+      const params = new URLSearchParams({
+        q: query,
+        format: 'jsonv2',
+        limit: '1',
+        countrycodes: 'id',
+        'accept-language': 'id'
+      });
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+        headers: { Accept: 'application/json' }
+      });
+      if (!response.ok) throw new Error(`Layanan OpenStreetMap merespons ${response.status}. Coba lagi nanti.`);
+      const results: Array<{ lat: string; lon: string; display_name: string }> = await response.json();
+      const result = results[0];
+      if (!result) throw new Error('Tempat tidak ditemukan. Coba nama lain atau atur posisi pin manual.');
+      const lat = Number(result.lat);
+      const lng = Number(result.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        throw new Error('Layanan pencarian mengembalikan koordinat tidak valid.');
+      }
+      setFormData((current) => ({ ...current, lat, lng }));
+      setLocationLookupState('success');
+      setLocationLookupMessage(`Lokasi ditemukan: ${result.display_name}`);
+    } catch (error) {
+      setLocationLookupState('error');
+      setLocationLookupMessage(error instanceof Error ? error.message : 'Lokasi tidak dapat ditemukan dari informasi tersebut.');
+    }
   };
 
   return (
@@ -602,6 +719,9 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
               onClick={() => {
                 soundManager.playTap();
                 setEditingPin(null);
+                setShowMorePinDetails(false);
+                setPhotoFiles([]);
+                setPhotoUrlsEdited(false);
                 setFormData({
                   title: '',
                   date: new Date().toISOString().split('T')[0],
@@ -613,7 +733,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
                   category: 'kafe',
                   mapUrl: '',
                   status: 'visited',
-                  addedBy: 'Berdua',
+                  addedBy: activeProfile,
                   lat: -6.9957834,
                   lng: 110.423215,
                   isSensitive: false
@@ -628,36 +748,32 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
           </div>
         </div>
 
-        {/* Quick Location Chips Bar ("Loncat Cepat ke Tempat Kenangan") */}
-        <div className="bg-white/70 dark:bg-black/30 p-3 rounded-2xl border border-[#7A1018]/15 shadow-xs">
-          <div className="flex items-center space-x-2 text-[10px] font-sans-clean font-bold tracking-wider text-[#7A1018] dark:text-[#F4B6C2] uppercase mb-2">
-            <Compass className="w-3.5 h-3.5" />
-            <span>PILIH CEPAT LOKASI UTAMA SEMARANG:</span>
-          </div>
+        {syncError && (
+          <p className="rounded-xl bg-red-100 px-4 py-3 text-xs text-red-800 dark:bg-red-950/40 dark:text-red-200" role="alert">
+            Sinkronisasi pin Supabase gagal: {syncError}. Pastikan migration tabel memory_pins sudah dijalankan.
+          </p>
+        )}
 
-          <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none pb-1">
-            {QUICK_SPOTS.map((spot) => {
-              const matchedPin = pins.find((p) => p.id === spot.id || p.title.toLowerCase().includes(spot.label.toLowerCase()));
-              return (
+        {filteredPins.length > 0 && (
+          <div className="bg-white/70 dark:bg-black/30 p-3 rounded-2xl border border-[#7A1018]/15 shadow-xs">
+            <div className="flex items-center space-x-2 text-[10px] font-sans-clean font-bold tracking-wider text-[#7A1018] dark:text-[#F4B6C2] uppercase mb-2">
+              <Compass className="w-3.5 h-3.5" />
+              <span>PILIH CEPAT LOKASI KENANGAN:</span>
+            </div>
+            <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none pb-1">
+              {filteredPins.slice(0, 8).map((pin) => (
                 <button
-                  key={spot.id}
-                  onClick={() => {
-                    if (matchedPin) {
-                      flyToPin(matchedPin);
-                    } else {
-                      mapInstanceRef.current?.flyTo([spot.lat, spot.lng], 16, { animate: true });
-                    }
-                  }}
+                  key={pin.id}
+                  onClick={() => flyToPin(pin)}
                   className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-[#EFE6DA]/80 dark:bg-black/50 hover:bg-[#7A1018] hover:text-[#EFE6DA] dark:hover:bg-[#7A1018] text-[#3B0A0F] dark:text-[#EFE6DA] text-xs font-sans-clean border border-[#7A1018]/15 transition-all flex items-center space-x-1.5 shadow-xs"
                 >
                   <MapPin className="w-3 h-3 text-[#7A1018] dark:text-[#F4B6C2]" />
-                  <span className="font-bold">{spot.label}</span>
-                  <span className="text-[10px] opacity-70">({spot.sub})</span>
+                  <span className="font-bold">{pin.title}</span>
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Controls Ribbon (Search, Filters, Map Tiles) */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-sans-clean">
@@ -768,7 +884,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
                   <div>
                     {pin.photos && pin.photos[0] && (
                       <div className="w-full h-32 rounded-xl overflow-hidden mb-2 relative">
-                        <ManagedImage src={pin.photos[0]} alt={pin.title} className="w-full h-full object-cover" />
+                        <ManagedImage src={pin.photos[0]} photoKey={`pin-photo:${pin.id}:0`} alt={pin.title} className="w-full h-full object-cover" />
                         <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-[#7A1018] text-[#EFE6DA]">
                           {meta.label}
                         </span>
@@ -791,18 +907,37 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
 
                   <div className="flex items-center justify-between pt-2 border-t border-[#7A1018]/10 text-xs font-sans-clean">
                     <span className="text-[10px] text-gray-500">Oleh: <strong>{pin.addedBy}</strong></span>
-                    {pin.mapUrl && (
-                      <a
-                        href={pin.mapUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-[#7A1018] dark:text-[#F4B6C2] font-bold hover:underline flex items-center space-x-1 text-[11px]"
+                    <div className="flex items-center gap-2">
+                      {pin.mapUrl && (
+                        <a
+                          href={pin.mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[#7A1018] dark:text-[#F4B6C2] font-bold hover:underline flex items-center space-x-1 text-[11px]"
+                        >
+                          <span>Maps</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        aria-label={`Edit pin ${pin.title}`}
+                        onClick={(event) => { event.stopPropagation(); startEditingPin(pin); }}
+                        className="rounded-lg p-1.5 text-[#7A1018] hover:bg-[#7A1018]/10 dark:text-[#F4B6C2]"
                       >
-                        <span>Maps</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Hapus pin ${pin.title}`}
+                        disabled={deletingPinId === pin.id}
+                        onClick={(event) => { event.stopPropagation(); void handleDeletePin(pin); }}
+                        className="rounded-lg p-1.5 text-red-700 hover:bg-red-100 disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950/40"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -817,41 +952,76 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto"
+              className="fixed inset-0 z-50 flex items-end justify-center bg-black/65 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !savingPin) {
+                  setIsFormOpen(false);
+                  setFormError('');
+                }
+              }}
             >
               <motion.div
                 initial={{ scale: 0.95, y: 20 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.95, y: 20 }}
-                className="bg-[#EFE6DA] dark:bg-[#250709] max-w-lg w-full rounded-3xl p-6 border-2 border-[#7A1018]/30 shadow-2xl my-8"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="memory-pin-form-title"
+                onMouseDown={(event) => event.stopPropagation()}
+                className="flex max-h-[94dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-[#7A1018]/25 bg-[#EFE6DA] shadow-2xl dark:bg-[#250709] sm:max-h-[90dvh] sm:rounded-3xl"
               >
-                <div className="flex items-center justify-between pb-3 border-b border-[#7A1018]/15 mb-4">
-                  <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
-                    {editingPin ? 'Ubah Pin Kenangan' : 'Tambah Titik Kenangan Baru'}
-                  </h3>
+                <div className="flex shrink-0 items-center justify-between border-b border-[#7A1018]/15 px-4 py-3 sm:px-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#7A1018]/10 text-[#7A1018] dark:text-[#F4B6C2]">
+                      <MapPin className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 id="memory-pin-form-title" className="truncate font-serif-title text-base font-bold text-[#7A1018] dark:text-[#F4B6C2]">
+                        {editingPin ? 'Edit pin' : 'Pin kenangan baru'}
+                      </h3>
+                      <p className="truncate text-[11px] text-gray-500">{editingPin?.title || 'Tambahkan tempat dan cerita'}</p>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => setIsFormOpen(false)}
-                    className="text-gray-500 hover:text-black font-bold text-sm"
+                    type="button"
+                    aria-label="Tutup form pin"
+                    onClick={() => { setIsFormOpen(false); setFormError(''); }}
+                    className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[#7A1018] transition hover:bg-[#7A1018]/10 dark:text-[#F4B6C2]"
                   >
-                    ✕
+                    <X className="h-5 w-5" />
                   </button>
                 </div>
 
-                <form onSubmit={handleFormSubmit} className="space-y-4 text-xs font-sans-clean">
+                <form onSubmit={handleFormSubmit} className="flex min-h-0 flex-1 flex-col text-xs font-sans-clean">
+                  <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3 pb-5 sm:px-5">
                   <div>
                     <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">
-                      Nama Tempat / Momen
+                      Nama tempat
                     </label>
                     <input
                       type="text"
                       required
                       value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="Contoh: Kencan Taichan Pleburan"
+                      onChange={(e) => {
+                        setLocationLookupState('idle');
+                        setLocationLookupMessage('');
+                        setFormData({ ...formData, title: e.target.value });
+                      }}
+                      placeholder="Nama tempat atau momen"
                       className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20 focus:outline-hidden focus:ring-1 focus:ring-[#7A1018]"
                     />
                   </div>
 
+                  <details
+                    open={showMorePinDetails}
+                    onToggle={(event) => setShowMorePinDetails(event.currentTarget.open)}
+                    className="rounded-2xl border border-[#7A1018]/15 bg-white/45 dark:bg-black/15"
+                  >
+                    <summary className="cursor-pointer list-none px-3 py-3 font-bold text-[#7A1018] dark:text-[#F4B6C2]">
+                      Detail lokasi, foto & lainnya
+                      <span className="float-right text-[10px] font-normal text-gray-500">{showMorePinDetails ? 'Tutup' : 'Opsional'}</span>
+                    </summary>
+                    <div className="space-y-3 border-t border-[#7A1018]/10 p-3">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">Tanggal</label>
@@ -875,6 +1045,35 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
+                    <label className="block font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
+                      Latitude
+                      <input
+                        type="number"
+                        required
+                        step="any"
+                        min="-90"
+                        max="90"
+                        value={formData.lat}
+                        onChange={(e) => setFormData({ ...formData, lat: Number(e.target.value) })}
+                        className="mt-1 w-full rounded-xl border border-[#7A1018]/20 bg-white px-3 py-2 font-normal dark:bg-black/30"
+                      />
+                    </label>
+                    <label className="block font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
+                      Longitude
+                      <input
+                        type="number"
+                        required
+                        step="any"
+                        min="-180"
+                        max="180"
+                        value={formData.lng}
+                        onChange={(e) => setFormData({ ...formData, lng: Number(e.target.value) })}
+                        className="mt-1 w-full rounded-xl border border-[#7A1018]/20 bg-white px-3 py-2 font-normal dark:bg-black/30"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">Kategori</label>
                       <select
@@ -893,7 +1092,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
                       <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">Ditambahkan Oleh</label>
                       <select
                         value={formData.addedBy}
-                        onChange={(e) => setFormData({ ...formData, addedBy: e.target.value as any })}
+                        onChange={(e) => setFormData({ ...formData, addedBy: e.target.value as MemoryPin['addedBy'] })}
                         className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20"
                       >
                         <option value="Berdua">Berdua</option>
@@ -919,14 +1118,68 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
 
                   <div>
                     <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">
-                      Tautan Foto (Pisahkan dengan koma bila lebih dari satu)
+                      URL foto (pisahkan dengan koma; kosongkan untuk menghapus foto)
                     </label>
                     <input
                       type="text"
                       value={formData.photos}
-                      onChange={(e) => setFormData({ ...formData, photos: e.target.value })}
+                      onChange={(e) => {
+                        setPhotoUrlsEdited(true);
+                        setFormData({ ...formData, photos: e.target.value });
+                      }}
                       placeholder="https://images.unsplash.com/..., https://..."
                       className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20 text-xs"
+                    />
+                    <p className="mt-1 text-[10px] text-gray-500">Foto yang tersimpan: {editingPin?.photos.length ?? 0}. URL kosong akan menghapus foto saat disimpan.</p>
+                    {editingPin?.photos.length ? (
+                      <div className="mt-2 flex gap-2 overflow-x-auto">
+                        {editingPin.photos.map((photo, index) => (
+                          <ManagedImage
+                            key={`${editingPin.id}-${index}`}
+                            src={photo}
+                            photoKey={`pin-photo:${editingPin.id}:${index}`}
+                            alt={`${editingPin.title} foto ${index + 1}`}
+                            className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                    <label className="mt-3 block font-bold">
+                      Unggah foto dari perangkat
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        multiple
+                        onChange={(event) => setPhotoFiles(Array.from(event.target.files ?? []))}
+                        className="mt-1 block w-full rounded-xl border border-[#7A1018]/20 bg-white p-2 text-[10px] dark:bg-black/30"
+                      />
+                    </label>
+                    {photoFiles.length > 0 && (
+                      <p className="mt-1 text-[10px] text-[#7A1018] dark:text-[#F4B6C2]">
+                        {photoFiles.length} foto terpilih akan menggantikan foto lama. Maksimal 10 MB per foto.
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">Status lokasi</label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as MemoryPin['status'] })}
+                      className="w-full rounded-xl border border-[#7A1018]/20 bg-white px-3 py-2 dark:bg-black/30"
+                    >
+                      <option value="visited">Sudah dikunjungi</option>
+                      <option value="wishlist">Ingin dikunjungi</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">Tag (pisahkan dengan koma)</label>
+                    <input
+                      type="text"
+                      value={formData.tags}
+                      onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
+                      className="w-full rounded-xl border border-[#7A1018]/20 bg-white px-3 py-2 dark:bg-black/30"
                     />
                   </div>
 
@@ -937,11 +1190,36 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
                     <input
                       type="url"
                       value={formData.mapUrl}
-                      onChange={(e) => applyGoogleMapsShareLink(e.target.value)}
+                      onChange={(e) => {
+                        setLocationLookupState('idle');
+                        setLocationLookupMessage('');
+                        setFormData({ ...formData, mapUrl: e.target.value });
+                      }}
                       placeholder="https://maps.app.goo.gl/..."
                       className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20 text-xs"
                     />
-                    <p className="text-[10px] text-gray-500 mt-1">Tempel tautan tempat dari Google Maps. Koordinat akan terisi otomatis bila tersedia.</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={locationLookupState === 'loading'}
+                        onClick={() => void resolvePinLocation()}
+                        className="rounded-lg bg-[#7A1018]/10 px-3 py-1.5 text-[10px] font-bold text-[#7A1018] transition hover:bg-[#7A1018]/20 disabled:opacity-60 dark:text-[#F4B6C2]"
+                      >
+                        {locationLookupState === 'loading' ? 'Mencari lokasi…' : 'Sesuaikan pin ke lokasi'}
+                      </button>
+                      <span className="text-[10px] text-gray-500">Gratis via OpenStreetMap. Hindari alamat rumah/kos atau lokasi privat.</span>
+                    </div>
+                    {locationLookupMessage && (
+                      <p
+                      className={`mt-1 text-[10px] ${locationLookupState === 'error' ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}
+                      role={locationLookupState === 'error' ? 'alert' : 'status'}
+                      >
+                      {locationLookupMessage}
+                      </p>
+                    )}
+                    <p className="mt-1 text-[10px] text-gray-500">
+                      Pencarian nama mengirim nama tempat ke OpenStreetMap hanya setelah tombol ditekan. Lokasi sensitif tidak dikirim.
+                    </p>
                   </div>
 
                   {/* Rating Selector using SVG Hearts (Zero Emojis) */}
@@ -981,20 +1259,25 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
                       Sembunyikan pin ini saat Mode Tamu aktif (Privasi)
                     </label>
                   </div>
+                    </div>
+                  </details>
 
-                  <div className="flex items-center justify-end space-x-2 pt-3 border-t border-[#7A1018]/15">
+                  {formError && <p className="rounded-xl bg-red-100 px-3 py-2 text-xs text-red-800 dark:bg-red-950/40 dark:text-red-200" role="alert">{formError}</p>}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 border-t border-[#7A1018]/15 bg-[#EFE6DA]/95 px-4 py-3 pb-[max(.75rem,env(safe-area-inset-bottom))] backdrop-blur dark:bg-[#250709]/95 sm:justify-end sm:px-5">
                     <button
                       type="button"
-                      onClick={() => setIsFormOpen(false)}
-                      className="px-4 py-2 rounded-xl bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold"
+                      onClick={() => { setIsFormOpen(false); setFormError(''); }}
+                      className="min-h-11 flex-1 rounded-xl border border-[#7A1018]/20 px-4 py-2 font-bold text-[#6e5156] dark:text-rose-100/75 sm:flex-none"
                     >
-                      Batal
+                      Tutup
                     </button>
                     <button
                       type="submit"
-                      className="px-5 py-2 rounded-xl bg-[#7A1018] hover:bg-[#5e0a11] text-[#EFE6DA] font-bold shadow-md"
+                      disabled={savingPin}
+                      className="min-h-11 flex-[2] rounded-xl bg-[#7A1018] px-5 py-2 font-bold text-[#EFE6DA] shadow-md hover:bg-[#5e0a11] disabled:opacity-60 sm:flex-none"
                     >
-                      Simpan Titik Kenangan
+                      {savingPin ? 'Menyimpan…' : 'Simpan Titik Kenangan'}
                     </button>
                   </div>
                 </form>

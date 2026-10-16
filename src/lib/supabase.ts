@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 export const supabase = isSupabaseConfigured
@@ -24,6 +24,9 @@ const photoUrlCache = new Map<string, { url: string; expiresAt: number }>();
 
 export function invalidateManagedPhoto(photoKey: string): void {
   photoUrlCache.delete(photoKey);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('managed-photo-updated', { detail: { photoKey } }));
+  }
 }
 
 export async function getManagedPhotoUrl(photoKey: string, fallback: string): Promise<string> {

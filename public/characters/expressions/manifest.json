@@ -1,0 +1,290 @@
+﻿[
+    {
+        "width":  377,
+        "expression":  "bahagia",
+        "height":  900,
+        "offsetY":  98,
+        "offsetX":  338,
+        "person":  "Soffie",
+        "file":  "soffie/bahagia.png"
+    },
+    {
+        "width":  422,
+        "expression":  "bahagia",
+        "height":  900,
+        "offsetY":  58,
+        "offsetX":  1306,
+        "person":  "Savero",
+        "file":  "savero/bahagia.png"
+    },
+    {
+        "width":  386,
+        "expression":  "bingung",
+        "height":  900,
+        "offsetY":  122,
+        "offsetX":  208,
+        "person":  "Soffie",
+        "file":  "soffie/bingung.png"
+    },
+    {
+        "width":  384,
+        "expression":  "bingung",
+        "height":  900,
+        "offsetY":  84,
+        "offsetX":  1120,
+        "person":  "Savero",
+        "file":  "savero/bingung.png"
+    },
+    {
+        "width":  387,
+        "expression":  "gemas sayang",
+        "height":  900,
+        "offsetY":  100,
+        "offsetX":  192,
+        "person":  "Soffie",
+        "file":  "soffie/gemas-sayang.png"
+    },
+    {
+        "width":  373,
+        "expression":  "gemas sayang",
+        "height":  900,
+        "offsetY":  62,
+        "offsetX":  1500,
+        "person":  "Savero",
+        "file":  "savero/gemas-sayang.png"
+    },
+    {
+        "width":  395,
+        "expression":  "keren",
+        "height":  900,
+        "offsetY":  74,
+        "offsetX":  204,
+        "person":  "Soffie",
+        "file":  "soffie/keren.png"
+    },
+    {
+        "width":  355,
+        "expression":  "keren",
+        "height":  900,
+        "offsetY":  34,
+        "offsetX":  1456,
+        "person":  "Savero",
+        "file":  "savero/keren.png"
+    },
+    {
+        "width":  376,
+        "expression":  "malu tersipu",
+        "height":  900,
+        "offsetY":  120,
+        "offsetX":  390,
+        "person":  "Soffie",
+        "file":  "soffie/malu-tersipu.png"
+    },
+    {
+        "width":  392,
+        "expression":  "malu tersipu",
+        "height":  900,
+        "offsetY":  56,
+        "offsetX":  1344,
+        "person":  "Savero",
+        "file":  "savero/malu-tersipu.png"
+    },
+    {
+        "width":  352,
+        "expression":  "marah",
+        "height":  900,
+        "offsetY":  124,
+        "offsetX":  456,
+        "person":  "Soffie",
+        "file":  "soffie/marah.png"
+    },
+    {
+        "width":  393,
+        "expression":  "marah",
+        "height":  900,
+        "offsetY":  58,
+        "offsetX":  1244,
+        "person":  "Savero",
+        "file":  "savero/marah.png"
+    },
+    {
+        "width":  381,
+        "expression":  "mengantuk",
+        "height":  900,
+        "offsetY":  130,
+        "offsetX":  282,
+        "person":  "Soffie",
+        "file":  "soffie/mengantuk.png"
+    },
+    {
+        "width":  367,
+        "expression":  "mengantuk",
+        "height":  900,
+        "offsetY":  116,
+        "offsetX":  1456,
+        "person":  "Savero",
+        "file":  "savero/mengantuk.png"
+    },
+    {
+        "width":  401,
+        "expression":  "panik",
+        "height":  900,
+        "offsetY":  114,
+        "offsetX":  120,
+        "person":  "Soffie",
+        "file":  "soffie/panik.png"
+    },
+    {
+        "width":  345,
+        "expression":  "panik",
+        "height":  900,
+        "offsetY":  70,
+        "offsetX":  1614,
+        "person":  "Savero",
+        "file":  "savero/panik.png"
+    },
+    {
+        "width":  352,
+        "expression":  "sedih",
+        "height":  900,
+        "offsetY":  42,
+        "offsetX":  292,
+        "person":  "Soffie",
+        "file":  "soffie/sedih.png"
+    },
+    {
+        "width":  393,
+        "expression":  "sedih",
+        "height":  900,
+        "offsetY":  36,
+        "offsetX":  1410,
+        "person":  "Savero",
+        "file":  "savero/sedih.png"
+    },
+    {
+        "width":  431,
+        "expression":  "semangat",
+        "height":  900,
+        "offsetY":  78,
+        "offsetX":  120,
+        "person":  "Soffie",
+        "file":  "soffie/semangat.png"
+    },
+    {
+        "width":  417,
+        "expression":  "semangat",
+        "height":  900,
+        "offsetY":  56,
+        "offsetX":  1246,
+        "person":  "Savero",
+        "file":  "savero/semangat.png"
+    },
+    {
+        "width":  398,
+        "expression":  "serius",
+        "height":  900,
+        "offsetY":  80,
+        "offsetX":  142,
+        "person":  "Soffie",
+        "file":  "soffie/serius.png"
+    },
+    {
+        "width":  309,
+        "expression":  "serius",
+        "height":  900,
+        "offsetY":  50,
+        "offsetX":  1708,
+        "person":  "Savero",
+        "file":  "savero/serius.png"
+    },
+    {
+        "width":  365,
+        "expression":  "terkejut",
+        "height":  900,
+        "offsetY":  120,
+        "offsetX":  316,
+        "person":  "Soffie",
+        "file":  "soffie/terkejut.png"
+    },
+    {
+        "width":  404,
+        "expression":  "terkejut",
+        "height":  900,
+        "offsetY":  58,
+        "offsetX":  1432,
+        "person":  "Savero",
+        "file":  "savero/terkejut.png"
+    },
+    {
+        "width":  408,
+        "expression":  "terpesona",
+        "height":  900,
+        "offsetY":  110,
+        "offsetX":  120,
+        "person":  "Soffie",
+        "file":  "soffie/terpesona.png"
+    },
+    {
+        "width":  411,
+        "expression":  "terpesona",
+        "height":  900,
+        "offsetY":  60,
+        "offsetX":  1578,
+        "person":  "Savero",
+        "file":  "savero/terpesona.png"
+    },
+    {
+        "width":  394,
+        "expression":  "tertawa",
+        "height":  900,
+        "offsetY":  140,
+        "offsetX":  244,
+        "person":  "Soffie",
+        "file":  "soffie/tertawa.png"
+    },
+    {
+        "width":  377,
+        "expression":  "tertawa",
+        "height":  900,
+        "offsetY":  64,
+        "offsetX":  1476,
+        "person":  "Savero",
+        "file":  "savero/tertawa.png"
+    },
+    {
+        "width":  383,
+        "expression":  "tidak suka",
+        "height":  900,
+        "offsetY":  76,
+        "offsetX":  120,
+        "person":  "Soffie",
+        "file":  "soffie/tidak-suka.png"
+    },
+    {
+        "width":  425,
+        "expression":  "tidak suka",
+        "height":  900,
+        "offsetY":  52,
+        "offsetX":  1538,
+        "person":  "Savero",
+        "file":  "savero/tidak-suka.png"
+    },
+    {
+        "width":  382,
+        "expression":  "usil jahil",
+        "height":  900,
+        "offsetY":  108,
+        "offsetX":  282,
+        "person":  "Soffie",
+        "file":  "soffie/usil-jahil.png"
+    },
+    {
+        "width":  341,
+        "expression":  "usil jahil",
+        "height":  900,
+        "offsetY":  74,
+        "offsetX":  1536,
+        "person":  "Savero",
+        "file":  "savero/usil-jahil.png"
+    }
+]

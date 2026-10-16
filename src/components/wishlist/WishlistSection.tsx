@@ -6,6 +6,7 @@ import {
   Coffee,
   CheckCircle,
   Plus,
+  Pencil,
   Shuffle,
   ExternalLink,
   Filter,
@@ -25,7 +26,9 @@ interface WishlistSectionProps {
   drinks: WishlistDrink[];
   pins: MemoryPin[];
   settings: AppSettings;
+  activeProfile: 'Savero' | 'Soffie';
   onAddPlace: (place: WishlistPlace) => void;
+  onUpdatePlace: (place: WishlistPlace) => void;
   onMarkPlaceVisited: (place: WishlistPlace) => void;
   onAddDrink: (drink: WishlistDrink) => void;
   onUpdateDrink: (drink: WishlistDrink) => void;
@@ -36,7 +39,9 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
   drinks,
   pins,
   settings,
+  activeProfile,
   onAddPlace,
+  onUpdatePlace,
   onMarkPlaceVisited,
   onAddDrink,
   onUpdateDrink
@@ -51,6 +56,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
 
   // New Place Modal State
   const [isNewPlaceOpen, setIsNewPlaceOpen] = useState(false);
+  const [editingPlace, setEditingPlace] = useState<WishlistPlace | null>(null);
   const [placeForm, setPlaceForm] = useState<{
     name: string;
     category: PinCategory;
@@ -67,7 +73,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
     area: 'Semarang',
     budgetEstimate: 'sedang',
     priority: 'tinggi',
-    requestedBy: 'Berdua',
+    requestedBy: activeProfile,
     notes: '',
     mapUrl: '',
     tags: 'Semarang, Kencan'
@@ -75,6 +81,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
 
   // New Drink Modal State
   const [isNewDrinkOpen, setIsNewDrinkOpen] = useState(false);
+  const [editingDrink, setEditingDrink] = useState<WishlistDrink | null>(null);
   const [drinkForm, setDrinkForm] = useState<{
     name: string;
     type: 'kopi' | 'matcha' | 'non-kopi' | 'alkohol';
@@ -124,44 +131,81 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
   const handleSavePlace = (e: React.FormEvent) => {
     e.preventDefault();
     const newPlace: WishlistPlace = {
-      id: 'wplace-' + Date.now(),
+      id: editingPlace?.id ?? 'wplace-' + Date.now(),
       name: placeForm.name,
       category: placeForm.category,
       area: placeForm.area,
       budgetEstimate: placeForm.budgetEstimate,
       priority: placeForm.priority,
-      requestedBy: placeForm.requestedBy,
+      requestedBy: activeProfile,
       notes: placeForm.notes,
       mapUrl: placeForm.mapUrl,
       tags: placeForm.tags.split(',').map((s) => s.trim()).filter(Boolean),
-      createdAt: new Date().toISOString().split('T')[0],
-      isVisited: false
+      createdAt: editingPlace?.createdAt ?? new Date().toISOString().split('T')[0],
+      isVisited: editingPlace?.isVisited ?? false
     };
-    onAddPlace(newPlace);
+    if (editingPlace) onUpdatePlace(newPlace);
+    else onAddPlace(newPlace);
+    setEditingPlace(null);
     setIsNewPlaceOpen(false);
+  };
+
+  const openPlaceEditor = (place: WishlistPlace) => {
+    setEditingPlace(place);
+    setPlaceForm({
+      name: place.name,
+      category: place.category,
+      area: place.area,
+      budgetEstimate: place.budgetEstimate,
+      priority: place.priority,
+      requestedBy: place.requestedBy,
+      notes: place.notes ?? '',
+      mapUrl: place.mapUrl ?? '',
+      tags: place.tags.join(', ')
+    });
+    setIsNewPlaceOpen(true);
   };
 
   const handleSaveDrink = (e: React.FormEvent) => {
     e.preventDefault();
     const newDrink: WishlistDrink = {
-      id: 'wdrink-' + Date.now(),
+      ...editingDrink,
+      id: editingDrink?.id ?? 'wdrink-' + Date.now(),
       name: drinkForm.name,
       type: drinkForm.type,
       venueName: drinkForm.venueName,
+      addedBy: activeProfile,
       price: Number(drinkForm.price),
       forWhom: drinkForm.forWhom,
       status: drinkForm.status,
       rating: drinkForm.status === 'sudah_coba' ? drinkForm.rating : undefined,
       tastingNotes: drinkForm.tastingNotes,
-      createdAt: new Date().toISOString().split('T')[0]
+      createdAt: editingDrink?.createdAt ?? new Date().toISOString().split('T')[0]
     };
-    onAddDrink(newDrink);
+    if (editingDrink) onUpdateDrink(newDrink);
+    else onAddDrink(newDrink);
+    setEditingDrink(null);
     setIsNewDrinkOpen(false);
+  };
+
+  const openDrinkEditor = (drink: WishlistDrink) => {
+    setEditingDrink(drink);
+    setDrinkForm({
+      name: drink.name,
+      type: drink.type,
+      venueName: drink.venueName,
+      price: drink.price ?? 0,
+      forWhom: drink.forWhom,
+      status: drink.status,
+      rating: drink.rating ?? 5,
+      tastingNotes: drink.tastingNotes ?? ''
+    });
+    setIsNewDrinkOpen(true);
   };
 
   // Filtered Drinks
   const visibleDrinks = drinks.filter((d) => {
-    if (d.type === 'alkohol' && (!settings.allowAlcoholCategory || settings.isGuestMode)) {
+    if (d.type === 'alkohol' && settings.isGuestMode) {
       return false;
     }
     return true;
@@ -240,7 +284,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
           <div className="space-y-6">
             <div className="flex justify-end">
               <button
-                onClick={() => setIsNewPlaceOpen(true)}
+                onClick={() => { setPlaceForm((form) => ({ ...form, requestedBy: activeProfile })); setIsNewPlaceOpen(true); }}
                 className="flex min-h-11 w-full items-center justify-center space-x-1.5 rounded-full bg-[#d66783] px-5 py-2 text-xs font-sans-clean font-bold text-white shadow-[0_4px_0_#a9435b] transition hover:-translate-y-0.5 hover:bg-[#ca5875] active:translate-y-1 active:shadow-none sm:ml-auto sm:w-auto"
               >
                 <Plus className="w-4 h-4" />
@@ -276,6 +320,8 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                     </span>
                   </div>
 
+                  <button type="button" onClick={() => openPlaceEditor(place)} className="mb-2 inline-flex items-center gap-1 rounded-full bg-[#f9dce1] px-2.5 py-1 text-[10px] font-bold text-[#7a3444] transition hover:bg-[#f2cbd4] dark:bg-white/10 dark:text-rose-100"><Pencil className="h-3 w-3" /> Ubah detail</button>
+
                   <h4 className="font-serif-title font-bold text-lg text-[#3B0A0F] dark:text-[#EFE6DA] mb-1">
                     {place.name}
                   </h4>
@@ -290,7 +336,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
 
                   <div className="pt-3 border-t border-[#7A1018]/10 flex items-center justify-between text-xs font-sans-clean">
                     <span className="text-[10px] text-gray-500">
-                      Diajukan: <strong>{place.requestedBy}</strong>
+                      Disimpan oleh: <strong>{place.requestedBy}</strong>
                     </span>
 
                     <button
@@ -325,7 +371,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
           <div className="space-y-8">
             <div className="flex justify-end">
               <button
-                onClick={() => setIsNewDrinkOpen(true)}
+                onClick={() => { setDrinkForm((form) => ({ ...form, forWhom: activeProfile, type: activeProfile === 'Savero' ? 'kopi' : 'matcha' })); setIsNewDrinkOpen(true); }}
                 className="px-4 py-2 bg-[#7A1018] hover:bg-[#5e0a11] text-[#EFE6DA] text-xs font-sans-clean font-bold rounded-xl shadow transition flex items-center space-x-1.5"
               >
                 <Plus className="w-4 h-4" />
@@ -379,6 +425,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
 
                       <div className="text-right">
                         <HeartRating rating={item.rating || 5} size={12} />
+                        <button type="button" onClick={() => openDrinkEditor(item)} className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#f9dce1] px-2 py-1 text-[9px] font-bold text-[#7a3444] dark:bg-white/10 dark:text-rose-100"><Pencil className="h-3 w-3" /> Ubah</button>
                       </div>
                     </div>
                   ))}
@@ -429,6 +476,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
 
                       <div className="text-right">
                         <HeartRating rating={item.rating || 5} size={12} />
+                        <button type="button" onClick={() => openDrinkEditor(item)} className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#f9dce1] px-2 py-1 text-[9px] font-bold text-[#7a3444] dark:bg-white/10 dark:text-rose-100"><Pencil className="h-3 w-3" /> Ubah</button>
                       </div>
                     </div>
                   ))}
@@ -535,7 +583,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
               >
                 <div className="flex items-center justify-between pb-3 border-b border-[#7A1018]/15 mb-4">
                   <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
-                    Tambah Wishlist Tempat
+                    {editingPlace ? 'Ubah Wishlist Tempat' : 'Tambah Wishlist Tempat'}
                   </h3>
                   <CloseButton onClick={() => setIsNewPlaceOpen(false)} />
                 </div>
@@ -612,10 +660,10 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-bold mb-1">Siapa yang Menginginkan?</label>
+                  <label className="block font-bold mb-1">Ditambahkan dari profil</label>
                   <select
-                    value={placeForm.requestedBy}
-                    onChange={(e) => setPlaceForm({ ...placeForm, requestedBy: e.target.value as any })}
+                    value={activeProfile}
+                    disabled
                     className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20"
                   >
                     <option value="Berdua">Berdua ❤️</option>
@@ -638,7 +686,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                 <div className="flex justify-end space-x-2 pt-3 border-t border-[#7A1018]/15">
                   <button
                     type="button"
-                    onClick={() => setIsNewPlaceOpen(false)}
+                    onClick={() => { setIsNewPlaceOpen(false); setEditingPlace(null); }}
                     className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl font-bold"
                   >
                     Batal
@@ -647,7 +695,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                     type="submit"
                     className="px-5 py-2 bg-[#7A1018] text-[#EFE6DA] rounded-xl font-bold hover:bg-[#5e0a11]"
                   >
-                    Simpan Wishlist
+                    {editingPlace ? 'Simpan Perubahan' : 'Simpan Wishlist'}
                   </button>
                 </div>
               </form>
@@ -675,9 +723,9 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
             >
               <div className="flex items-center justify-between pb-3 border-b border-[#7A1018]/15 mb-4">
                 <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
-                  Tambah Ulasan Minuman
+                  {editingDrink ? 'Ubah Ulasan Minuman' : 'Tambah Ulasan Minuman'}
                 </h3>
-                <CloseButton onClick={() => setIsNewDrinkOpen(false)} />
+                <CloseButton onClick={() => { setIsNewDrinkOpen(false); setEditingDrink(null); }} />
               </div>
 
               <form onSubmit={handleSaveDrink} className="space-y-3 font-sans-clean text-xs">
@@ -704,7 +752,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                       <option value="matcha">Matcha (Soffie)</option>
                       <option value="kopi">Kopi (Savero)</option>
                       <option value="non-kopi">Juice / Teh Artisan</option>
-                      {settings.allowAlcoholCategory && <option value="alkohol">Cocktail / Spesial</option>}
+                      <option value="alkohol">Cocktail / Spesial</option>
                     </select>
                   </div>
 
@@ -793,7 +841,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                     type="submit"
                     className="px-5 py-2 bg-[#7A1018] text-[#EFE6DA] rounded-xl font-bold hover:bg-[#5e0a11]"
                   >
-                    Simpan Minuman
+                    {editingDrink ? 'Simpan Perubahan' : 'Simpan Minuman'}
                   </button>
                 </div>
               </form>

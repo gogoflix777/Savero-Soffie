@@ -8,27 +8,29 @@ import {
   Trash2,
   Key,
   Calendar,
-  Share2,
   ShieldAlert,
-  Wine,
-  Film,
   Moon
 } from 'lucide-react';
 import { AppSettings } from '../../types';
 import { appStorage } from '../../utils/storage';
 import { CloseButton } from '../common/CloseButton';
-import { PhotoLibrary } from './PhotoLibrary';
 
 interface SettingsModalProps {
   settings: AppSettings;
+  isAdminAccount?: boolean;
+  adminMode?: boolean;
   onSaveSettings: (settings: AppSettings) => void;
+  onToggleAdminMode?: () => void;
   onClose: () => void;
   onWipeCycleData: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   settings,
+  isAdminAccount = false,
+  adminMode = false,
   onSaveSettings,
+  onToggleAdminMode,
   onClose,
   onWipeCycleData
 }) => {
@@ -71,14 +73,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-md sm:p-4"
     >
       <motion.div
         initial={{ scale: 0.92, opacity: 0, y: 25 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.92, opacity: 0, y: 25 }}
         transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-        className="bg-[#EFE6DA] dark:bg-[#250709] max-w-lg w-full rounded-3xl p-6 sm:p-8 border-2 border-[#7A1018]/30 shadow-2xl my-8"
+        className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-3xl border-2 border-[#7A1018]/30 bg-[#fffaf0] p-5 text-[#57202c] shadow-2xl dark:bg-[#250709] dark:text-rose-50 sm:p-8"
       >
         <div className="flex items-center justify-between pb-4 border-b border-[#7A1018]/15 mb-6">
           <div className="flex items-center space-x-2">
@@ -106,7 +108,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   required
                   value={formData.anniversaryDate}
                   onChange={(e) => setFormData({ ...formData, anniversaryDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20"
+                  className="min-h-11 w-full rounded-xl border border-[#7A1018]/20 bg-white px-3 py-2 text-[#57202c] dark:bg-black/30 dark:text-rose-50 dark:[color-scheme:dark]"
                 />
               </div>
 
@@ -117,7 +119,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   required
                   value={formData.firstMeetDate}
                   onChange={(e) => setFormData({ ...formData, firstMeetDate: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20"
+                  className="min-h-11 w-full rounded-xl border border-[#7A1018]/20 bg-white px-3 py-2 text-[#57202c] dark:bg-black/30 dark:text-rose-50 dark:[color-scheme:dark]"
                 />
               </div>
             </div>
@@ -149,7 +151,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 required
                 value={formData.pin}
                 onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '') })}
-                className="w-32 px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20 font-bold tracking-widest text-center text-sm"
+                className="min-h-11 w-32 rounded-xl border border-[#7A1018]/20 bg-white px-3 py-2 text-center text-sm font-bold tracking-widest text-[#57202c] dark:bg-black/30 dark:text-rose-50"
               />
             </div>
 
@@ -167,63 +169,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* Cycle Sharing with Partner */}
-          <div className="p-4 rounded-2xl bg-white/60 dark:bg-black/30 border border-[#7A1018]/15 space-y-3">
-            <h4 className="font-bold text-[#7A1018] dark:text-[#F4B6C2] flex items-center space-x-1.5 uppercase tracking-wider text-[11px]">
-              <Share2 className="w-3.5 h-3.5" />
-              <span>Berbagi Data Siklus dengan Pasangan</span>
-            </h4>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="shareCycle"
-                checked={formData.shareCycleWithPartner}
-                onChange={(e) => setFormData({ ...formData, shareCycleWithPartner: e.target.checked })}
-                className="rounded text-[#7A1018]"
-              />
-              <label htmlFor="shareCycle" className="cursor-pointer font-medium">
-                Bagikan data siklus dan log intim dengan Savero (Default Menyala)
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="shareOnlyPred"
-                checked={formData.shareOnlyPredictions}
-                onChange={(e) => setFormData({ ...formData, shareOnlyPredictions: e.target.checked })}
-                className="rounded text-[#7A1018]"
-              />
-              <label htmlFor="shareOnlyPred" className="cursor-pointer font-medium text-gray-600 dark:text-gray-300">
-                Batasi hanya bagikan prediksi haid & masa subur (tanpa catatan detail intim)
-              </label>
-            </div>
-          </div>
-
-          {/* Optional Alcohol Category */}
-          <div className="p-4 rounded-2xl bg-white/60 dark:bg-black/30 border border-[#7A1018]/15 space-y-2">
-            <h4 className="font-bold text-[#7A1018] dark:text-[#F4B6C2] flex items-center space-x-1.5 uppercase tracking-wider text-[11px]">
-              <Wine className="w-3.5 h-3.5" />
-              <span>Kategori Minuman Dewasa (Alkohol)</span>
-            </h4>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="allowAlcohol"
-                checked={formData.allowAlcoholCategory}
-                onChange={(e) => setFormData({ ...formData, allowAlcoholCategory: e.target.checked })}
-                className="rounded text-[#7A1018]"
-              />
-              <label htmlFor="allowAlcohol" className="cursor-pointer font-medium">
-                Izinkan kategori minuman cocktail/alkohol di Wishlist (selalu tersembunyi di Mode Tamu)
-              </label>
-            </div>
-          </div>
-
-          {/* Backup & Restore */}
-          <PhotoLibrary />
+          {isAdminAccount && (
+            <section className="rounded-2xl border border-amber-300/70 bg-amber-50/80 p-4 text-[#603e1e] shadow-inner dark:border-amber-200/20 dark:bg-amber-950/20 dark:text-amber-100">
+              <h4 className="mb-2 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider">
+                <ShieldAlert className="h-4 w-4" />
+                Akses administrator terverifikasi
+              </h4>
+              <p className="mb-3 text-[10px] leading-relaxed opacity-80">
+                Mode ini mengizinkan akun admin membaca dan mengubah check-in, foto diary, konfirmasi bertemu, dan progres hati kedua profil melalui Supabase. Pilih profil aktif dari menu profil setelah mengaktifkannya.
+              </p>
+              <button
+                type="button"
+                onClick={onToggleAdminMode}
+                aria-pressed={adminMode}
+                className={`min-h-10 rounded-xl px-4 py-2 text-xs font-extrabold text-white shadow-[0_3px_0_rgba(75,48,20,.25)] transition active:translate-y-0.5 active:shadow-none ${adminMode ? 'bg-rose-700 hover:bg-rose-800' : 'bg-amber-700 hover:bg-amber-800'}`}
+              >
+                {adminMode ? 'Nonaktifkan Mode Admin' : 'Aktifkan Mode Admin'}
+              </button>
+              <p className="mt-2 text-[9px] opacity-70" role="status">
+                {adminMode ? 'Mode Admin aktif untuk sesi ini.' : 'Mode Admin nonaktif.'}
+              </p>
+              <p className="mt-2 text-[9px] leading-relaxed opacity-70">
+                Data fitur lain yang hanya tersimpan di browser (localStorage) belum dipisahkan atau disinkronkan per profil.
+              </p>
+            </section>
+          )}
 
           {/* Backup & Restore */}
           <div className="p-4 rounded-2xl bg-white/60 dark:bg-black/30 border border-[#7A1018]/15 space-y-3">

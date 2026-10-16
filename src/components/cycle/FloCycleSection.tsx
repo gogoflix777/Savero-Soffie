@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Calendar as CalendarIcon,
@@ -21,6 +21,7 @@ import {
 import { CloseButton } from '../common/CloseButton';
 import { CycleRecord, IntimateLog, MemoryPin, AppSettings, ProtectionType } from '../../types';
 import { MoodBadge, MOOD_DEFINITIONS, AnimatedHeart } from '../common/AnimatedIcons';
+import { soundManager } from '../../utils/audio';
 import {
   calculateCycleStats,
   getDayStatus,
@@ -35,6 +36,7 @@ interface FloCycleSectionProps {
   intimateLogs: IntimateLog[];
   pins: MemoryPin[];
   settings: AppSettings;
+  canEdit: boolean;
   onAddCycle: (cycle: CycleRecord) => void;
   onUpdateCycle: (cycle: CycleRecord) => void;
   onAddIntimateLog: (log: IntimateLog) => void;
@@ -48,6 +50,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
   intimateLogs,
   pins,
   settings,
+  canEdit,
   onAddCycle,
   onUpdateCycle,
   onAddIntimateLog,
@@ -59,6 +62,8 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
   const [selectedDate, setSelectedDate] = useState<string>(formatDateKey(new Date()));
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [isPeriodEditModalOpen, setIsPeriodEditModalOpen] = useState(false);
+  const [isDayActionModalOpen, setIsDayActionModalOpen] = useState(false);
+  const [editingCycleId, setEditingCycleId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'kalender' | 'ringkasan' | 'edukasi'>('kalender');
 
   // Form State for Intimate Log
@@ -85,6 +90,9 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
   // Form State for Period Record
   const [periodForm, setPeriodForm] = useState<{
     startDate: string;
+    fertileStartDate: string;
+    fertileEndDate: string;
+    ovulationDate: string;
     periodLength: number;
     flow: 'ringan' | 'sedang' | 'banyak';
     pain: 'tidak_ada' | 'ringan' | 'sedang' | 'parah';
@@ -92,12 +100,23 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
     notes: string;
   }>({
     startDate: formatDateKey(new Date()),
+    fertileStartDate: '',
+    fertileEndDate: '',
+    ovulationDate: '',
     periodLength: 5,
     flow: 'sedang',
     pain: 'ringan',
     mood: 'tenang',
     notes: ''
   });
+
+  useEffect(() => {
+    if (!canEdit) {
+      setIsLogModalOpen(false);
+      setIsPeriodEditModalOpen(false);
+      setIsDayActionModalOpen(false);
+    }
+  }, [canEdit]);
 
   const stats = useMemo(() => calculateCycleStats(cycles), [cycles]);
   const healthAlerts = useMemo(() => checkIntimateHealthRisk(intimateLogs, cycles, stats), [intimateLogs, cycles, stats]);
@@ -119,16 +138,50 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
   }, []);
 
   const openLogModalForDate = (dateStr: string) => {
+    if (!canEdit) return;
+    soundManager.playTap();
     setSelectedDate(dateStr);
-    setIntimateForm((prev) => ({
-      ...prev,
-      date: dateStr
-    }));
+    setIntimateForm({ date: dateStr, time: '23:00', protection: 'kondom', protectionIssue: false, otherMethodDetails: '', mood: 'romantis', notes: '', pinId: '' });
     setIsLogModalOpen(true);
+  };
+
+  const openDayActions = (dateStr: string) => {
+    if (!canEdit) return;
+    soundManager.playTap();
+    setSelectedDate(dateStr);
+    setIsDayActionModalOpen(true);
+  };
+
+  const openPeriodEditorForDate = (dateStr: string) => {
+    soundManager.playTap();
+    const existing = cycles.find((cycle) => {
+      const dayOffset = Math.round((parseDate(dateStr).getTime() - parseDate(cycle.startDate).getTime()) / 86400000);
+      const inPeriod = dayOffset >= 0 && dayOffset < (cycle.periodLength || stats.averagePeriodLength || 5);
+      const inFertileWindow = Boolean(cycle.fertileStartDate && cycle.fertileEndDate && dateStr >= cycle.fertileStartDate && dateStr <= cycle.fertileEndDate);
+      return cycle.startDate === dateStr || inPeriod || inFertileWindow;
+    });
+    const startDate = existing?.startDate ?? dateStr;
+    const ovulationDate = existing?.ovulationDate ?? formatDateKey(new Date(parseDate(startDate).getTime() + (stats.averageCycleLength - 14) * 86400000));
+    const fertileStartDate = existing?.fertileStartDate ?? formatDateKey(new Date(parseDate(ovulationDate).getTime() - 5 * 86400000));
+    setEditingCycleId(existing?.id ?? null);
+    setPeriodForm({
+      startDate,
+      fertileStartDate,
+      fertileEndDate: existing?.fertileEndDate ?? ovulationDate,
+      ovulationDate,
+      periodLength: existing?.periodLength ?? stats.averagePeriodLength ?? 5,
+      flow: existing?.flow ?? 'sedang',
+      pain: existing?.pain ?? 'ringan',
+      mood: existing?.mood ?? 'tenang',
+      notes: existing?.notes ?? ''
+    });
+    setIsDayActionModalOpen(false);
+    setIsPeriodEditModalOpen(true);
   };
 
   const handleSaveIntimateLog = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
     const newLog: IntimateLog = {
       id: 'intimate-' + Date.now(),
       date: intimateForm.date,
@@ -142,14 +195,24 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
       createdAt: new Date().toISOString()
     };
     onAddIntimateLog(newLog);
+    soundManager.playChime();
     setIsLogModalOpen(false);
   };
 
   const handleSavePeriod = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canEdit) return;
+    if (periodForm.fertileStartDate && periodForm.fertileEndDate && periodForm.fertileEndDate < periodForm.fertileStartDate) {
+      window.alert('Tanggal akhir masa subur harus setelah tanggal mulai.');
+      return;
+    }
     const newCycle: CycleRecord = {
-      id: 'cycle-' + Date.now(),
+      id: editingCycleId ?? 'cycle-' + Date.now(),
       startDate: periodForm.startDate,
+      endDate: formatDateKey(new Date(parseDate(periodForm.startDate).getTime() + (periodForm.periodLength - 1) * 86400000)),
+      fertileStartDate: periodForm.fertileStartDate || undefined,
+      fertileEndDate: periodForm.fertileEndDate || undefined,
+      ovulationDate: periodForm.ovulationDate || undefined,
       cycleLength: stats.averageCycleLength || 28,
       periodLength: periodForm.periodLength,
       flow: periodForm.flow,
@@ -157,7 +220,10 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
       mood: periodForm.mood,
       notes: periodForm.notes
     };
-    onAddCycle(newCycle);
+    if (editingCycleId) onUpdateCycle(newCycle);
+    else onAddCycle(newCycle);
+    soundManager.playChime();
+    setEditingCycleId(null);
     setIsPeriodEditModalOpen(false);
   };
 
@@ -172,6 +238,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
           <p className="mx-auto mt-1 max-w-lg text-xs leading-relaxed text-[#80646a] dark:text-rose-100/70 sm:text-sm">
             Catat kalender, lihat ringkasan, dan kelola privasi dalam satu tempat.
           </p>
+          {!canEdit && <div className="mx-auto mt-3 flex max-w-md items-center justify-center gap-2 rounded-2xl border border-[#e7c2c8] bg-white/75 px-3 py-2 text-xs text-[#704b54] shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-rose-100/75"><img src="/characters/expressions/soffie/gemas-sayang.png" alt="" className="h-10 w-7 object-contain" /><span>Mode lihat — pencatatan siklus hanya tersedia di profil Soffie.</span></div>}
         </header>
         {/* Flo-styled Top Bar */}
         <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-3xl p-4 sm:p-5 shadow-lg border border-[#7A1018]/15 mb-5">
@@ -212,13 +279,13 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
 
             {/* Quick Actions (Settings, Close) */}
             <div className="flex items-center space-x-2">
-              <button
+              {canEdit && <button
                 onClick={onOpenSettings}
                 className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition"
                 title="Pengaturan Siklus & Privasi"
               >
                 <SettingsIcon className="w-4 h-4" />
-              </button>
+              </button>}
             </div>
           </div>
 
@@ -344,7 +411,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                             <button
                               key={dayNum}
                               type="button"
-                              onClick={() => openLogModalForDate(dateStr)}
+                              onClick={() => openDayActions(dateStr)}
                               className={`relative h-14 sm:h-16 rounded-xl flex flex-col items-center justify-between p-1 transition border ${
                                 isToday
                                   ? 'border-[#7A1018] bg-[#7A1018]/5 dark:bg-white/5 font-bold shadow-xs'
@@ -476,24 +543,14 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
             )}
 
             {/* Floating Action Button at Bottom: "Edit tanggal periode haid" */}
-            <div className="sticky bottom-2 mt-6 flex flex-wrap items-center justify-between gap-3 bg-white/95 dark:bg-[#200508]/95 p-3 rounded-2xl border border-[#7A1018]/20 shadow-xl backdrop-blur-md">
+            {canEdit && <div className="sticky bottom-2 mt-6 flex flex-wrap items-center justify-between gap-3 bg-white/95 dark:bg-[#200508]/95 p-3 rounded-2xl border border-[#7A1018]/20 shadow-xl backdrop-blur-md">
               <button
                 type="button"
-                onClick={() => {
-                  setPeriodForm({
-                    startDate: todayStr,
-                    periodLength: stats.averagePeriodLength || 5,
-                    flow: 'sedang',
-                    pain: 'ringan',
-                    mood: '😊 Tenang',
-                    notes: ''
-                  });
-                  setIsPeriodEditModalOpen(true);
-                }}
+                onClick={() => { setSelectedDate(todayStr); openPeriodEditorForDate(todayStr); }}
                 className="px-4 py-2.5 rounded-xl bg-[#F4B6C2] hover:bg-[#e99ba9] text-[#7A1018] font-bold text-xs font-sans-clean transition shadow-sm flex items-center space-x-2"
               >
                 <CalendarIcon className="w-4 h-4" />
-                <span>Edit Tanggal Periode Haid</span>
+                <span>Catat / ubah haid & masa subur</span>
               </button>
 
               <button
@@ -504,7 +561,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                 <Heart className="w-4 h-4 fill-current" />
                 <span>Catat Hubungan Hari Ini</span>
               </button>
-            </div>
+            </div>}
           </div>
         )}
 
@@ -592,7 +649,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                           </div>
                         </div>
 
-                        <button
+                        {canEdit && <button
                           onClick={() => {
                             if (confirm('Hapus log intim tanggal ' + log.date + '?')) {
                               onDeleteIntimateLog(log.id);
@@ -601,7 +658,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                           className="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded"
                         >
                           Hapus
-                        </button>
+                        </button>}
                       </div>
                     );
                   })}
@@ -610,7 +667,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
             </div>
 
             {/* Privacy Wipe Button */}
-            <div className="pt-4 border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
+            {canEdit && <div className="pt-4 border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
               <span className="text-xs text-gray-500">
                 Penyimpanan lokal di perangkat ini terenkripsi.
               </span>
@@ -624,7 +681,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
               >
                 Hapus Semua Data Siklus & Intim
               </button>
-            </div>
+            </div>}
           </div>
         )}
 
@@ -704,7 +761,22 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
           </div>
         )}
 
-        {/* Modal: Log Hubungan Intim */}
+      <AnimatePresence>
+        {isDayActionModalOpen && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) setIsDayActionModalOpen(false); }}>
+            <motion.div role="dialog" aria-modal="true" aria-labelledby="cycle-day-actions-title" className="w-full max-w-sm rounded-3xl border border-[#e8bdc3] bg-[#fffaf5] p-5 shadow-2xl dark:border-white/10 dark:bg-[#250709]" initial={{ opacity: 0, scale: .92, y: 18 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: .94, y: 10 }} transition={{ type: 'spring', damping: 25, stiffness: 350 }}>
+              <div className="mb-4 flex items-start justify-between gap-3"><div><h2 id="cycle-day-actions-title" className="font-sans-clean text-base font-extrabold text-[#7A1018] dark:text-[#F4B6C2]">Catat tanggal</h2><p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{new Intl.DateTimeFormat('id-ID', { dateStyle: 'long' }).format(parseDate(selectedDate))}</p></div><CloseButton onClick={() => { soundManager.playTap(); setIsDayActionModalOpen(false); }} /></div>
+              <div className="space-y-2">
+                <button type="button" onClick={() => openPeriodEditorForDate(selectedDate)} className="flex w-full items-center gap-3 rounded-2xl border border-rose-200 bg-white p-3 text-left transition hover:-translate-y-0.5 hover:bg-rose-50 active:scale-[.98] dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f9dce1] text-[#a94761]"><CalendarIcon className="h-5 w-5" /></span><span><strong className="block text-xs text-[#57202c] dark:text-rose-50">Haid & masa subur</strong><span className="text-[10px] text-gray-500 dark:text-gray-400">Catat atau ubah tanggal</span></span></button>
+                <button type="button" onClick={() => openLogModalForDate(selectedDate)} className="flex w-full items-center gap-3 rounded-2xl border border-rose-200 bg-white p-3 text-left transition hover:-translate-y-0.5 hover:bg-rose-50 active:scale-[.98] dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f9dce1] text-[#a94761]"><Heart className="h-5 w-5" /></span><span><strong className="block text-xs text-[#57202c] dark:text-rose-50">Catatan intim</strong><span className="text-[10px] text-gray-500 dark:text-gray-400">Tambah catatan untuk tanggal ini</span></span></button>
+              </div>
+              <button type="button" onClick={() => { soundManager.playTap(); setIsDayActionModalOpen(false); }} className="mt-4 min-h-10 w-full rounded-xl bg-gray-100 text-xs font-bold text-gray-600 transition hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/15">Batal</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal: Log Hubungan Intim */}
         <AnimatePresence>
           {isLogModalOpen && (
             <motion.div
@@ -728,7 +800,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                       Catat Hubungan Intim
                     </h3>
                   </div>
-                  <CloseButton onClick={() => setIsLogModalOpen(false)} />
+                  <CloseButton onClick={() => { soundManager.playTap(); setIsLogModalOpen(false); }} />
                 </div>
 
               <form onSubmit={handleSaveIntimateLog} className="space-y-4 font-sans-clean text-xs">
@@ -886,7 +958,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                 <div className="flex justify-end space-x-2 pt-3 border-t border-[#7A1018]/15">
                   <button
                     type="button"
-                    onClick={() => setIsLogModalOpen(false)}
+                    onClick={() => { soundManager.playTap(); setIsLogModalOpen(false); }}
                     className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl font-bold"
                   >
                     Batal
@@ -925,10 +997,10 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                 <div className="flex items-center space-x-2">
                   <CalendarIcon className="w-5 h-5 text-[#F4B6C2]" />
                   <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
-                    Catat Periode Haid
+                    {editingCycleId ? 'Ubah Catatan Siklus' : 'Catat Haid & Masa Subur'}
                   </h3>
                 </div>
-                <CloseButton onClick={() => setIsPeriodEditModalOpen(false)} />
+                <CloseButton onClick={() => { soundManager.playTap(); setIsPeriodEditModalOpen(false); setEditingCycleId(null); }} />
               </div>
 
               <form onSubmit={handleSavePeriod} className="space-y-4 font-sans-clean text-xs">
@@ -940,9 +1012,23 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                     type="date"
                     required
                     value={periodForm.startDate}
-                    onChange={(e) => setPeriodForm({ ...periodForm, startDate: e.target.value })}
+                    onChange={(e) => {
+                      const startDate = e.target.value;
+                      const start = parseDate(startDate);
+                      const ovulationDate = formatDateKey(new Date(start.getTime() + (stats.averageCycleLength - 14) * 86400000));
+                      setPeriodForm({ ...periodForm, startDate, ovulationDate, fertileStartDate: formatDateKey(new Date(parseDate(ovulationDate).getTime() - 5 * 86400000)), fertileEndDate: ovulationDate });
+                    }}
                     className="w-full px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20"
                   />
+                </div>
+
+                <div className="rounded-2xl border border-teal-200/80 bg-teal-50/70 p-3 dark:border-teal-900/50 dark:bg-teal-950/20">
+                  <p className="mb-2 text-[10px] font-extrabold uppercase tracking-wide text-teal-800 dark:text-teal-200">Masa subur · perkiraan yang bisa diubah</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="text-[10px] font-bold text-gray-600 dark:text-gray-300">Mulai<input type="date" value={periodForm.fertileStartDate} onChange={(e) => setPeriodForm({ ...periodForm, fertileStartDate: e.target.value })} className="mt-1 w-full rounded-xl border border-teal-200 bg-white px-2 py-2 text-xs dark:border-white/10 dark:bg-black/30" /></label>
+                    <label className="text-[10px] font-bold text-gray-600 dark:text-gray-300">Akhir<input type="date" value={periodForm.fertileEndDate} onChange={(e) => setPeriodForm({ ...periodForm, fertileEndDate: e.target.value })} className="mt-1 w-full rounded-xl border border-teal-200 bg-white px-2 py-2 text-xs dark:border-white/10 dark:bg-black/30" /></label>
+                    <label className="col-span-2 text-[10px] font-bold text-gray-600 dark:text-gray-300">Perkiraan ovulasi<input type="date" value={periodForm.ovulationDate} onChange={(e) => setPeriodForm({ ...periodForm, ovulationDate: e.target.value })} className="mt-1 w-full rounded-xl border border-teal-200 bg-white px-2 py-2 text-xs dark:border-white/10 dark:bg-black/30" /></label>
+                  </div>
                 </div>
 
                 <div>
@@ -1007,7 +1093,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                 <div className="flex justify-end space-x-2 pt-3 border-t border-[#7A1018]/15">
                   <button
                     type="button"
-                    onClick={() => setIsPeriodEditModalOpen(false)}
+                    onClick={() => { soundManager.playTap(); setIsPeriodEditModalOpen(false); setEditingCycleId(null); }}
                     className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl font-bold"
                   >
                     Batal
@@ -1016,7 +1102,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                     type="submit"
                     className="px-5 py-2 bg-[#7A1018] hover:bg-[#5e0a11] text-[#EFE6DA] rounded-xl font-bold"
                   >
-                    Simpan Periode
+                    Simpan Siklus
                   </button>
                 </div>
               </form>

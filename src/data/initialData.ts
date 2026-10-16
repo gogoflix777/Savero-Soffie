@@ -1,5 +1,4 @@
 import {
-  MemoryPin,
   CycleRecord,
   IntimateLog,
   MovieItem,
@@ -26,167 +25,8 @@ export const initialSettings: AppSettings = {
   soffieCollege: 'Mahasiswi Keperawatan UNDIP',
   shareCycleWithPartner: true,
   shareOnlyPredictions: false,
-  allowAlcoholCategory: false
+  allowAlcoholCategory: true
 };
-
-export const initialPins: MemoryPin[] = [
-  {
-    id: 'pin-1',
-    title: 'Pertemuan Pertama: Mie Gacoan',
-    date: '2026-03-24',
-    time: '20:15',
-    description: 'Pertemuan awal cerita kita berdua. Suasana ramai Mie Gacoan Semarang dengan tawa dan obrolan pertama yang tidak terlupakan.',
-    photos: [
-      'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=800&q=80',
-      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80'
-    ],
-    rating: 5,
-    tags: ['Pertama Kali', 'Mie Gacoan', 'Awal Cerita', 'Semarang'],
-    category: 'restoran',
-    lat: -7.004128,
-    lng: 110.419234,
-    mapUrl: 'https://maps.app.goo.gl/YVWJqrZoqhJp6ZXs5?g_st=iw',
-    status: 'visited',
-    addedBy: 'Berdua',
-    isSensitive: false
-  },
-  {
-    id: 'pin-2',
-    title: 'Pindah Ngobrol: Kafe Dekat Unika',
-    date: '2026-03-25',
-    time: '01:30',
-    description: 'Melanjutkan obrolan sampai dini hari di kafe hangat dekat kampus Unika Soegijapranata Bendan Dhuwur. Kopi pertama dan percakapan mendalam.',
-    photos: [
-      'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&q=80'
-    ],
-    rating: 5,
-    tags: ['Kafe Unika', 'Dini Hari', 'Kopi', 'Ngobrol Santai'],
-    category: 'kafe',
-    lat: -7.018241,
-    lng: 110.407632,
-    mapUrl: 'https://maps.app.goo.gl/hUEKGe5DZ5jh51fz9?g_st=iw',
-    status: 'visited',
-    addedBy: 'Berdua',
-    isSensitive: false
-  },
-  {
-    id: 'pin-3',
-    title: 'Kencan Berdua Pertama: KONICIPICIP Taichan Pleburan',
-    date: '2026-08-26',
-    time: '23:23',
-    description: 'Pertama kali resmi keluar berdua! Menikmati sate taichan gurih pedas di Pleburan jam 23.23 malam. Titik tolak hari jadian kita yang penuh debar.',
-    photos: [
-      'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&q=80',
-      'https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=800&q=80'
-    ],
-    rating: 5,
-    tags: ['Kencan Pertama', 'Hari Jadian', 'Taichan Pleburan', 'Malam Romantis'],
-    category: 'restoran',
-    lat: -6.9957834,
-    lng: 110.423215,
-    mapUrl: 'http://google.com/maps/place/KONICIPICIP+sate+taichan+semarang+PLEBURAN/@-6.9957834,110.423215,17z/data=!3m1!4b1!4m6!3m5!1s0x2e708b8a726ddc57:0x4111b05b0bbccff1!8m2!3d-6.9957834!4d110.423215!16s%2Fg%2F11jjpqjcpp',
-    status: 'visited',
-    addedBy: 'Berdua',
-    isSensitive: false
-  },
-  {
-    id: 'pin-4',
-    title: 'Night Ride: Jalan Baru Jangli – Undip Sampai Subuh',
-    date: '2026-08-27',
-    time: '05:38',
-    description: 'Menyusuri jalanan malam Semarang dari Jangli sampai tembusan kampus Tembalang Undip. Angin dingin, jalan sepi, dan pemandangan sunrise fajar jam 05.38 pagi.',
-    photos: [
-      'https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=800&q=80'
-    ],
-    rating: 5,
-    tags: ['Night Ride', 'Jangli-Undip', 'Subuh', 'Sunrise', 'Rute Spesial'],
-    category: 'jalan',
-    lat: -7.0375,
-    lng: 110.4335,
-    mapUrl: 'https://maps.google.com/?q=-7.0375,110.4335',
-    status: 'visited',
-    addedBy: 'Berdua',
-    isSensitive: false,
-    isRoute: true,
-    routeCoords: [
-      [-7.0250, 110.4280],
-      [-7.0310, 110.4310],
-      [-7.0375, 110.4335],
-      [-7.0440, 110.4370],
-      [-7.0520, 110.4410]
-    ]
-  },
-  {
-    id: 'pin-5',
-    title: 'Menginap Pertama: Alam Indah Hotel Gombel',
-    date: '2026-09-06',
-    time: '02:00',
-    description: 'Motel pertama kita di perbukitan Gombel, Jl. Setia Budi No. 12, Gombel, Ngesrep Banyumanik (~200m dari Gombel Golf Course). View bukit Semarang malam hari dan kehangatan privat berdua.',
-    photos: [
-      'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80'
-    ],
-    rating: 5,
-    tags: ['Menginap Pertama', 'Gombel', 'Privat', 'Malam Berdua'],
-    category: 'motel',
-    lat: -7.0289,
-    lng: 110.4245,
-    mapUrl: 'https://www.google.com/maps/search/?api=1&query=Alam+Indah+Hotel+Gombel+Semarang',
-    status: 'visited',
-    addedBy: 'Berdua',
-    isSensitive: true
-  },
-  {
-    id: 'pin-6',
-    title: 'Rumah Savero',
-    date: '2026-04-10',
-    time: '14:00',
-    description: 'Rumah Savero di Semarang. Ruang hangat keluarga dan tempat istirahat anak Hukum UNNES.',
-    photos: ['https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80'],
-    rating: 5,
-    tags: ['Rumah Savero', 'Keluarga', 'Semarang'],
-    category: 'rumah',
-    lat: -7.0012,
-    lng: 110.3950,
-    mapUrl: 'https://share.google/z1owJXRhPZkB6OMHC',
-    status: 'visited',
-    addedBy: 'Savero',
-    isSensitive: true
-  },
-  {
-    id: 'pin-7',
-    title: 'Rumah Soffie',
-    date: '2026-04-18',
-    time: '16:00',
-    description: 'Rumah Soffie di Semarang. Tempat penuh kenyamanan bidadari Keperawatan UNDIP.',
-    photos: ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80'],
-    rating: 5,
-    tags: ['Rumah Soffie', 'Keluarga', 'Semarang'],
-    category: 'rumah',
-    lat: -6.9880,
-    lng: 110.4350,
-    mapUrl: 'https://maps.app.goo.gl/zEY72KjjhbJMTxPh8?g_st=iw',
-    status: 'visited',
-    addedBy: 'Soffie',
-    isSensitive: true
-  },
-  {
-    id: 'pin-8',
-    title: 'Kos Soffie: Jalan Turus Asri III',
-    date: '2026-05-02',
-    time: '19:00',
-    description: 'Kos Soffie di dekat kampus Undip Tembalang. Tempat singgah tugas stase keperawatan dan tempat jemputan Savero.',
-    photos: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&q=80'],
-    rating: 5,
-    tags: ['Kos Soffie', 'Tembalang', 'UNDIP', 'Turus Asri'],
-    category: 'kos',
-    lat: -7.057831,
-    lng: 110.447910,
-    mapUrl: 'https://maps.apple.com/?ll=-7.057831,110.447910&q=Jalan%20Turus%20Asri%20III&t=m',
-    status: 'visited',
-    addedBy: 'Soffie',
-    isSensitive: true
-  }
-];
 
 export const initialCycles: CycleRecord[] = [
   {
@@ -237,205 +77,10 @@ export const initialIntimateLogs: IntimateLog[] = [
   }
 ];
 
-export const initialMovies: MovieItem[] = [
-  {
-    id: 'mov-1',
-    tmdbId: 313369,
-    title: 'La La Land',
-    year: 2016,
-    posterUrl: 'https://image.tmdb.org/t/p/w500/uDO8zWDhfWwoFdKS4fzkVJb0Rf0.jpg',
-    backdropUrl: 'https://image.tmdb.org/t/p/original/qJeU7KM4nR29v2qK4tqO7uQn2G.jpg',
-    genres: ['Romance', 'Comedy', 'Drama', 'Music'],
-    durationMinutes: 128,
-    overview: 'Mia, seorang calon aktris, dan Sebastian, musisi jazz yang berdedikasi, berjuang memenuhi kebutuhan di kota yang terkenal menghancurkan harapan dan mematahkan hati.',
-    tmdbRating: 7.9,
-    status: 'together',
-    watchedDate: '2026-08-30',
-    venuePinId: 'pin-8',
-    ratingSavero: 5,
-    ratingSoffie: 5,
-    notes: 'Soundtrack City of Stars bikin terhanyut. Film favorit kencan malam kita di kos.',
-    emojiReaction: '✨😭❤️'
-  },
-  {
-    id: 'mov-2',
-    tmdbId: 122906,
-    title: 'About Time',
-    year: 2013,
-    posterUrl: 'https://image.tmdb.org/t/p/w500/iL8bJ7qV05m98r0CsmWb2aE8V4f.jpg',
-    backdropUrl: 'https://image.tmdb.org/t/p/original/jG2lqR5h33aF1oI7WkUeFz42b.jpg',
-    genres: ['Drama', 'Romance', 'Fantasy'],
-    durationMinutes: 123,
-    overview: 'Pada usia 21 tahun, Tim mengetahui bahwa pria di keluarganya dapat melakukan perjalanan melintasi waktu. Ia memutuskan untuk membuat dunianya lebih baik dengan mencari pacar.',
-    tmdbRating: 8.0,
-    status: 'together',
-    watchedDate: '2026-09-10',
-    ratingSavero: 5,
-    ratingSoffie: 5,
-    notes: 'Pelajaran berharga tentang menikmati setiap detik bersama orang tersayang.',
-    emojiReaction: '⏳❤️🥹'
-  },
-  {
-    id: 'mov-3',
-    tmdbId: 19995,
-    title: 'Avatar',
-    year: 2009,
-    posterUrl: 'https://image.tmdb.org/t/p/w500/kyeqWdyUXW608qlYkRqosgbbJyK.jpg',
-    genres: ['Action', 'Adventure', 'Fantasy', 'Sci-Fi'],
-    durationMinutes: 162,
-    overview: 'Di dunia alien Pandora hidup suku Na vi, makhluk yang tampak primitif namun sangat berevolusi.',
-    tmdbRating: 7.6,
-    status: 'together',
-    watchedDate: '2026-09-15',
-    ratingSavero: 4,
-    ratingSoffie: 4,
-    notes: 'Visual spektakuler, nonton sambil cemil taichan.',
-    emojiReaction: '🌿💙'
-  },
-  {
-    id: 'mov-4',
-    tmdbId: 157336,
-    title: 'Interstellar',
-    year: 2014,
-    posterUrl: 'https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg',
-    genres: ['Adventure', 'Drama', 'Sci-Fi'],
-    durationMinutes: 169,
-    overview: 'Petualangan melintasi lubang cacing untuk memastikan kelangsungan hidup umat manusia di planet lain.',
-    tmdbRating: 8.4,
-    status: 'savero',
-    ratingSavero: 5,
-    notes: 'Savero sangat suka teori relativitas waktu dan soundtrack Hans Zimmer.',
-    emojiReaction: '🌌🪐'
-  },
-  {
-    id: 'mov-5',
-    tmdbId: 508442,
-    title: 'Soul',
-    year: 2020,
-    posterUrl: 'https://image.tmdb.org/t/p/w500/hm58Jw4Lw8OIiv9I08RiAhGIvXd.jpg',
-    genres: ['Animation', 'Comedy', 'Drama', 'Music'],
-    durationMinutes: 100,
-    overview: 'Seorang pianis jazz New York menemukan dirinya di alam peralihan antara kehidupan dan akhirat.',
-    tmdbRating: 8.1,
-    status: 'soffie',
-    ratingSoffie: 5,
-    notes: 'Soffie terharu banget melihat makna hidup dari hal-hal kecil seperti daun yang jatuh.',
-    emojiReaction: '🍂🎹'
-  },
-  {
-    id: 'mov-6',
-    tmdbId: 872585,
-    title: 'Oppenheimer',
-    year: 2023,
-    posterUrl: 'https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg',
-    genres: ['Drama', 'History'],
-    durationMinutes: 180,
-    overview: 'Kisah fisikawan J. Robert Oppenheimer yang memimpin Proyek Manhattan.',
-    tmdbRating: 8.1,
-    status: 'watchlist',
-    notes: 'Target movie night marathon akhir pekan ini berdua!'
-  }
-];
-
-export const initialActors: ActorItem[] = [
-  {
-    id: 'act-1',
-    name: 'Emma Stone',
-    photoUrl: 'https://image.tmdb.org/t/p/w500/cZ8a3Q7vG1m3rY8uPq4X2e8L4t.jpg',
-    birthDate: '1988-11-06',
-    birthPlace: 'Scottsdale, Arizona, USA',
-    biography: 'Aktris pemenang Oscar yang memukau lewat La La Land, Poor Things, dan The Amazing Spider-Man.',
-    likedBy: 'Berdua',
-    topMovies: ['La La Land', 'Cruella', 'Easy A', 'Poor Things']
-  },
-  {
-    id: 'act-2',
-    name: 'Ryan Gosling',
-    photoUrl: 'https://image.tmdb.org/t/p/w500/lyUyVARQKhGxaxy0FbPJCQRpiaW.jpg',
-    birthDate: '1980-11-12',
-    birthPlace: 'London, Ontario, Canada',
-    biography: 'Aktor karismatik yang membintangi La La Land, Drive, Blade Runner 2049, dan The Notebook.',
-    likedBy: 'Berdua',
-    topMovies: ['La La Land', 'The Notebook', 'Drive', 'Blade Runner 2049']
-  },
-  {
-    id: 'act-3',
-    name: 'Cillian Murphy',
-    photoUrl: 'https://image.tmdb.org/t/p/w500/iOKW49Y93nF5p8CgmU45J3kC6hA.jpg',
-    birthDate: '1976-05-25',
-    birthPlace: 'Douglas, Cork, Ireland',
-    biography: 'Aktor brilian pemeran Thomas Shelby di Peaky Blinders dan J. Robert Oppenheimer.',
-    likedBy: 'Savero',
-    topMovies: ['Oppenheimer', 'Peaky Blinders', 'Inception', 'Dunkirk']
-  },
-  {
-    id: 'act-4',
-    name: 'Rachel McAdams',
-    photoUrl: 'https://image.tmdb.org/t/p/w500/2fec7wN4wE9rXU062m8oN7P2y.jpg',
-    birthDate: '1978-11-17',
-    birthPlace: 'London, Ontario, Canada',
-    biography: 'Ratu film romantis mempesona lewat About Time, The Notebook, dan The Vow.',
-    likedBy: 'Soffie',
-    topMovies: ['About Time', 'The Notebook', 'The Vow', 'Midnight in Paris']
-  }
-];
-
-export const initialCollections: MovieCollection[] = [
-  {
-    id: 'col-1',
-    name: 'Marvel Cinematic Universe (MCU)',
-    description: 'Petualangan superhero Marvel dari Iron Man hingga Endgame dan multiverse.',
-    movieTitles: ['Iron Man', 'The Avengers', 'Captain America: Winter Soldier', 'Guardians of the Galaxy', 'Avengers: Infinity War', 'Avengers: Endgame', 'Spider-Man: No Way Home'],
-    isTargetThisYear: true
-  },
-  {
-    id: 'col-2',
-    name: 'Harry Potter Wizarding World',
-    description: 'Petualangan magis Hogwarts dari tahun pertama hingga pertempuran Deathly Hallows.',
-    movieTitles: ['Sorcerer Stone', 'Chamber of Secrets', 'Prisoner of Azkaban', 'Goblet of Fire', 'Order of the Phoenix', 'Half-Blood Prince', 'Deathly Hallows Pt 1', 'Deathly Hallows Pt 2'],
-    isTargetThisYear: false
-  },
-  {
-    id: 'col-3',
-    name: 'The Lord of the Rings Trilogy',
-    description: 'Karya epik J.R.R. Tolkien tentang perjalanan penghancuran One Ring di Middle-Earth.',
-    movieTitles: ['Fellowship of the Ring', 'The Two Towers', 'The Return of the King'],
-    isTargetThisYear: true
-  }
-];
-
-export const initialTvSeries: TvSeries[] = [
-  {
-    id: 'series-1',
-    title: 'Hospital Playlist',
-    posterUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=500&q=80',
-    totalSeasons: 2,
-    totalEpisodes: 24,
-    watchedEpisodes: 18,
-    notes: 'Drama medis hangat favorit Soffie. Musiknya bagus dan persahabatannya bikin terharu.',
-    status: 'watching'
-  },
-  {
-    id: 'series-2',
-    title: 'Peaky Blinders',
-    posterUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=500&q=80',
-    totalSeasons: 6,
-    totalEpisodes: 36,
-    watchedEpisodes: 36,
-    notes: 'Kharisma Thomas Shelby dan intrik hukum/politik Birmingham favorit Savero.',
-    status: 'completed'
-  },
-  {
-    id: 'series-3',
-    title: 'House of the Dragon',
-    posterUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&q=80',
-    totalSeasons: 2,
-    totalEpisodes: 18,
-    watchedEpisodes: 10,
-    notes: 'Nonton bareng setiap weekend sambil ngemil taichan pedas.',
-    status: 'watching'
-  }
-];
+export const initialMovies: MovieItem[] = [];
+export const initialActors: ActorItem[] = [];
+export const initialCollections: MovieCollection[] = [];
+export const initialTvSeries: TvSeries[] = [];
 
 export const initialWishlistPlaces: WishlistPlace[] = [
   {
@@ -691,7 +336,7 @@ export const initialBadges: AchievementBadge[] = [
     iconType: 'klaper',
     isUnlocked: true,
     unlockedAt: '2026-08-30',
-    triggerContext: 'La La Land berdua'
+    triggerContext: 'Menonton film bersama'
   },
   {
     id: 'badge-13',
@@ -702,12 +347,12 @@ export const initialBadges: AchievementBadge[] = [
     iconType: 'hati',
     isUnlocked: true,
     unlockedAt: '2026-08-30',
-    triggerContext: 'Rating 5/5 untuk La La Land & About Time'
+    triggerContext: 'Memberi rating 5/5 pada film yang sama'
   },
   {
     id: 'badge-14',
-    title: 'Fans Setia Emma Stone',
-    description: 'Menyukai artis dan aktris film musikal yang sama.',
+    title: 'Penggemar Aktor Favorit',
+    description: 'Menyukai aktor atau aktris film yang sama.',
     category: 'film',
     tier: 'perak',
     iconType: 'klaper',

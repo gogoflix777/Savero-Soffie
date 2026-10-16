@@ -13,6 +13,55 @@ export type PinCategory =
   | 'jalan'
   | 'lainnya';
 
+export type MoodExpression = 'bahagia' | 'rindu' | 'tenang' | 'semangat' | 'lelah' | 'sedih';
+export interface CurrentMoodLog {
+  expression: MoodExpression;
+  updatedAt: string;
+}
+export type CoupleMoodLog = Record<'Savero' | 'Soffie', CurrentMoodLog>;
+
+export interface MoodDiaryEntry {
+  id: string;
+  profile: 'Savero' | 'Soffie';
+  date: string;
+  expression: MoodExpression;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CoupleProfile = 'Savero' | 'Soffie';
+export interface DailyHeartProgress {
+  profile: CoupleProfile;
+  progress_date: string;
+  percentage: number;
+}
+export interface DailyCheckin {
+  id: string;
+  user_id: string;
+  profile: CoupleProfile;
+  log_date: string;
+  expression: MoodExpression;
+  rating: number;
+  diary_text: string | null;
+  photo_path: string | null;
+  photo_url?: string | null;
+  expires_at: string;
+  created_at: string;
+}
+export interface MeetingConfirmation {
+  id: string;
+  user_id: string;
+  profile: CoupleProfile;
+  meeting_date: string;
+  confirmed_at: string;
+}
+export interface StreakRestore {
+  missed_date: string;
+  restored_by: string;
+  restored_at: string;
+}
+
 export interface MemoryPin {
   id: string;
   title: string;
@@ -52,6 +101,9 @@ export interface CycleRecord {
   id: string;
   startDate: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD (typically ~5 days)
+  fertileStartDate?: string; // optional manually corrected fertile-window start
+  fertileEndDate?: string; // optional manually corrected fertile-window end
+  ovulationDate?: string; // optional manually corrected ovulation date
   cycleLength: number; // e.g. 28
   periodLength: number; // e.g. 5
   notes?: string;
@@ -75,6 +127,7 @@ export interface MovieItem {
   trailerUrl?: string;
   cast?: string[];
   status: 'together' | 'savero' | 'soffie' | 'separate' | 'watchlist';
+  addedBy?: 'Savero' | 'Soffie';
   watchedDate?: string;
   venuePinId?: string; // link to cinema pin
   ratingSavero?: number; // 1-5
@@ -145,6 +198,7 @@ export interface WishlistDrink {
   venuePinId?: string;
   price?: number;
   forWhom: 'Savero' | 'Soffie' | 'Berdua';
+  addedBy?: 'Savero' | 'Soffie';
   status: 'ingin_coba' | 'sudah_coba';
   rating?: number; // 1-5
   tastingNotes?: string;
@@ -216,12 +270,28 @@ export interface LockedLetter {
 
 export interface LoveSong {
   id: string;
+  musicBrainzId?: string;
   title: string;
   artist: string;
   albumArt: string;
+  releaseTitle?: string;
+  durationMs?: number;
+  description?: string;
   memoryNote?: string;
   spotifyUri?: string;
   audioUrl?: string;
+}
+
+export interface FavoriteSinger {
+  profile: CoupleProfile;
+  musicBrainzId: string;
+  name: string;
+  disambiguation?: string;
+  country?: string;
+  artistType?: string;
+  photoUrl?: string;
+  description: string;
+  createdAt: string;
 }
 
 export interface AppSettings {
