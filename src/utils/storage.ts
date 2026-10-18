@@ -17,7 +17,8 @@ import {
   DailyCheckin,
   MeetingConfirmation,
   StreakRestore,
-  DailyHeartProgress
+  DailyHeartProgress,
+  InstantReply
 } from '../types';
 import {
   initialSettings,
@@ -94,12 +95,22 @@ export const appStorage = {
     save('meeting_fill_progress', { date, progress }),
   getDailyHeartProgress: (): DailyHeartProgress[] => load<DailyHeartProgress[]>('daily_heart_progress', []),
   saveDailyHeartProgress: (entries: DailyHeartProgress[]) => save('daily_heart_progress', entries),
-  getSettings: (): AppSettings => ({
-    ...load<AppSettings>('settings', initialSettings),
-    shareCycleWithPartner: true,
-    shareOnlyPredictions: false,
-    allowAlcoholCategory: true
-  }),
+  getInstantReplies: (): InstantReply[] => load<InstantReply[]>('instant_replies', []),
+  saveInstantReplies: (entries: InstantReply[]) => save('instant_replies', entries),
+  getSettings: (): AppSettings => {
+    const saved = load<AppSettings>('settings', initialSettings);
+    return {
+      ...initialSettings,
+      ...saved,
+      notifications: {
+        ...initialSettings.notifications!,
+        ...(saved.notifications ?? {})
+      },
+      shareCycleWithPartner: true,
+      shareOnlyPredictions: false,
+      allowAlcoholCategory: true
+    };
+  },
   saveSettings: (settings: AppSettings) => save('settings', {
     ...settings,
     shareCycleWithPartner: true,

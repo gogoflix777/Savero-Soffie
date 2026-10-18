@@ -1259,6 +1259,219 @@ set public = false,
 where id = 'daily-diary';
 
 -- ============================================================================
+-- 202610180013_instant_replies_and_realtime.sql
+-- ============================================================================
+create table if not exists public.daily_checkin_replies (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  author_profile text not null check (author_profile in ('Savero', 'Soffie')),
+  target_profile text not null check (target_profile in ('Savero', 'Soffie')),
+  text text not null check (char_length(trim(text)) between 1 and 280),
+  emoji text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_daily_checkin_replies_created_at
+  on public.daily_checkin_replies(created_at desc);
+
+create index if not exists idx_daily_checkin_replies_target
+  on public.daily_checkin_replies(target_profile, created_at desc);
+
+alter table public.daily_checkin_replies enable row level security;
+
+drop policy if exists "Couple members can read instant replies" on public.daily_checkin_replies;
+create policy "Couple members can read instant replies"
+  on public.daily_checkin_replies
+  for select to authenticated
+  using (public.is_couple_member());
+
+drop policy if exists "Couple members can create instant replies" on public.daily_checkin_replies;
+create policy "Couple members can create instant replies"
+  on public.daily_checkin_replies
+  for insert to authenticated
+  with check (public.is_couple_member());
+
+drop policy if exists "Authors or admin can delete instant replies" on public.daily_checkin_replies;
+create policy "Authors or admin can delete instant replies"
+  on public.daily_checkin_replies
+  for delete to authenticated
+  using (user_id = auth.uid() or public.is_app_admin());
+
+create or replace function public.enforce_reply_identity()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Silakan masuk terlebih dahulu.';
+  end if;
+
+  if not public.is_couple_member() then
+    raise exception 'Akses ditolak: Hanya pasangan atau admin yang dapat mengirim balasan.';
+  end if;
+
+  if public.is_app_admin() then
+    if new.user_id is null then
+      new.user_id := auth.uid();
+    end if;
+    return new;
+  end if;
+
+  new.user_id := auth.uid();
+  if not exists (
+    select 1 from public.couple_profiles
+    where user_id = auth.uid() and profile_name = new.author_profile
+  ) then
+    raise exception 'Akses ditolak: Profil pengirim tidak cocok dengan akun login.';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists reply_identity_guard on public.daily_checkin_replies;
+create trigger reply_identity_guard
+  before insert or update on public.daily_checkin_replies
+  for each row execute function public.enforce_reply_identity();
+
+grant select, insert, delete on public.daily_checkin_replies to authenticated;
+
+alter table public.daily_checkins replica identity full;
+alter table public.meeting_confirmations replica identity full;
+alter table public.streak_restores replica identity full;
+alter table public.daily_checkin_replies replica identity full;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'daily_checkins'
+    ) then
+      alter publication supabase_realtime add table public.daily_checkins;
+    end if;
+
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'meeting_confirmations'
+    ) then
+      alter publication supabase_realtime add table public.meeting_confirmations;
+    end if;
+
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'streak_restores'
+    ) then
+      alter publication supabase_realtime add table public.streak_restores;
+    end if;
+
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'daily_checkin_replies'
+    ) then
+      alter publication supabase_realtime add table public.daily_checkin_replies;
+    end if;
+  end if;
+end;
+$$;
+
+update storage.buckets
+set public = false,
+    file_size_limit = 5242880,
+    allowed_mime_types = array['image/webp', 'image/png', 'image/jpeg']
+where id = 'daily-diary';
+
+-- ============================================================================
+-- 202610180014_shared_wishlist_places.sql
+-- ============================================================================
+create table if not exists public.wishlist_places (
+  id text primary key,
+  payload jsonb not null check (jsonb_typeof(payload) = 'object'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by uuid default auth.uid() references auth.users(id),
+  check (payload->>'id' = id)
+);
+
+alter table public.wishlist_places enable row level security;
+revoke all on public.wishlist_places from public, anon;
+grant select, insert, update, delete on public.wishlist_places to authenticated;
+
+drop policy if exists "Couple members read wishlist places" on public.wishlist_places;
+create policy "Couple members read wishlist places"
+  on public.wishlist_places for select to authenticated
+  using (public.is_couple_member());
+
+drop policy if exists "Couple members add wishlist places" on public.wishlist_places;
+create policy "Couple members add wishlist places"
+  on public.wishlist_places for insert to authenticated
+  with check (public.is_couple_member());
+
+drop policy if exists "Couple members update wishlist places" on public.wishlist_places;
+create policy "Couple members update wishlist places"
+  on public.wishlist_places for update to authenticated
+  using (public.is_couple_member())
+  with check (public.is_couple_member());
+
+drop policy if exists "Couple members remove wishlist places" on public.wishlist_places;
+create policy "Couple members remove wishlist places"
+  on public.wishlist_places for delete to authenticated
+  using (public.is_couple_member());
+
+create or replace function public.enforce_wishlist_place_identity()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or not public.is_couple_member() then
+    raise exception 'Akses akun pasangan diperlukan.';
+  end if;
+  if new.payload->>'id' is distinct from new.id then
+    raise exception 'ID wishlist tempat pada metadata tidak cocok.';
+  end if;
+  if tg_op = 'UPDATE' and new.id is distinct from old.id then
+    raise exception 'ID wishlist tempat tidak dapat diubah.';
+  end if;
+  new.updated_at := now();
+  new.updated_by := auth.uid();
+  return new;
+end;
+$$;
+
+drop trigger if exists wishlist_place_identity_guard on public.wishlist_places;
+create trigger wishlist_place_identity_guard
+  before insert or update on public.wishlist_places
+  for each row execute function public.enforce_wishlist_place_identity();
+
+alter table public.wishlist_places replica identity full;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'wishlist_places'
+     ) then
+    alter publication supabase_realtime add table public.wishlist_places;
+  end if;
+end;
+$$;
+
+insert into public.wishlist_places (id, payload)
+values
+  ('wplace-1', $json${"id":"wplace-1","name":"Kofitiere Semarang","category":"kafe","area":"Peleburan / Erlangga","budgetEstimate":"sedang","priority":"tinggi","requestedBy":"Soffie","notes":"Matcha latte-nya terkenal enak dan suasananya teduh buat nugas berdua.","tags":["Matcha","Nugas","Cozy"],"createdAt":"2026-09-02","isVisited":false}$json$::jsonb),
+  ('wplace-2', $json${"id":"wplace-2","name":"Spiegel Bar & Bistro Kota Lama","category":"restoran","area":"Kota Lama Semarang","budgetEstimate":"mewah","priority":"tinggi","requestedBy":"Savero","notes":"Bangunan heritage Eropa yang estetik buat kencan formal atau perayaan milestone.","tags":["Heritage","Kota Lama","Fine Dining"],"createdAt":"2026-09-05","isVisited":false}$json$::jsonb),
+  ('wplace-3', $json${"id":"wplace-3","name":"Pantai Marina Sunset","category":"pantai","area":"Tawangsari Semarang Barat","budgetEstimate":"murah","priority":"sedang","requestedBy":"Berdua","notes":"Duduk di tanggul sore-sore sambil makan jagung bakar melihat matahari terbenam.","tags":["Sunset","Angin Laut","Santai"],"createdAt":"2026-09-12","isVisited":false}$json$::jsonb),
+  ('wplace-4', $json${"id":"wplace-4","name":"XXI The Premiere DP Mall","category":"bioskop","area":"Jl. Pemuda Semarang","budgetEstimate":"mewah","priority":"tinggi","requestedBy":"Berdua","notes":"Nonton film terbaru dengan sofa rebah empuk dan selimut tebal berdua.","tags":["Cinema","Comfort","Premiere"],"createdAt":"2026-09-15","isVisited":false}$json$::jsonb)
+on conflict (id) do nothing;
+
+-- ============================================================================
 -- OPTIONAL PROJECT-SPECIFIC SQL (edit values and run separately when needed)
 -- ============================================================================
 -- Admin enrollment: create the admin Auth user first, replace the email, then

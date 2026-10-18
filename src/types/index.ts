@@ -296,6 +296,28 @@ export interface FavoriteSinger {
   createdAt: string;
 }
 
+export interface NotificationSettings {
+  enabled: boolean;
+  webPush: boolean;
+  inAppToast: boolean;
+  notifyOnPin: boolean;
+  notifyOnPhoto: boolean;
+  notifyOnWishlist: boolean;
+  notifyOnReply: boolean;
+  notifyOnStreak: boolean;
+  notifyOnNotes: boolean;
+}
+
+export interface InstantReply {
+  id: string;
+  checkinId?: string;
+  targetProfile: CoupleProfile;
+  authorProfile: CoupleProfile;
+  text: string;
+  emoji?: string;
+  createdAt: string;
+}
+
 export interface AppSettings {
   pin: string; // default "2608"
   isGuestMode: boolean;
@@ -309,4 +331,5 @@ export interface AppSettings {
   shareCycleWithPartner: boolean;
   shareOnlyPredictions: boolean;
   allowAlcoholCategory: boolean;
+  notifications?: NotificationSettings;
 }

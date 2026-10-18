@@ -142,7 +142,7 @@ export const PhotoLibrary: React.FC = () => {
         <div>
           <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#b95770] dark:text-rose-200">Kelola foto</p>
           <h3 className="mt-1 text-xl font-extrabold text-[#3B0A0F] dark:text-rose-50">Foto-foto kita</h3>
-          <p className="mt-1 max-w-lg text-xs leading-relaxed text-[#80646a] dark:text-rose-100/65">
+          <p className="mt-1 max-w-lg text-xs leading-relaxed text-[#5c2432] dark:text-rose-200">
             Ketuk “Ganti foto” pada foto yang ingin diperbarui. Foto lama tetap tampil sampai penggantinya berhasil disimpan.
           </p>
         </div>

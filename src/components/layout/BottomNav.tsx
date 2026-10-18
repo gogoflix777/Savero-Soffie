@@ -2,12 +2,10 @@ import React, { useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   Home,
-  MapPin,
   HeartPulse,
   Sparkles,
   Film,
-  Heart,
-  Clock
+  Heart
 } from 'lucide-react';
 import { AppSettings } from '../../types';
 import { soundManager } from '../../utils/audio';
@@ -63,11 +61,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <nav
       aria-label="Navigasi Utama Aplikasi"
-      className="bottom-dock-3d fixed bottom-0 left-0 right-0 z-40 rounded-t-[24px] border-t border-[#f6c4ca] bg-[#f2a0ad] shadow-[0_-5px_20px_rgba(136,50,66,.15)] transition-colors duration-300 pb-[max(0.45rem,env(safe-area-inset-bottom))] dark:border-white/10 dark:bg-[#542b37]"
+      className="pointer-events-none fixed left-1/2 -translate-x-1/2 z-40 w-[calc(100%-24px)] max-w-sm sm:max-w-md"
+      style={{ bottom: 'max(0.75rem, env(safe-area-inset-bottom, 0.75rem))' }}
     >
       <div
         ref={containerRef}
-        className="mx-auto flex max-w-lg items-center justify-between gap-1 px-2 pt-1.5 overflow-x-auto scrollbar-none"
+        className="bottom-dock-3d pointer-events-auto flex items-center justify-around gap-1 p-1.5 sm:p-2"
       >
         {visibleItems.map((item) => {
           const isActive = activeSection === item.id;
@@ -78,42 +77,31 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               key={item.id}
               data-tab-id={item.id}
               onClick={() => handleTabClick(item.id)}
-              className="relative flex min-h-[62px] min-w-[58px] flex-1 flex-col items-center justify-center rounded-[20px] px-2 py-1 transition-all duration-200 group focus:outline-hidden sm:min-w-[64px]"
+              className="group relative flex h-11 flex-1 sm:h-12 items-center justify-center rounded-full transition-transform duration-150 active:scale-90 focus:outline-hidden"
               title={item.label}
+              aria-label={item.label}
             >
-              {/* Active Tab Glow & Background Pill */}
+              {/* Active Tab 3D Clay Pill Indicator */}
               {isActive && (
                 <motion.div
                   layoutId="bottomNavTabIndicator"
                   transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                  className="absolute inset-x-1 inset-y-0 rounded-[20px] bg-[#ffe1e5] shadow-[0_3px_10px_rgba(130,48,64,.12)] -z-10 dark:bg-[#a94860]"
+                  className="bottom-dock-active-pill"
                 />
               )}
 
               {/* Animated Icon */}
               <motion.div
-                animate={isActive ? { scale: [1, 1.2, 1], y: -2 } : { scale: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className={`transition-colors duration-200 ${
+                animate={isActive ? { scale: [1, 1.2, 1], y: -0.5 } : { scale: 1, y: 0 }}
+                transition={{ duration: 0.28, type: 'spring', stiffness: 400 }}
+                className={`relative z-10 transition-colors duration-200 ${
                   isActive
-                    ? 'text-[#963f55]'
-                    : 'text-[#9a6870] dark:text-rose-100/60 group-hover:text-[#c35f78] dark:group-hover:text-rose-200'
+                    ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]'
+                    : 'text-[#7e293c] hover:text-[#521322] dark:text-rose-200/75 dark:group-hover:text-white'
                 }`}
               >
-                <Icon className="w-5 h-5 stroke-[2.2]" />
+                <Icon className="h-5 w-5 sm:h-5.5 sm:w-5.5 stroke-[2.2]" />
               </motion.div>
-
-              {/* Tiny Mobile Label */}
-              <span
-                  className={`mt-0.5 max-w-[62px] truncate font-sans-clean text-[10px] font-semibold tracking-tight transition-colors duration-200 ${
-                  isActive
-                    ? 'font-bold text-[#42151e]'
-                    : 'text-[#51212a] dark:text-rose-100/75 group-hover:text-[#57202c] dark:group-hover:text-white'
-                }`}
-              >
-                {item.label}
-              </span>
-
             </button>
           );
         })}
@@ -121,3 +109,4 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     </nav>
   );
 };
+

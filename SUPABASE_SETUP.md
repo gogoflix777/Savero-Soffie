@@ -47,7 +47,7 @@ Jika pendaftaran publik dimatikan, siapkan akun pengguna lewat **Authentication 
 
 ## 2. Jalankan SQL
 
-Untuk project Supabase baru, buka file `supabase/SQL_EDITOR_SETUP.sql`, salin seluruh isinya ke **Supabase → SQL Editor → New query**, lalu tekan **Run** satu kali. File tersebut menggabungkan migration 001–012 sesuai urutan dependensinya, termasuk tabel, kebijakan akses, bucket foto, seed pin, dan Realtime.
+Untuk project Supabase baru, buka file `supabase/SQL_EDITOR_SETUP.sql`, salin seluruh isinya ke **Supabase → SQL Editor → New query**, lalu tekan **Run** satu kali. File tersebut menggabungkan migration 001–013 sesuai urutan dependensinya, termasuk tabel, kebijakan akses, bucket foto, seed pin, dan Realtime.
 
 Jangan jalankan file gabungan ini jika sebagian migration sudah pernah dijalankan. Untuk project yang sudah berisi setup, cocokkan migration yang sudah diterapkan dan jalankan hanya migration yang masih belum diterapkan, satu per satu dari `supabase/migrations/`.
 
@@ -74,6 +74,8 @@ Setelah migration kesepuluh diterapkan, tombol **Batalkan konfirmasi bertemu** m
 SQL kesebelas mempertahankan teks dan foto diary agar riwayat harian dapat ditelusuri, serta menambahkan waktu perubahan terakhir. Tetap hanya ada satu check-in per profil per tanggal: menyimpan ulang pada hari yang sama menimpa log hari itu, sedangkan log dari tanggal lain tetap tersedia. Terapkan `202610170011_preserve_diary_history.sql` setelah migration sebelumnya. Foto dan teks yang sudah dihapus oleh cleanup sebelum migration ini tidak dapat dipulihkan.
 
 SQL kedua belas mengizinkan MIME WebP, PNG, dan JPEG pada bucket diary. Browser tertentu dapat mengembalikan PNG saat aplikasi meminta kompresi WebP; aplikasi kini mengunggah sesuai MIME hasil sebenarnya. Untuk project yang sudah disiapkan, jalankan `202610170012_support_diary_image_mime_types.sql` di SQL Editor.
+ 
+SQL ketiga belas menambahkan tabel `daily_checkin_replies` untuk menyimpan balasan foto Instagram Instant antar-profil dengan perlindungan RLS dan trigger identitas, mengatur `replica identity full` pada tabel-tabel utama agar payload perubahan realtime selalu menyertakan data baris lengkap, mendaftarkan `daily_checkins`, `meeting_confirmations`, `streak_restores`, dan `daily_checkin_replies` ke publikasi `supabase_realtime` secara otomatis di database, serta menaikkan batas ukuran bucket `daily-diary` dari 768 KB menjadi 5 MB (5.242.880 bytes) agar foto kamera ponsel resolusi tinggi tersimpan tanpa kendala 413 Payload Too Large. Untuk project yang sudah disiapkan, jalankan `supabase/migrations/202610180013_instant_replies_and_realtime.sql` di SQL Editor.
 
 Setelah SQL Editor setup selesai, buka PowerShell di folder project. CLI perlu login ke akun Supabase terlebih dahulu. Jalankan:
 
@@ -167,7 +169,17 @@ Foto tetap dibatasi oleh bucket privat dan signed URL. Jangan mengubah bucket me
 
 ## 5. Nyalakan update realtime
 
-Migration dalam SQL Editor setup mendaftarkan tabel-tabel terkait ke `supabase_realtime` jika publication tersedia. Jika Realtime belum aktif atau ada tabel yang belum terdaftar, buka **Database → Publications → supabase_realtime** dan tambahkan `daily_checkins`, `streak_restores`, `meeting_confirmations`, `profile_heart_progress`, `profile_daily_heart_progress`, `meeting_fill_progress`, `shared_media_catalog`, `memory_pins`, dan `favorite_singers`.
+Migration dalam SQL Editor setup (terutama Migration 013) mendaftarkan tabel-tabel terkait ke `supabase_realtime` secara otomatis jika publication tersedia. Jika Realtime belum aktif atau ada tabel yang belum terdaftar di dashboard, buka **Database → Publications → supabase_realtime** dan pastikan tabel-tabel berikut sudah aktif:
+- `daily_checkins` (update foto instant & catatan diary)
+- `daily_checkin_replies` (balasan instant antar-profil)
+- `streak_restores` (pemulihan streak)
+- `meeting_confirmations` (konfirmasi temu)
+- `profile_heart_progress`
+- `profile_daily_heart_progress` (indikator hati harian)
+- `meeting_fill_progress` (progres pengisian kedua)
+- `shared_media_catalog` (katalog film/series bersama)
+- `memory_pins` (pin peta bersama)
+- `favorite_singers` (penyanyi favorit bersama)
 
 ## Cara kerja yang perlu diketahui
 

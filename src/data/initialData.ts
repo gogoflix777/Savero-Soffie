@@ -25,7 +25,18 @@ export const initialSettings: AppSettings = {
   soffieCollege: 'Mahasiswi Keperawatan UNDIP',
   shareCycleWithPartner: true,
   shareOnlyPredictions: false,
-  allowAlcoholCategory: true
+  allowAlcoholCategory: true,
+  notifications: {
+    enabled: true,
+    webPush: true,
+    inAppToast: true,
+    notifyOnPin: true,
+    notifyOnPhoto: true,
+    notifyOnWishlist: true,
+    notifyOnReply: true,
+    notifyOnStreak: true,
+    notifyOnNotes: true
+  }
 };
 
 export const initialCycles: CycleRecord[] = [

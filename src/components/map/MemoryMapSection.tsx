@@ -693,7 +693,7 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
             <h2 className="font-serif-title text-3xl sm:text-4xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
               Peta Kenangan Savero & Soffie
             </h2>
-            <p className="font-editorial italic text-xs sm:text-sm text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 mt-0.5">
+            <p className="font-editorial italic text-xs sm:text-sm text-[#5c2432] dark:text-rose-200 mt-0.5">
               Klik titik kenangan untuk melihat cerita, atau ketuk langsung di peta untuk menandai tempat baru kita.
             </p>
           </div>

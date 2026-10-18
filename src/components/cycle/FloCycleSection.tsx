@@ -235,7 +235,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
             <CalendarIcon className="h-3.5 w-3.5" /> Kalender perawatan
           </span>
           <h1 className="font-sans-clean text-2xl font-extrabold text-[#43252d] dark:text-rose-50 sm:text-3xl">Siklus & Kasih</h1>
-          <p className="mx-auto mt-1 max-w-lg text-xs leading-relaxed text-[#80646a] dark:text-rose-100/70 sm:text-sm">
+          <p className="mx-auto mt-1 max-w-lg text-xs leading-relaxed text-[#5c2432] dark:text-rose-200 sm:text-sm">
             Catat kalender, lihat ringkasan, dan kelola privasi dalam satu tempat.
           </p>
           {!canEdit && <div className="mx-auto mt-3 flex max-w-md items-center justify-center gap-2 rounded-2xl border border-[#e7c2c8] bg-white/75 px-3 py-2 text-xs text-[#704b54] shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-rose-100/75"><img src="/characters/expressions/soffie/gemas-sayang.png" alt="" className="h-10 w-7 object-contain" /><span>Mode lihat — pencatatan siklus hanya tersedia di profil Soffie.</span></div>}

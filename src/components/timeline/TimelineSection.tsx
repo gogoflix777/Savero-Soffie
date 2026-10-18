@@ -26,7 +26,7 @@ export const TimelineSection: React.FC<TimelineSectionProps> = ({ pins, settings
           <h2 className="font-sans-clean text-3xl font-extrabold tracking-tight text-[#43252d] dark:text-rose-50 sm:text-4xl">
             Linimasa Kenangan
           </h2>
-          <p className="mt-1 text-sm text-[#80646a] dark:text-rose-100/70 sm:text-base">
+          <p className="mt-1 text-sm text-[#5c2432] dark:text-rose-200 sm:text-base">
             Setiap tempat menyimpan satu bab perjalanan kalian.
           </p>
         </header>
@@ -53,12 +53,12 @@ export const TimelineSection: React.FC<TimelineSectionProps> = ({ pins, settings
                         <span className="timeline-category-chip rounded-full bg-[#f5e0e2] px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-[#a94761] dark:bg-[#49353d] dark:text-rose-200">
                           {pin.category}
                         </span>
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#80646a] dark:text-rose-100/65">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#6b3140] dark:text-rose-200">
                           <Calendar className="h-3 w-3" />{pin.date}
                         </span>
                       </div>
                       <h3 className="line-clamp-2 font-sans-clean text-sm font-extrabold text-[#43252d] dark:text-rose-50 sm:text-base">{pin.title}</h3>
-                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#80646a] dark:text-rose-100/70">{pin.description}</p>
+                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#5c2432] dark:text-rose-200">{pin.description}</p>
                       <span className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-bold text-[#a94761] dark:text-rose-200">
                         <Clock className="h-3 w-3" />{pin.time || 'Kenangan bersama'}<span className="px-1">·</span>Lihat detail
                       </span>
@@ -69,7 +69,7 @@ export const TimelineSection: React.FC<TimelineSectionProps> = ({ pins, settings
             ))}
           </div>
         ) : (
-          <div className="clay-surface rounded-3xl px-6 py-10 text-center text-sm text-[#80646a] dark:text-rose-100/70">
+          <div className="clay-surface rounded-3xl px-6 py-10 text-center text-sm text-[#6b3140] dark:text-rose-200">
             Belum ada kenangan untuk ditampilkan di linimasa.
           </div>
         )}
@@ -84,12 +84,12 @@ export const TimelineSection: React.FC<TimelineSectionProps> = ({ pins, settings
             </div>
             <h3 id="timeline-detail-title" className="mb-3 pr-8 font-sans-clean text-xl font-extrabold text-[#43252d] dark:text-rose-50">{selectedPin.title}</h3>
             {selectedPin.photos[0] && <ManagedImage src={selectedPin.photos[0]} alt={selectedPin.title} className="mb-4 max-h-64 w-full rounded-2xl object-cover shadow-md" />}
-            <p className="text-sm leading-relaxed text-[#63464e] dark:text-rose-100/80">{selectedPin.description}</p>
+            <p className="text-sm leading-relaxed text-[#4a1e28] dark:text-rose-100">{selectedPin.description}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {selectedPin.tags.map((tag) => <span key={tag} className="timeline-category-chip rounded-full bg-[#f5e0e2] px-2.5 py-1 text-[10px] font-semibold text-[#a94761] dark:bg-[#49353d] dark:text-rose-200">#{tag}</span>)}
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#ead1d2] pt-4 dark:border-white/10">
-              <span className="text-xs text-[#80646a] dark:text-rose-100/70">Ditambahkan oleh {selectedPin.addedBy}</span>
+              <span className="text-xs text-[#6b3140] dark:text-rose-200">Ditambahkan oleh {selectedPin.addedBy}</span>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => { onOpenPinInMap(selectedPin); setSelectedPin(null); }} className="clay-action-button inline-flex items-center gap-1.5 rounded-xl bg-[#c85f79] px-3 py-2 text-xs font-bold text-white">
                   <MapPin className="h-3.5 w-3.5" />Lihat di peta

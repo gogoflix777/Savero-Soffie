@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Moon, Sun } from 'lucide-react';
 import {
@@ -63,11 +63,16 @@ import { PinModal } from './components/auth/PinModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { SupabaseLogin } from './components/auth/SupabaseLogin';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
-import { cancelMeetingConfirmation, confirmMeeting, getAppAdminStatus, getBoundProfile, getJakartaDate, loadCoupleDaily, loadDailyHeartProgress, loadMeetingFillProgress, loadProfileHeartProgress, restoreStreak, saveAdminHeartProgress, saveAdminMeetingFillProgress, saveDailyCheckin, saveMyHeartProgress, saveMyMeetingFillProgress } from './lib/coupleDaily';
+import { deleteInstantReply, cancelMeetingConfirmation, confirmMeeting, getAppAdminStatus, getBoundProfile, getJakartaDate, loadCoupleDaily, loadDailyHeartProgress, loadInstantReplies, loadMeetingFillProgress, loadProfileHeartProgress, restoreStreak, saveAdminHeartProgress, saveAdminMeetingFillProgress, saveDailyCheckin, saveInstantReply, saveMyHeartProgress, saveMyMeetingFillProgress } from './lib/coupleDaily';
 import { loadSharedMediaCatalog, removeSharedMediaItem, saveSharedMediaItem, seedSharedMediaCatalog } from './lib/sharedMediaCatalog';
 import { deleteMemoryPin, loadMemoryPins, saveMemoryPin } from './lib/memoryPins';
+import { deleteWishlistPlace, loadWishlistPlaces, saveWishlistPlace, seedWishlistPlaces } from './lib/wishlistPlaces';
 import { CoupleProfileSetup } from './components/auth/CoupleProfileSetup';
 import { deleteFavoriteSinger, loadFavoriteSingers, saveFavoriteSinger } from './lib/favoriteSingers';
+import { InAppToastContainer } from './components/common/InAppToastContainer';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { triggerNotification } from './utils/notifications';
+import { InstantReply } from './types';
 
 export default function App() {
   const [authReady, setAuthReady] = useState(false);
@@ -109,12 +114,14 @@ export default function App() {
   const [tvSeries, setTvSeries] = useState<TvSeries[]>(() => appStorage.getTvSeries());
   const [collections, setCollections] = useState<MovieCollection[]>(() => appStorage.getCollections());
   const [wishlistPlaces, setWishlistPlaces] = useState<WishlistPlace[]>(() => appStorage.getWishlistPlaces());
+  const [wishlistPlacesError, setWishlistPlacesError] = useState<string | null>(null);
   const [wishlistDrinks, setWishlistDrinks] = useState<WishlistDrink[]>(() => appStorage.getWishlistDrinks());
   const [badges, setBadges] = useState<AchievementBadge[]>(() => appStorage.getBadges());
   const [letters, setLetters] = useState<LockedLetter[]>(() => appStorage.getLetters());
   const [songs, setSongs] = useState<LoveSong[]>(() => appStorage.getSongs());
   const [favoriteSingers, setFavoriteSingers] = useState<FavoriteSinger[]>([]);
   const [favoriteSingersError, setFavoriteSingersError] = useState<string | null>(null);
+  const [instantReplies, setInstantReplies] = useState<InstantReply[]>(() => appStorage.getInstantReplies());
 
   // Navigation & Modals: Individual Dedicated Pages
   const [activeSection, setActiveSection] = useState<string>('beranda');
@@ -181,8 +188,8 @@ export default function App() {
           appStorage.saveActiveProfile(profile);
         }
         if (profile || isAdmin) {
-          const [dailyResult, progressResult, meetingFillResult, dailyHeartResult, favoriteSingersResult] = await Promise.allSettled([
-            loadCoupleDaily(), loadProfileHeartProgress(), loadMeetingFillProgress(), loadDailyHeartProgress(), loadFavoriteSingers()
+          const [dailyResult, progressResult, meetingFillResult, dailyHeartResult, favoriteSingersResult, instantRepliesResult] = await Promise.allSettled([
+            loadCoupleDaily(), loadProfileHeartProgress(), loadMeetingFillProgress(), loadDailyHeartProgress(), loadFavoriteSingers(), loadInstantReplies()
           ]);
           if (!alive) return;
           const loadErrors: string[] = [];
@@ -190,12 +197,23 @@ export default function App() {
             loadErrors.push('Status admin gagal diverifikasi. Jalankan migration admin terbaru.');
           }
           if (dailyResult.status === 'fulfilled') {
-            setDailyCheckins(dailyResult.value.logs);
+            const logs = dailyResult.value.logs;
+            setDailyCheckins(logs);
             setStreakRestores(dailyResult.value.restores);
             setMeetingConfirmations(dailyResult.value.meetings);
-            appStorage.saveDailyCheckins(dailyResult.value.logs);
+            appStorage.saveDailyCheckins(logs);
             appStorage.saveStreakRestores(dailyResult.value.restores);
             appStorage.saveMeetingConfirmations(dailyResult.value.meetings);
+
+            const latestSavero = logs.find((l) => l.profile === 'Savero');
+            const latestSoffie = logs.find((l) => l.profile === 'Soffie');
+            setCoupleMoodLog((curr) => {
+              const updated = { ...curr };
+              if (latestSavero) updated.Savero = { expression: latestSavero.expression, updatedAt: latestSavero.created_at };
+              if (latestSoffie) updated.Soffie = { expression: latestSoffie.expression, updatedAt: latestSoffie.created_at };
+              appStorage.saveCoupleMoodLog(updated);
+              return updated;
+            });
           } else {
             loadErrors.push(dailyResult.reason instanceof Error ? dailyResult.reason.message : 'Data harian gagal dimuat.');
           }
@@ -225,6 +243,20 @@ export default function App() {
               : 'Penyanyi favorit gagal dimuat.';
             setFavoriteSingersError(message);
             loadErrors.push(message);
+          }
+          if (instantRepliesResult.status === 'fulfilled' && instantRepliesResult.value.length > 0) {
+            setInstantReplies((prev) => {
+              const combined = [...instantRepliesResult.value, ...prev];
+              const uniqueMap = new Map<string, InstantReply>();
+              for (const item of combined) {
+                if (!uniqueMap.has(item.id)) {
+                  uniqueMap.set(item.id, item);
+                }
+              }
+              const merged = Array.from(uniqueMap.values()).slice(0, 50);
+              appStorage.saveInstantReplies(merged);
+              return merged;
+            });
           }
           try {
             let sharedCatalog = await loadSharedMediaCatalog();
@@ -258,6 +290,23 @@ export default function App() {
             setMemoryPinsError(message);
             loadErrors.push(message);
           }
+          try {
+            let sharedPlaces = await loadWishlistPlaces();
+            if (!sharedPlaces.length) {
+              const localPlaces = appStorage.getWishlistPlaces();
+              if (localPlaces.length) {
+                await seedWishlistPlaces(localPlaces);
+                sharedPlaces = await loadWishlistPlaces();
+              }
+            }
+            if (sharedPlaces.length) {
+              setWishlistPlaces(sharedPlaces);
+              appStorage.saveWishlistPlaces(sharedPlaces);
+            }
+            setWishlistPlacesError(null);
+          } catch (error) {
+            console.warn('Wishlist tempat gagal disinkronkan dari Supabase:', error);
+          }
           setDailyActionError(loadErrors.length ? loadErrors.join(' ') : null);
         } else if (adminResult.status === 'rejected') {
           setDailyActionError('Status admin gagal diverifikasi. Jalankan migration admin terbaru.');
@@ -287,6 +336,16 @@ export default function App() {
         appStorage.saveDailyCheckins(daily.logs);
         appStorage.saveStreakRestores(daily.restores);
         appStorage.saveMeetingConfirmations(daily.meetings);
+
+        const latestSavero = daily.logs.find((l) => l.profile === 'Savero');
+        const latestSoffie = daily.logs.find((l) => l.profile === 'Soffie');
+        setCoupleMoodLog((curr) => {
+          const updated = { ...curr };
+          if (latestSavero) updated.Savero = { expression: latestSavero.expression, updatedAt: latestSavero.created_at };
+          if (latestSoffie) updated.Soffie = { expression: latestSoffie.expression, updatedAt: latestSoffie.created_at };
+          appStorage.saveCoupleMoodLog(updated);
+          return updated;
+        });
       } catch (error) {
         setDailyActionError(error instanceof Error ? error.message : 'Data harian gagal diperbarui.');
       }
@@ -348,19 +407,149 @@ export default function App() {
         setMemoryPinsError(error instanceof Error ? error.message : 'Pin peta bersama gagal diperbarui.');
       }
     };
+    const refreshWishlistPlaces = async () => {
+      try {
+        const sharedPlaces = await loadWishlistPlaces();
+        setWishlistPlaces(sharedPlaces);
+        appStorage.saveWishlistPlaces(sharedPlaces);
+        setWishlistPlacesError(null);
+      } catch (error) {
+        setWishlistPlacesError(error instanceof Error ? error.message : 'Wishlist tempat bersama gagal diperbarui.');
+      }
+    };
     const channel = realtimeClient.channel('couple-daily-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_checkins' }, () => { void refreshDaily(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_checkins' }, (payload) => {
+        void refreshDaily();
+        const row = payload.new as { profile?: string; diary_text?: string } | undefined;
+        if (row && row.profile && row.profile !== activeProfile) {
+          triggerNotification({
+            category: 'photo',
+            title: `Instant Cinta dari ${row.profile} 📸`,
+            message: row.diary_text || 'Foto dan instant baru telah diunggah!',
+            settings: settings.notifications
+          });
+        }
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'streak_restores' }, () => { void refreshDaily(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_confirmations' }, () => { void refreshDaily(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_confirmations' }, (payload) => {
+        void refreshDaily();
+        const row = payload.new as { profile?: string } | undefined;
+        if (row && row.profile && row.profile !== activeProfile) {
+          triggerNotification({
+            category: 'streak',
+            title: 'Konfirmasi Bertemu 💕',
+            message: `${row.profile} telah mengonfirmasi pertemuan berdua hari ini!`,
+            settings: settings.notifications
+          });
+        }
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profile_heart_progress' }, () => { void refreshHeartProgress(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profile_daily_heart_progress' }, () => { void refreshDailyHeartProgress(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_fill_progress' }, () => { void refreshMeetingFillProgress(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_media_catalog' }, () => { void refreshSharedMediaCatalog(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'favorite_singers' }, () => { void refreshFavoriteSingers(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'memory_pins' }, () => { void refreshMemoryPins(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'memory_pins' }, (payload) => {
+        void refreshMemoryPins();
+        const row = payload.new as { title?: string; addedBy?: string } | undefined;
+        if (row && row.addedBy && row.addedBy !== activeProfile) {
+          triggerNotification({
+            category: 'pin',
+            title: 'Pin Kenangan Baru 📍',
+            message: row.title ? `Pin "${row.title}" telah ditambahkan ke peta!` : 'Pin kenangan baru telah ditambahkan.',
+            settings: settings.notifications
+          });
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wishlist_places' }, (payload) => {
+        void refreshWishlistPlaces();
+        const row = (payload.new || {}) as { payload?: { name?: string; requestedBy?: string } };
+        const placeName = row.payload?.name;
+        const requestedBy = row.payload?.requestedBy;
+        if (payload.eventType === 'INSERT' && requestedBy && requestedBy !== activeProfile && placeName) {
+          triggerNotification({
+            category: 'wishlist',
+            title: `Wishlist Baru dari ${requestedBy} 💖`,
+            message: `Tempat "${placeName}" ditambahkan ke wishlist!`,
+            settings: settings.notifications
+          });
+        }
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'daily_checkin_replies' }, (payload) => {
+        const row = payload.new as {
+          id: string;
+          author_profile: string;
+          target_profile: string;
+          text: string;
+          emoji?: string | null;
+          created_at: string;
+        } | undefined;
+        if (!row || !row.id) return;
+        const incomingReply: InstantReply = {
+          id: String(row.id),
+          targetProfile: row.target_profile as CoupleProfile,
+          authorProfile: row.author_profile as CoupleProfile,
+          text: row.text,
+          emoji: row.emoji || undefined,
+          createdAt: row.created_at
+        };
+        setInstantReplies((prev) => {
+          if (prev.some((r) => r.id === incomingReply.id)) return prev;
+          const updated = [incomingReply, ...prev].slice(0, 50);
+          appStorage.saveInstantReplies(updated);
+          return updated;
+        });
+        if (incomingReply.authorProfile !== activeProfile) {
+          triggerNotification({
+            category: 'reply',
+            title: `${incomingReply.authorProfile} Membalas Instantmu 💬`,
+            message: incomingReply.emoji ? `${incomingReply.emoji} ${incomingReply.text}` : incomingReply.text,
+            settings: settings.notifications
+          });
+        }
+      })
+      .on('broadcast', { event: 'instant_reply' }, ({ payload }) => {
+        const reply = payload as InstantReply;
+        if (reply && reply.authorProfile !== activeProfile) {
+          setInstantReplies((prev) => {
+            if (prev.some((r) => r.id === reply.id)) return prev;
+            const updated = [reply, ...prev].slice(0, 50);
+            appStorage.saveInstantReplies(updated);
+            return updated;
+          });
+          triggerNotification({
+            category: 'reply',
+            title: `${reply.authorProfile} Membalas Instantmu 💬`,
+            message: reply.emoji ? `${reply.emoji} ${reply.text}` : reply.text,
+            settings: settings.notifications
+          });
+        }
+      })
+      .on('broadcast', { event: 'delete_reply' }, ({ payload }) => {
+        const data = payload as { id?: string };
+        if (data?.id) {
+          setInstantReplies((prev) => {
+            const updated = prev.filter((r) => r.id !== data.id);
+            appStorage.saveInstantReplies(updated);
+            return updated;
+          });
+        }
+      })
+      .on('broadcast', { event: 'couple_event' }, ({ payload }) => {
+        if (payload && payload.sender !== activeProfile) {
+          triggerNotification({
+            category: payload.category,
+            title: payload.title,
+            message: payload.body,
+            settings: settings.notifications
+          });
+        }
+        if (payload?.category === 'wishlist' || payload?.type === 'wishlist_update') {
+          void refreshWishlistPlaces();
+        }
+      })
       .subscribe();
     return () => { void realtimeClient.removeChannel(channel); };
-  }, [accountProfile, isAdminAccount, authenticated]);
+  }, [accountProfile, isAdminAccount, authenticated, activeProfile, settings.notifications]);
 
   useEffect(() => {
     if (isSupabaseConfigured && (!authenticated || (!accountProfile && !isAdminAccount))) return;
@@ -541,6 +730,16 @@ export default function App() {
         setMemoryPinsError(message);
         loadErrors.push(message);
       }
+      try {
+        const sharedPlaces = await loadWishlistPlaces();
+        if (sharedPlaces.length) {
+          setWishlistPlaces(sharedPlaces);
+          appStorage.saveWishlistPlaces(sharedPlaces);
+        }
+        setWishlistPlacesError(null);
+      } catch (error) {
+        console.warn('Wishlist tempat gagal dimuat dari Supabase:', error);
+      }
       setDailyActionError(loadErrors.length ? loadErrors.join(' ') : null);
     } catch (error) {
       setDailyActionError(error instanceof Error ? error.message : 'Data profil gagal dimuat.');
@@ -577,6 +776,18 @@ export default function App() {
       appStorage.saveMoodDiary(updated);
       return updated;
     });
+    if (supabase) {
+      void supabase.channel('couple-daily-live').send({
+        type: 'broadcast',
+        event: 'couple_event',
+        payload: {
+          category: 'notes',
+          sender: profile,
+          title: `Catatan Baru dari ${profile} 📝`,
+          body: content.trim() || 'Catatan perasaan baru telah ditulis.'
+        }
+      });
+    }
   };
 
   const handleSaveDailyCheckin = async (input: { expression: MoodExpression; rating: number; diaryText: string; photo?: Blob | null }) => {
@@ -605,6 +816,18 @@ export default function App() {
         return updated;
       });
       setDailyActionError(null);
+      if (supabase) {
+        void supabase.channel('couple-daily-live').send({
+          type: 'broadcast',
+          event: 'couple_event',
+          payload: {
+            category: 'photo',
+            sender: activeProfile,
+            title: `Instant Cinta Baru dari ${activeProfile} 📸`,
+            body: input.diaryText.trim() || 'Foto baru telah dibagikan!'
+          }
+        });
+      }
     } catch (error) {
       setDailyActionError(error instanceof Error ? error.message : 'Log harian gagal disimpan. Coba lagi.');
       throw error;
@@ -662,6 +885,74 @@ export default function App() {
       return updated;
     });
     setDailyActionError(null);
+  };
+
+  const handleSendInstantReply = async (targetProfile: CoupleProfile, text: string, emoji?: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    let persistedReply: InstantReply | null = null;
+    if (supabase) {
+      persistedReply = await saveInstantReply({
+        targetProfile,
+        authorProfile: activeProfile,
+        text: trimmed,
+        emoji,
+        adminMode
+      });
+    }
+
+    const replyToSave: InstantReply = persistedReply || {
+      id: `reply-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      targetProfile,
+      authorProfile: activeProfile,
+      text: trimmed,
+      emoji,
+      createdAt: new Date().toISOString()
+    };
+
+    setInstantReplies((prev) => {
+      if (prev.some((r) => r.id === replyToSave.id)) return prev;
+      const updated = [replyToSave, ...prev].slice(0, 50);
+      appStorage.saveInstantReplies(updated);
+      return updated;
+    });
+
+    if (supabase) {
+      try {
+        const liveChannel = supabase.channel('couple-daily-live');
+        await liveChannel.send({
+          type: 'broadcast',
+          event: 'instant_reply',
+          payload: replyToSave
+        });
+      } catch (err) {
+        console.warn('Failed to broadcast instant reply:', err);
+      }
+    }
+  };
+
+  const handleDeleteInstantReply = async (replyId: string) => {
+    setInstantReplies((prev) => {
+      const updated = prev.filter((r) => r.id !== replyId);
+      appStorage.saveInstantReplies(updated);
+      return updated;
+    });
+
+    void deleteInstantReply(replyId);
+
+    if (supabase) {
+      try {
+        const liveChannel = supabase.channel('couple-daily-live');
+        await liveChannel.send({
+          type: 'broadcast',
+          event: 'delete_reply',
+          payload: { id: replyId }
+        });
+      } catch (err) {
+        console.warn('Failed to broadcast delete reply:', err);
+      }
+    }
   };
 
   const recordDailyHeartProgress = (profile: CoupleProfile, percentage: number) => {
@@ -764,6 +1055,18 @@ export default function App() {
       return updated;
     });
     setMemoryPinsError(null);
+    if (supabase) {
+      void supabase.channel('couple-daily-live').send({
+        type: 'broadcast',
+        event: 'couple_event',
+        payload: {
+          category: 'pin',
+          sender: activeProfile,
+          title: `Pin Baru dari ${activeProfile} 📍`,
+          body: `Pin "${pin.title}" telah ditambahkan ke peta kenangan!`
+        }
+      });
+    }
   };
 
   const handleUpdatePin = async (pin: MemoryPin) => {
@@ -923,24 +1226,108 @@ export default function App() {
     });
   };
 
-  const handleAddWishlistPlace = (place: WishlistPlace) => {
-    const updated = [place, ...wishlistPlaces];
+  const handleAddWishlistPlace = async (place: WishlistPlace) => {
+    try {
+      if (isSupabaseConfigured) await saveWishlistPlace(place);
+      setWishlistPlacesError(null);
+    } catch (error) {
+      console.warn('Gagal menyimpan wishlist ke Supabase:', error);
+      setWishlistPlacesError(error instanceof Error ? error.message : 'Wishlist gagal disimpan ke Supabase.');
+    }
+    const updated = [place, ...wishlistPlaces.filter((item) => item.id !== place.id)];
     setWishlistPlaces(updated);
     appStorage.saveWishlistPlaces(updated);
+    if (supabase) {
+      void supabase.channel('couple-daily-live').send({
+        type: 'broadcast',
+        event: 'couple_event',
+        payload: {
+          category: 'wishlist',
+          sender: activeProfile,
+          title: `Wishlist Baru dari ${activeProfile} 💖`,
+          body: `Tempat "${place.name}" ditambahkan ke wishlist!`
+        }
+      });
+    }
   };
 
-  const handleUpdateWishlistPlace = (place: WishlistPlace) => {
+  const handleUpdateWishlistPlace = async (place: WishlistPlace) => {
+    try {
+      if (isSupabaseConfigured) await saveWishlistPlace(place);
+      setWishlistPlacesError(null);
+    } catch (error) {
+      console.warn('Gagal memperbarui wishlist di Supabase:', error);
+      setWishlistPlacesError(error instanceof Error ? error.message : 'Perubahan wishlist gagal disimpan ke Supabase.');
+    }
     const updated = wishlistPlaces.map((item) => item.id === place.id ? place : item);
     setWishlistPlaces(updated);
     appStorage.saveWishlistPlaces(updated);
+    if (supabase) {
+      void supabase.channel('couple-daily-live').send({
+        type: 'broadcast',
+        event: 'couple_event',
+        payload: {
+          category: 'wishlist',
+          sender: activeProfile,
+          title: `Wishlist Diperbarui oleh ${activeProfile} ✨`,
+          body: `Detail "${place.name}" diperbarui!`
+        }
+      });
+    }
   };
 
-  const handleMarkPlaceVisited = (place: WishlistPlace) => {
+  const handleDeleteWishlistPlace = async (placeId: string) => {
+    const place = wishlistPlaces.find((p) => p.id === placeId);
+    try {
+      if (isSupabaseConfigured) await deleteWishlistPlace(placeId);
+      setWishlistPlacesError(null);
+    } catch (error) {
+      console.warn('Gagal menghapus wishlist dari Supabase:', error);
+      setWishlistPlacesError(error instanceof Error ? error.message : 'Wishlist gagal dihapus dari Supabase.');
+    }
+    const updated = wishlistPlaces.filter((item) => item.id !== placeId);
+    setWishlistPlaces(updated);
+    appStorage.saveWishlistPlaces(updated);
+    if (supabase) {
+      void supabase.channel('couple-daily-live').send({
+        type: 'broadcast',
+        event: 'couple_event',
+        payload: {
+          category: 'wishlist',
+          sender: activeProfile,
+          title: `Wishlist Dihapus oleh ${activeProfile} 🗑️`,
+          body: place ? `Tempat "${place.name}" dihapus dari wishlist.` : 'Satu tempat dihapus dari wishlist.'
+        }
+      });
+    }
+  };
+
+  const handleMarkPlaceVisited = async (place: WishlistPlace) => {
+    const updatedPlace: WishlistPlace = { ...place, isVisited: !place.isVisited };
+    try {
+      if (isSupabaseConfigured) await saveWishlistPlace(updatedPlace);
+      setWishlistPlacesError(null);
+    } catch (error) {
+      console.warn('Gagal mengubah status kunjungan di Supabase:', error);
+      setWishlistPlacesError(error instanceof Error ? error.message : 'Status kunjungan gagal disimpan ke Supabase.');
+    }
     const updatedPlaces = wishlistPlaces.map((p) =>
-      p.id === place.id ? { ...p, isVisited: !p.isVisited } : p
+      p.id === place.id ? updatedPlace : p
     );
     setWishlistPlaces(updatedPlaces);
     appStorage.saveWishlistPlaces(updatedPlaces);
+    if (supabase) {
+      void supabase.channel('couple-daily-live').send({
+        type: 'broadcast',
+        event: 'couple_event',
+        payload: {
+          category: 'wishlist',
+          sender: activeProfile,
+          title: updatedPlace.isVisited ? `Wishlist Tercapai! 🎉` : `Status Wishlist Diubah`,
+          body: `${activeProfile} menandai "${place.name}" ${updatedPlace.isVisited ? 'sudah dikunjungi!' : 'belum dikunjungi.'}`
+        }
+      });
+    }
 
     if (!place.isVisited) {
       const newPin: MemoryPin = {
@@ -960,7 +1347,7 @@ export default function App() {
         addedBy: place.requestedBy,
         isSensitive: false
       };
-      handleAddPin(newPin);
+      void handleAddPin(newPin);
     }
   };
 
@@ -1164,6 +1551,9 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Realtime In-App Romantic Toasts */}
+      <InAppToastContainer />
+
       {/* Top Mobile App Bar (No Top Navigation Tabs) */}
       <Header
         settings={settings}
@@ -1201,34 +1591,39 @@ export default function App() {
                 }}
               />
 
-              {/* Hero Section */}
-              <HeroSection
-                settings={settings}
-                activeProfile={activeProfile}
-                coupleMoodLog={coupleMoodLog}
-                moodDiary={moodDiary}
-                dailyCheckins={dailyCheckins}
-                streakRestores={streakRestores}
-                meetingConfirmations={meetingConfirmations}
-                heartProgress={heartProgress}
-                dailyHeartProgress={dailyHeartProgress}
-                meetingFillProgress={meetingFillProgress}
-                dailyActionError={dailyActionError}
-                onMoodChange={handleUpdateMood}
-                onSaveMoodDiary={handleSaveMoodDiary}
-                onSaveDailyCheckin={handleSaveDailyCheckin}
-                onRestoreStreak={handleRestoreStreak}
-                onConfirmMeeting={handleConfirmMeeting}
-                onCancelMeeting={handleCancelMeeting}
-                onHeartProgressChange={(percentage) => { void handleHeartProgressChange(percentage); }}
-                onMeetingFillProgressChange={(percentage) => { void handleMeetingFillProgressChange(percentage); }}
-                onExploreClick={() => {
-                  document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                onAddMemoryClick={() => {
-                  document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-              />
+              {/* Hero Section with Error Boundary */}
+              <ErrorBoundary>
+                <HeroSection
+                  settings={settings}
+                  activeProfile={activeProfile}
+                  coupleMoodLog={coupleMoodLog}
+                  moodDiary={moodDiary}
+                  dailyCheckins={dailyCheckins}
+                  streakRestores={streakRestores}
+                  meetingConfirmations={meetingConfirmations}
+                  heartProgress={heartProgress}
+                  dailyHeartProgress={dailyHeartProgress}
+                  meetingFillProgress={meetingFillProgress}
+                  dailyActionError={dailyActionError}
+                  instantReplies={instantReplies}
+                  onSendReply={handleSendInstantReply}
+                  onDeleteReply={handleDeleteInstantReply}
+                  onMoodChange={handleUpdateMood}
+                  onSaveMoodDiary={handleSaveMoodDiary}
+                  onSaveDailyCheckin={handleSaveDailyCheckin}
+                  onRestoreStreak={handleRestoreStreak}
+                  onConfirmMeeting={handleConfirmMeeting}
+                  onCancelMeeting={handleCancelMeeting}
+                  onHeartProgressChange={(percentage) => { void handleHeartProgressChange(percentage); }}
+                  onMeetingFillProgressChange={(percentage) => { void handleMeetingFillProgressChange(percentage); }}
+                  onExploreClick={() => {
+                    document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  onAddMemoryClick={() => {
+                    document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                />
+              </ErrorBoundary>
 
               {/* Intro Section: Savero & Soffie */}
               <IntroSection settings={settings} />
@@ -1337,6 +1732,7 @@ export default function App() {
                 activeProfile={activeProfile}
                 onAddPlace={handleAddWishlistPlace}
                 onUpdatePlace={handleUpdateWishlistPlace}
+                onDeletePlace={handleDeleteWishlistPlace}
                 onMarkPlaceVisited={handleMarkPlaceVisited}
                 onAddDrink={handleAddWishlistDrink}
                 onUpdateDrink={handleUpdateWishlistDrink}

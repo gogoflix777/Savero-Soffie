@@ -157,7 +157,7 @@ export const TrophyCabinetSection: React.FC<TrophyCabinetProps> = ({
           <h2 className="font-serif-title text-3xl sm:text-4xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
             Medali Pencapaian Kisah Kita
           </h2>
-          <p className="font-editorial italic text-xs sm:text-sm text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 mt-0.5">
+          <p className="font-editorial italic text-xs sm:text-sm text-[#5c2432] dark:text-rose-200 mt-0.5">
             Model medali 3D WebGL dengan material logam beveled, pita tier, ukiran stempel cinta, dan animasi rotasi 360°.
           </p>
 
@@ -208,7 +208,7 @@ export const TrophyCabinetSection: React.FC<TrophyCabinetProps> = ({
                 <h3 className="font-serif-title text-2xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
                   {podiumBadge.title}
                 </h3>
-                <p className="font-editorial text-sm text-[#3B0A0F]/80 dark:text-[#EFE6DA]/80 leading-relaxed">
+                <p className="font-editorial text-sm text-[#5c2432] dark:text-rose-200 leading-relaxed">
                   {podiumBadge.description}
                 </p>
 
@@ -430,7 +430,7 @@ export const TrophyCabinetSection: React.FC<TrophyCabinetProps> = ({
                 <h3 className="font-serif-title text-2xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA] mt-3">
                   {selectedBadge.title}
                 </h3>
-                <p className="font-editorial text-sm text-[#3B0A0F]/80 dark:text-[#EFE6DA]/80 mt-1 mb-4 leading-relaxed">
+                <p className="font-editorial text-sm text-[#5c2432] dark:text-rose-200 mt-1 mb-4 leading-relaxed">
                   {selectedBadge.description}
                 </p>
 

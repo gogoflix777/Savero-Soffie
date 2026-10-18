@@ -84,7 +84,7 @@ export const AppLauncherHub: React.FC<AppLauncherHubProps> = ({
         <h3 className="font-serif-title text-2xl sm:text-3xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
           Ruang Eksplorasi Cinta
         </h3>
-        <p className="text-xs text-gray-600 dark:text-gray-400 font-sans-clean mt-1">
+        <p className="text-xs text-[#5c2432] dark:text-rose-200 font-sans-clean mt-1">
           Ketuk salah satu bagian di bawah atau gunakan bilah navigasi di bawah layar.
         </p>
       </div>
@@ -121,7 +121,7 @@ export const AppLauncherHub: React.FC<AppLauncherHubProps> = ({
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] font-sans-clean text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
+                  <p className="text-[11px] font-sans-clean text-[#6b3140] dark:text-rose-200 line-clamp-1 mt-0.5">
                     {item.desc}
                   </p>
                 </div>

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ManagedImage } from '../common/ManagedImage';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Compass,
   MapPin,
   Clock,
   Sparkles,
@@ -10,30 +9,22 @@ import {
   Navigation,
   RefreshCw,
   Search,
-  ExternalLink,
   Plus,
   Check,
   Star,
   Flame,
   Camera,
-  Share2,
   Copy,
   ChevronLeft,
-  ChevronRight,
-  Info
+  ChevronRight
 } from 'lucide-react';
 import { CloseButton } from '../common/CloseButton';
-import {
-  RealtimeCafeRecommendation,
-  WishlistPlace,
-  AppSettings
-} from '../../types';
+import { WishlistPlace, AppSettings } from '../../types';
 import {
   REALTIME_SEMARANG_CAFES,
   calculateDistanceKm,
   SEMARANG_PRESET_LOCATIONS,
-  PresetLocation,
-  RealtimeStatusResult
+  PresetLocation
 } from '../../data/realtimeCafes';
 import {
   fetchGooglePlacesCafes,
@@ -83,16 +74,12 @@ interface RealtimeCafeRecommendationsProps {
 
 export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsProps> = ({
   existingPlaces,
-  onAddPlace,
-  settings
+  onAddPlace
 }) => {
-  // Live Time state for real-time calculation
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoadingPlaces, setIsLoadingPlaces] = useState(false);
-  const [apiConnected, setApiConnected] = useState(true);
 
-  // User Location State (Default: Pleburan Undip - Savero's campus)
   const [userLocation, setUserLocation] = useState<{
     lat: number;
     lng: number;
@@ -105,63 +92,45 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
     isLiveGps: false
   });
 
-  const [gpsError, setGpsError] = useState<string | null>(null);
-
-  // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTab, setFilterTab] = useState<
     'semua' | 'terdekat' | 'buka' | 'baru' | 'tren' | 'matcha' | 'kopi'
   >('semua');
-  const [maxDistanceKm, setMaxDistanceKm] = useState<number>(15);
 
-  // Detail Modal State
   const [selectedCafe, setSelectedCafe] = useState<ProcessedCafe | null>(null);
   const [modalPhotoIndex, setModalPhotoIndex] = useState(0);
   const [copiedToast, setCopiedToast] = useState(false);
   const [addedCafeIds, setAddedCafeIds] = useState<Record<string, boolean>>({});
-
-  // Dynamic Google Places API results
   const [googlePlaces, setGooglePlaces] = useState<GooglePlaceCafe[]>([]);
 
-  // Auto-refresh real-time clock every 60 seconds
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 60000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
-  // Request browser GPS on initial load
   useEffect(() => {
     requestLiveGpsLocation(false);
   }, []);
 
   const requestLiveGpsLocation = (showSound = true) => {
     if (showSound) soundManager.playTap();
-    if (!navigator.geolocation) {
-      setGpsError('Browser tidak mendukung geolokasi GPS.');
-      return;
-    }
+    if (!navigator.geolocation) return;
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setUserLocation({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
-          label: 'Lokasi GPS Anda Sekarang',
+          label: 'GPS Aktif',
           isLiveGps: true
         });
-        setGpsError(null);
         if (showSound) soundManager.playSuccess();
       },
-      () => {
-        setGpsError('GPS tidak aktif, menggunakan titik acuan Pleburan Semarang.');
-      },
+      () => {},
       { timeout: 7000, enableHighAccuracy: true }
     );
   };
 
-  // Fetch live places from Google Places API
   const loadGooglePlacesData = useCallback(async () => {
     setIsLoadingPlaces(true);
     try {
@@ -184,7 +153,6 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
 
       if (results && results.length > 0) {
         setGooglePlaces(results);
-        setApiConnected(true);
       }
     } catch (err) {
       console.warn('Could not load Google Places:', err);
@@ -193,12 +161,10 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
     }
   }, [filterTab, searchQuery, userLocation.lat, userLocation.lng]);
 
-  // Load when filter or query changes (with debounced search)
   useEffect(() => {
     const timeout = setTimeout(() => {
-      loadGooglePlacesData();
+      void loadGooglePlacesData();
     }, searchQuery ? 400 : 0);
-
     return () => clearTimeout(timeout);
   }, [loadGooglePlacesData, searchQuery]);
 
@@ -222,7 +188,6 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
     });
   };
 
-  // Check if cafe is already in Wishlist
   const isCafeInWishlist = (cafeName: string) => {
     return existingPlaces.some(
       (p) => p.name.toLowerCase().trim() === cafeName.toLowerCase().trim()
@@ -249,10 +214,9 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
           : cafe.statusBadge === 'spesial_kopi'
           ? 'Savero'
           : 'Berdua',
-      notes: `${cafe.signatureMenu}. ⭐ Google Rating: ${cafe.rating} (${cafe.reviewCount} ulasan). ${cafe.highlightForCouple}`,
+      notes: `${cafe.signatureMenu}. ⭐ Rating: ${cafe.rating} (${cafe.reviewCount} ulasan). ${cafe.highlightForCouple}`,
       mapUrl: cafe.mapUrl,
       tags: [
-        'Google Places API',
         cafe.statusBadgeLabel.replace(/[^\w\s]/gi, '').trim(),
         cafe.area.split(',')[0].trim()
       ],
@@ -264,7 +228,6 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
     setAddedCafeIds((prev) => ({ ...prev, [cafe.id]: true }));
   };
 
-  // Helper to compute open status message
   const computeStatusInfo = (
     isOpenNow: boolean | undefined,
     weekdayDesc?: string[]
@@ -277,51 +240,40 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
     if (isOpenNow === true) {
       return {
         isOpen: true,
-        statusLabel: 'Buka Sekarang',
+        statusLabel: 'Buka',
         statusColor: 'green',
-        detailMessage: 'Sedang beroperasi hari ini • Siap dikunjungi kencan'
+        detailMessage: 'Sedang beroperasi hari ini'
       };
     }
     if (isOpenNow === false) {
       return {
         isOpen: false,
-        statusLabel: 'Tutup Saat Ini',
+        statusLabel: 'Tutup',
         statusColor: 'red',
-        detailMessage: weekdayDesc?.[0]
-          ? `Jadwal: ${weekdayDesc[0]}`
-          : 'Sedang tutup • Simpan ke Wishlist untuk kunjungan berikutnya'
+        detailMessage: weekdayDesc?.[0] ? `Jadwal: ${weekdayDesc[0]}` : 'Sedang tutup saat ini'
       };
     }
     return {
       isOpen: true,
-      statusLabel: 'Buka Hari Ini',
+      statusLabel: 'Buka',
       statusColor: 'amber',
-      detailMessage: 'Buka setiap hari • Cek Maps untuk jam tepatnya'
+      detailMessage: 'Buka setiap hari'
     };
   };
 
-  // Harmonize Google Places API results with curated spots
   const processedCafes: ProcessedCafe[] = useMemo(() => {
     const list: ProcessedCafe[] = [];
     const seenNames = new Set<string>();
 
-    // 1. Process Google Places API results
     googlePlaces.forEach((gp) => {
       const norm = gp.name.toLowerCase().trim();
       seenNames.add(norm);
 
-      const distance = calculateDistanceKm(
-        userLocation.lat,
-        userLocation.lng,
-        gp.lat,
-        gp.lng
-      );
-
+      const distance = calculateDistanceKm(userLocation.lat, userLocation.lng, gp.lat, gp.lng);
       const status = computeStatusInfo(gp.isOpenNow, gp.weekdayDescriptions);
       const isAdded = isCafeInWishlist(gp.name) || addedCafeIds[gp.id];
 
-      // Romantic notes for couple
-      let highlight = 'Tempat aesthetic yang sangat direkomendasikan untuk kencan berdua Savero & Soffie.';
+      let highlight = 'Tempat aesthetic yang direkomendasikan untuk kencan berdua Savero & Soffie.';
       if (norm.includes('matcha') || norm.includes('tea')) {
         highlight = 'Spot matcha favorit Soffie dengan racikan teh autentik yang menenangkan.';
       } else if (norm.includes('coffee') || norm.includes('roast') || norm.includes('kopi')) {
@@ -343,33 +295,27 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
         statusBadge: gp.tag,
         statusBadgeLabel: gp.tagLabel,
         priceRange: 'sedang',
-        averagePrice: 'Rp 30.000 - Rp 60.000',
+        averagePrice: 'Rp 30rb - 60rb',
         photos: gp.photos,
         photoUrl: gp.photos[0],
-        signatureMenu: gp.editorialSummary || `Specialty menu & kopi pilihan khas ${gp.name}`,
-        matchaMenu: norm.includes('matcha') ? 'Signature Ceremonial Matcha' : undefined,
-        coffeeMenu: 'Specialty Espresso & Manual Brew',
-        atmosphere: 'Suasana modern, nyaman, dan estetik khas kafe pilihan Semarang',
+        signatureMenu: gp.editorialSummary || `Menu spesial khas ${gp.name}`,
+        matchaMenu: norm.includes('matcha') ? 'Signature Matcha' : undefined,
+        coffeeMenu: 'Specialty Espresso & Brew',
+        atmosphere: 'Suasana nyaman dan estetik khas Semarang',
         highlightForCouple: highlight,
         mapUrl: gp.googleMapsUri || `https://maps.google.com/?q=${encodeURIComponent(gp.name + ' Semarang')}`,
         rating: gp.rating || 4.8,
         reviewCount: gp.userRatingCount || 150,
-        isAdded: isAdded,
+        isAdded,
         isFromGoogleApi: true,
         weekdayDescriptions: gp.weekdayDescriptions
       });
     });
 
-    // 2. Add curated cafes if not already present
     REALTIME_SEMARANG_CAFES.forEach((c) => {
       const norm = c.name.toLowerCase().trim();
       if (!seenNames.has(norm)) {
-        const distance = calculateDistanceKm(
-          userLocation.lat,
-          userLocation.lng,
-          c.lat,
-          c.lng
-        );
+        const distance = calculateDistanceKm(userLocation.lat, userLocation.lng, c.lat, c.lng);
         const isAdded = isCafeInWishlist(c.name) || addedCafeIds[c.id];
 
         list.push({
@@ -384,9 +330,9 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
           closeTime: c.closeTime,
           openDays: c.openDays,
           isOpenNow: true,
-          statusLabel: c.statusBadge === 'baru_buka' ? 'Baru Buka' : 'Buka Hari Ini',
+          statusLabel: c.statusBadge === 'baru_buka' ? 'Baru' : 'Buka',
           statusColor: c.statusBadge === 'baru_buka' ? 'green' : 'amber',
-          detailMessage: `Jam Buka: ${c.openTime} - ${c.closeTime} WIB (${c.openDays})`,
+          detailMessage: `${c.openTime} - ${c.closeTime} WIB`,
           statusBadge: c.statusBadge,
           statusBadgeLabel: c.statusBadgeLabel,
           priceRange: c.priceRange,
@@ -401,7 +347,7 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
           mapUrl: c.mapUrl,
           rating: c.rating,
           reviewCount: c.reviewCount,
-          isAdded: isAdded,
+          isAdded,
           isFromGoogleApi: false
         });
       }
@@ -410,11 +356,9 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
     return list;
   }, [googlePlaces, userLocation, existingPlaces, addedCafeIds]);
 
-  // Filter & Search Logic
   const filteredCafes = useMemo(() => {
     let result = processedCafes;
 
-    // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter(
@@ -422,13 +366,10 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
           c.name.toLowerCase().includes(q) ||
           c.area.toLowerCase().includes(q) ||
           c.address.toLowerCase().includes(q) ||
-          c.signatureMenu.toLowerCase().includes(q) ||
-          (c.matchaMenu && c.matchaMenu.toLowerCase().includes(q)) ||
-          (c.coffeeMenu && c.coffeeMenu.toLowerCase().includes(q))
+          c.signatureMenu.toLowerCase().includes(q)
       );
     }
 
-    // Filter Tab
     switch (filterTab) {
       case 'terdekat':
         result = [...result].sort((a, b) => a.distanceKm - b.distanceKm);
@@ -444,12 +385,14 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
         );
         break;
       case 'tren':
-        result = result.filter(
-          (c) =>
-            c.statusBadge === 'sedang_tren' ||
-            c.statusBadge === 'viral' ||
-            c.reviewCount > 200
-        ).sort((a, b) => b.reviewCount - a.reviewCount);
+        result = result
+          .filter(
+            (c) =>
+              c.statusBadge === 'sedang_tren' ||
+              c.statusBadge === 'viral' ||
+              c.reviewCount > 200
+          )
+          .sort((a, b) => b.reviewCount - a.reviewCount);
         break;
       case 'matcha':
         result = result.filter(
@@ -469,9 +412,7 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
             c.name.toLowerCase().includes('roaster')
         );
         break;
-      case 'semua':
       default:
-        // Smart sort: newly opened & high ratings first
         result = [...result].sort((a, b) => {
           if (a.statusBadge === 'baru_buka' && b.statusBadge !== 'baru_buka') return -1;
           if (b.statusBadge === 'baru_buka' && a.statusBadge !== 'baru_buka') return 1;
@@ -480,15 +421,9 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
         break;
     }
 
-    // Distance Radius Slider if applied
-    if (maxDistanceKm < 20) {
-      result = result.filter((c) => c.distanceKm <= maxDistanceKm);
-    }
-
     return result;
-  }, [processedCafes, searchQuery, filterTab, maxDistanceKm]);
+  }, [processedCafes, searchQuery, filterTab]);
 
-  // Copy address to clipboard
   const handleCopyAddress = (address: string) => {
     navigator.clipboard.writeText(address);
     setCopiedToast(true);
@@ -496,430 +431,305 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
     setTimeout(() => setCopiedToast(false), 2000);
   };
 
-  // Formatted Live Time string (WIB)
   const formattedTimeStr = currentTime.toLocaleTimeString('id-ID', {
     hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
+    minute: '2-digit'
   });
 
   return (
-    <div className="space-y-6">
-      {/* Realtime Discovery Banner & Status Strip */}
-      <div className="bg-gradient-to-r from-[#7A1018] via-[#5e0a11] to-[#3B0A0F] text-[#EFE6DA] p-5 sm:p-6 rounded-3xl shadow-xl relative overflow-hidden border border-[#D9B26F]/30">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2 text-[10px] font-sans-clean font-bold tracking-[0.2em] uppercase text-[#F4B6C2]">
-              <div className="flex items-center space-x-1.5 bg-black/40 px-2.5 py-1 rounded-full border border-white/10">
-                <Sparkles className="w-3.5 h-3.5 text-[#D9B26F] animate-spin" />
-                <span>GOOGLE PLACES API LIVE • SEMARANG</span>
+    <div className="space-y-4">
+      {/* COMPACT 3D CLAY DISCOVERY CONTROL HUB (Irit Ruang & Mobile-First) */}
+      <div className="clay-card-3d rounded-[2rem] p-3.5">
+        {/* Top Micro Row: Title + Live Status + Refresh */}
+        <div className="mb-2.5 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-xs">
+              <Coffee className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 text-left">
+              <div className="flex items-center gap-1.5">
+                <h3 className="truncate text-sm font-black text-[#4a1623] dark:text-rose-50 sm:text-base">
+                  Eksplor Kafe Semarang
+                </h3>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[8.5px] font-black text-emerald-700 dark:text-emerald-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {formattedTimeStr}
+                </span>
               </div>
-              <div className="flex items-center space-x-1 text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                <span>DATA TERVERIFIKASI</span>
-              </div>
+              <p className="truncate text-[10px] font-bold text-[#8c4f60] dark:text-rose-200/75">
+                Acuan: <strong className="text-[#b84661] dark:text-rose-300">{userLocation.label}</strong>
+              </p>
             </div>
-            <h3 className="font-serif-title text-2xl sm:text-3xl font-bold text-white">
-              Rekomendasi Kafe Realtime & Baru
-            </h3>
-            <p className="font-editorial italic text-xs sm:text-sm text-[#EFE6DA]/90 max-w-xl">
-              Data langsung Google Places API: kafe baru buka, sedang viral, dan kafe terdekat di Semarang dengan foto asli untuk kencan Savero & Soffie.
-            </p>
           </div>
 
-          {/* Live Clock & Refresh Widget */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/15 flex items-center space-x-2 text-xs font-sans-clean">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
-              <div>
-                <span className="text-[10px] opacity-75 block font-mono">WIB (LIVE):</span>
-                <span className="font-bold font-mono tracking-wider">{formattedTimeStr}</span>
-              </div>
-            </div>
-
-            <button
-              onClick={handleManualRefresh}
-              disabled={isRefreshing || isLoadingPlaces}
-              className="p-2.5 bg-[#D9B26F] hover:bg-[#c49c56] text-[#3B0A0F] font-bold rounded-2xl shadow-md transition flex items-center justify-center focus:outline-hidden"
-              title="Segarkan data Google Places realtime"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${
-                  isRefreshing || isLoadingPlaces ? 'animate-spin' : ''
-                }`}
-              />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleManualRefresh}
+            disabled={isRefreshing || isLoadingPlaces}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/90 bg-white/90 text-[#8c2840] shadow-xs transition hover:scale-105 active:scale-90 dark:border-white/15 dark:bg-white/10 dark:text-rose-200"
+            title="Segarkan Data"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing || isLoadingPlaces ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
-        {/* Location Switcher Toolbar */}
-        <div className="mt-4 pt-4 border-t border-white/15 flex flex-wrap items-center justify-between gap-3 text-xs font-sans-clean">
-          <div className="flex items-center space-x-2">
-            <MapPin className="w-4 h-4 text-[#D9B26F] flex-shrink-0" />
-            <span className="text-[11px] font-bold text-white/90">
-              Titik Acuan GPS: <span className="text-[#D9B26F]">{userLocation.label}</span>
-              {userLocation.isLiveGps && (
-                <span className="ml-1.5 bg-emerald-500/20 text-emerald-300 text-[9px] px-2 py-0.5 rounded-full border border-emerald-400/30 font-mono">
-                  GPS AKTIF
-                </span>
-              )}
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-1.5 overflow-x-auto scrollbar-none py-1">
-            <button
-              onClick={() => requestLiveGpsLocation(true)}
-              className="px-2.5 py-1 rounded-xl bg-white/15 hover:bg-white/25 text-[#EFE6DA] text-[10px] font-bold flex items-center space-x-1 border border-white/20 whitespace-nowrap transition"
-            >
-              <Navigation className="w-3 h-3 text-[#D9B26F]" />
-              <span>Gunakan GPS HP</span>
-            </button>
-            {SEMARANG_PRESET_LOCATIONS.map((preset) => (
+        {/* Compact GPS Location Pills */}
+        <div className="mb-2.5 flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => requestLiveGpsLocation(true)}
+            className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[9.5px] font-extrabold transition active:scale-95 ${
+              userLocation.isLiveGps
+                ? 'bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-xs'
+                : 'border border-white/80 bg-white/80 text-[#6e2438] dark:border-white/10 dark:bg-white/10 dark:text-rose-100'
+            }`}
+          >
+            <Navigation className="h-2.5 w-2.5" />
+            <span>GPS HP</span>
+          </button>
+          {SEMARANG_PRESET_LOCATIONS.map((preset) => {
+            const active = !userLocation.isLiveGps && userLocation.label === preset.name;
+            return (
               <button
                 key={preset.id}
+                type="button"
                 onClick={() => handleSelectPresetLocation(preset)}
-                className={`px-2.5 py-1 rounded-xl text-[10px] font-bold whitespace-nowrap transition ${
-                  userLocation.label === preset.name
-                    ? 'bg-[#D9B26F] text-[#3B0A0F] shadow-sm'
-                    : 'bg-black/20 hover:bg-black/40 text-white/80'
+                className={`shrink-0 rounded-full px-2.5 py-1 text-[9.5px] font-extrabold transition active:scale-95 ${
+                  active
+                    ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-xs'
+                    : 'border border-white/80 bg-white/75 text-[#7a3948] hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-rose-200/80'
                 }`}
               >
                 {preset.name}
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      </div>
 
-      {/* Search & Filter Controls */}
-      <div className="bg-white/80 dark:bg-black/30 p-4 rounded-3xl border border-[#7A1018]/15 shadow-sm space-y-3">
-        {/* Search Bar */}
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" />
+        {/* Compact 3D Clay Search Input */}
+        <div className="relative mb-2.5">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-rose-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari kafe Semarang di Google Places (cth: Levain, Eastman, ARAH, roastery, matcha)..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white dark:bg-black/40 border border-[#7A1018]/20 focus:outline-hidden focus:ring-2 focus:ring-[#7A1018] text-xs font-sans-clean text-[#3B0A0F] dark:text-[#EFE6DA]"
+            placeholder="Cari kafe, matcha, roastery di Semarang..."
+            className="w-full rounded-full border border-white/90 bg-white/90 py-1.5 pl-9 pr-8 text-[11.5px] font-bold text-[#4a1623] shadow-inner placeholder:text-[#8c4f60]/55 focus:border-rose-300 focus:outline-none dark:border-white/10 dark:bg-black/30 dark:text-rose-50 dark:placeholder:text-rose-200/40"
           />
           {searchQuery && (
-            <CloseButton onClick={() => setSearchQuery('')} label="Hapus pencarian" className="absolute right-1.5 top-1" />
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full bg-rose-100 px-1.5 py-0.5 text-[9px] font-black text-rose-600 dark:bg-white/10 dark:text-rose-200"
+            >
+              ✕
+            </button>
           )}
         </div>
 
-        {/* Filter Pills with Badge Counters */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto scrollbar-none pb-1 text-xs font-sans-clean font-bold">
-          <button
-            onClick={() => {
-              soundManager.playTap();
-              setFilterTab('semua');
-            }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap flex items-center space-x-1 ${
-              filterTab === 'semua'
-                ? 'bg-[#7A1018] text-[#EFE6DA] shadow-xs'
-                : 'bg-white/60 dark:bg-black/20 text-[#3B0A0F] dark:text-[#EFE6DA] hover:bg-[#7A1018]/10'
-            }`}
-          >
-            <span>Semua Kafe</span>
-            <span className="text-[10px] opacity-75">({processedCafes.length})</span>
-          </button>
-
-          <button
-            onClick={() => {
-              soundManager.playTap();
-              setFilterTab('terdekat');
-            }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap flex items-center space-x-1 ${
-              filterTab === 'terdekat'
-                ? 'bg-[#7A1018] text-[#EFE6DA] shadow-xs'
-                : 'bg-white/60 dark:bg-black/20 text-[#3B0A0F] dark:text-[#EFE6DA] hover:bg-[#7A1018]/10'
-            }`}
-          >
-            <Navigation className="w-3 h-3 text-[#D9B26F]" />
-            <span>Paling Dekat</span>
-          </button>
-
-          <button
-            onClick={() => {
-              soundManager.playTap();
-              setFilterTab('tren');
-            }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap flex items-center space-x-1 ${
-              filterTab === 'tren'
-                ? 'bg-[#7A1018] text-[#EFE6DA] shadow-xs'
-                : 'bg-white/60 dark:bg-black/20 text-[#3B0A0F] dark:text-[#EFE6DA] hover:bg-[#7A1018]/10'
-            }`}
-          >
-            <Flame className="w-3 h-3 text-red-500" />
-            <span>Sedang Tren</span>
-          </button>
-
-          <button
-            onClick={() => {
-              soundManager.playTap();
-              setFilterTab('baru');
-            }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap flex items-center space-x-1 ${
-              filterTab === 'baru'
-                ? 'bg-[#7A1018] text-[#EFE6DA] shadow-xs'
-                : 'bg-white/60 dark:bg-black/20 text-[#3B0A0F] dark:text-[#EFE6DA] hover:bg-[#7A1018]/10'
-            }`}
-          >
-            <Sparkles className="w-3 h-3 text-amber-500" />
-            <span>Baru Buka</span>
-          </button>
-
-          <button
-            onClick={() => {
-              soundManager.playTap();
-              setFilterTab('buka');
-            }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap flex items-center space-x-1.5 ${
-              filterTab === 'buka'
-                ? 'bg-[#7A1018] text-[#EFE6DA] shadow-xs'
-                : 'bg-white/60 dark:bg-black/20 text-[#3B0A0F] dark:text-[#EFE6DA] hover:bg-[#7A1018]/10'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Buka Sekarang</span>
-          </button>
-
-          <button
-            onClick={() => {
-              soundManager.playTap();
-              setFilterTab('matcha');
-            }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap flex items-center space-x-1 ${
-              filterTab === 'matcha'
-                ? 'bg-[#7A1018] text-[#EFE6DA] shadow-xs'
-                : 'bg-white/60 dark:bg-black/20 text-[#3B0A0F] dark:text-[#EFE6DA] hover:bg-[#7A1018]/10'
-            }`}
-          >
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-            <span>Matcha Soffie</span>
-          </button>
-
-          <button
-            onClick={() => {
-              soundManager.playTap();
-              setFilterTab('kopi');
-            }}
-            className={`px-3 py-1.5 rounded-xl transition whitespace-nowrap flex items-center space-x-1 ${
-              filterTab === 'kopi'
-                ? 'bg-[#7A1018] text-[#EFE6DA] shadow-xs'
-                : 'bg-white/60 dark:bg-black/20 text-[#3B0A0F] dark:text-[#EFE6DA] hover:bg-[#7A1018]/10'
-            }`}
-          >
-            <Coffee className="w-3 h-3 text-amber-700" />
-            <span>Kopi Savero</span>
-          </button>
+        {/* Category Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+          {[
+            { id: 'semua', label: `Semua (${processedCafes.length})`, icon: null },
+            { id: 'terdekat', label: 'Terdekat', icon: Navigation },
+            { id: 'tren', label: 'Viral', icon: Flame },
+            { id: 'baru', label: 'Baru', icon: Sparkles },
+            { id: 'buka', label: 'Buka', icon: null },
+            { id: 'matcha', label: 'Matcha', icon: null },
+            { id: 'kopi', label: 'Kopi', icon: Coffee }
+          ].map((tab) => {
+            const active = filterTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  soundManager.playTap();
+                  setFilterTab(tab.id as any);
+                }}
+                className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[10.5px] font-extrabold transition-all active:scale-95 ${
+                  active
+                    ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-[0_3px_8px_rgba(217,56,106,0.28),inset_0_1px_2px_rgba(255,255,255,0.55)]'
+                    : 'border border-white/85 bg-white/85 text-[#6e2438] hover:bg-white dark:border-white/10 dark:bg-white/10 dark:text-rose-100'
+                }`}
+              >
+                {Icon && <Icon className="h-3 w-3" />}
+                {tab.id === 'buka' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />}
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Loading state indicator */}
+      {/* Loading Indicator */}
       {isLoadingPlaces && (
-        <div className="flex items-center justify-center space-x-2 py-4 text-xs font-sans-clean text-[#7A1018] dark:text-[#F4B6C2]">
-          <RefreshCw className="w-4 h-4 animate-spin" />
-          <span>Memuat rekomendasi live dari Google Places API...</span>
+        <div className="flex items-center justify-center gap-2 py-2 text-[11px] font-extrabold text-[#b84661] dark:text-rose-300">
+          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+          <span>Memperbarui daftar kafe...</span>
         </div>
       )}
 
-      {/* Kafe Recommendation Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredCafes.map((cafe) => {
-          return (
-            <motion.div
-              key={cafe.id}
-              layout
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              onClick={() => {
-                soundManager.playTap();
-                setSelectedCafe(cafe);
-                setModalPhotoIndex(0);
-              }}
-              className="bg-white/90 dark:bg-black/40 rounded-3xl p-5 border border-[#7A1018]/15 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between group cursor-pointer relative overflow-hidden"
-            >
-              {/* Image & Badges */}
-              <div>
-                <div className="relative h-48 w-full rounded-2xl overflow-hidden mb-3.5 bg-gray-100 dark:bg-black/40">
-                  <ManagedImage
-                    src={cafe.photoUrl}
-                    alt={cafe.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                    loading="lazy"
-                  />
+      {/* COMPACT 2-COLUMN MOBILE GRID FOR CAFE CARDS */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 sm:gap-3.5">
+        {filteredCafes.map((cafe) => (
+          <motion.div
+            key={cafe.id}
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22 }}
+            onClick={() => {
+              soundManager.playTap();
+              setSelectedCafe(cafe);
+              setModalPhotoIndex(0);
+            }}
+            className="clay-card-3d group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-[1.6rem] p-2.5 transition-all hover:-translate-y-0.5"
+          >
+            <div>
+              {/* Squircle-ish Thumbnail Image */}
+              <div className="relative mb-2 h-28 w-full overflow-hidden rounded-[1.2rem] border border-white/80 bg-rose-100/50 sm:h-36 dark:border-white/10 dark:bg-black/40">
+                <ManagedImage
+                  src={cafe.photoUrl}
+                  alt={cafe.name}
+                  className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/25" />
 
-                  {/* Gradient Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/30" />
+                {/* Top Left: Distance Pill */}
+                <div className="absolute top-1.5 left-1.5 flex items-center gap-0.5 rounded-full border border-white/25 bg-black/55 px-2 py-0.5 text-[8.5px] font-black text-white backdrop-blur-md">
+                  <Navigation className="h-2.5 w-2.5 text-rose-300" />
+                  <span>{cafe.distanceKm} km</span>
+                </div>
 
-                  {/* Top Status Badge */}
-                  <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1">
+                {/* Top Right: Rating Pill */}
+                <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-full border border-white/25 bg-black/55 px-1.5 py-0.5 text-[8.5px] font-black text-white backdrop-blur-md">
+                  <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
+                  <span>{cafe.rating}</span>
+                </div>
+
+                {/* Bottom Overlay: Open Status + Tag */}
+                <div className="absolute bottom-1.5 inset-x-1.5 flex items-center justify-between gap-1 text-white">
+                  <span className="flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[8px] font-extrabold backdrop-blur-md">
                     <span
-                      className={`text-[9px] font-sans-clean font-bold tracking-wider uppercase px-2.5 py-1 rounded-full shadow-md text-white ${
-                        cafe.statusBadge === 'baru_buka'
-                          ? 'bg-amber-600'
-                          : cafe.statusBadge === 'sedang_tren' || cafe.statusBadge === 'viral'
-                          ? 'bg-red-600'
-                          : cafe.statusBadge === 'spesial_matcha'
-                          ? 'bg-emerald-700'
-                          : 'bg-[#7A1018]'
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        cafe.statusColor === 'green'
+                          ? 'bg-emerald-400'
+                          : cafe.statusColor === 'amber'
+                          ? 'bg-amber-400'
+                          : 'bg-rose-400'
                       }`}
-                    >
-                      {cafe.statusBadgeLabel}
-                    </span>
-                  </div>
+                    />
+                    {cafe.statusLabel}
+                  </span>
 
-                  {/* Realtime Distance Pill */}
-                  <div className="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-md text-[#EFE6DA] px-2.5 py-1 rounded-full text-[10px] font-sans-clean font-bold flex items-center space-x-1 border border-white/20">
-                    <Navigation className="w-2.5 h-2.5 text-[#D9B26F]" />
-                    <span>{cafe.distanceKm} km</span>
-                  </div>
-
-                  {/* Bottom Image Overlay: Realtime Open Status & Ratings */}
-                  <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-white text-xs font-sans-clean font-bold">
-                    <div className="flex items-center space-x-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-xl">
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          cafe.statusColor === 'green'
-                            ? 'bg-emerald-400 animate-pulse'
-                            : cafe.statusColor === 'amber'
-                            ? 'bg-amber-400 animate-pulse'
-                            : 'bg-red-400'
-                        }`}
-                      />
-                      <span className="text-[11px]">{cafe.statusLabel}</span>
-                    </div>
-
-                    <div className="text-[10px] opacity-95 bg-black/60 px-2 py-1 rounded-xl flex items-center space-x-1">
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      <span>{cafe.rating}</span>
-                      <span className="opacity-75">({cafe.reviewCount})</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cafe Title & Area */}
-                <div className="mb-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-serif-title font-bold text-lg sm:text-xl text-[#3B0A0F] dark:text-[#EFE6DA] group-hover:text-[#7A1018] dark:group-hover:text-[#F4B6C2] transition line-clamp-1">
-                      {cafe.name}
-                    </h4>
-                  </div>
-                  <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400 font-sans-clean mt-0.5">
-                    <MapPin className="w-3.5 h-3.5 text-[#7A1018] dark:text-[#F4B6C2] flex-shrink-0" />
-                    <span className="line-clamp-1">{cafe.address}</span>
-                  </div>
-                </div>
-
-                {/* Live Hours Details */}
-                <div className="bg-[#EFE6DA]/60 dark:bg-black/30 p-2.5 rounded-2xl mb-3 text-[11px] font-sans-clean text-[#3B0A0F]/80 dark:text-[#EFE6DA]/80 flex items-center space-x-2">
-                  <Clock className="w-3.5 h-3.5 text-[#7A1018] dark:text-[#F4B6C2] flex-shrink-0" />
-                  <span className="line-clamp-1">{cafe.detailMessage}</span>
-                </div>
-
-                {/* Signature Menu & Highlights */}
-                <div className="space-y-1 mb-4 text-xs font-sans-clean">
-                  <div className="text-[11px] font-bold text-gray-700 dark:text-gray-300 line-clamp-1">
-                    ✨ <span className="text-[#7A1018] dark:text-[#F4B6C2]">Menu:</span> {cafe.signatureMenu}
-                  </div>
-                  <p className="font-editorial italic text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
-                    "{cafe.highlightForCouple}"
-                  </p>
+                  <span className="truncate rounded-full bg-rose-500/85 px-2 py-0.5 text-[7.5px] font-black uppercase tracking-wide text-white backdrop-blur-xs">
+                    {cafe.statusBadgeLabel.replace(/[^\w\s]/gi, '').trim().slice(0, 12)}
+                  </span>
                 </div>
               </div>
 
-              {/* Action Buttons: Add to Wishlist & Open Google Maps */}
-              <div className="pt-3 border-t border-[#7A1018]/15 flex items-center justify-between gap-2 text-xs font-sans-clean">
-                <button
-                  type="button"
-                  onClick={(e) => handleAddToWishlist(cafe, e)}
-                  disabled={cafe.isAdded}
-                  className={`flex-1 py-2 px-3 rounded-xl font-bold flex items-center justify-center space-x-1.5 transition shadow-xs ${
-                    cafe.isAdded
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300'
-                      : 'bg-[#7A1018] hover:bg-[#5e0a11] text-[#EFE6DA]'
-                  }`}
-                >
-                  {cafe.isAdded ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Di Wishlist</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Tambah Wishlist</span>
-                    </>
-                  )}
-                </button>
+              {/* Cafe Name & Area */}
+              <h4 className="line-clamp-1 text-left text-xs font-black leading-snug text-[#4a1623] group-hover:text-[#d9386a] dark:text-rose-50 sm:text-sm">
+                {cafe.name}
+              </h4>
+              <p className="mt-0.5 flex items-center gap-1 text-left text-[9.5px] font-bold text-[#8c4f60] dark:text-rose-200/70">
+                <MapPin className="h-2.5 w-2.5 shrink-0 text-rose-400" />
+                <span className="truncate">{cafe.area}</span>
+              </p>
+              <p className="mt-1 line-clamp-1 text-left text-[9.5px] font-medium text-[#6b3140] dark:text-rose-200/80">
+                {cafe.signatureMenu}
+              </p>
+            </div>
 
-                <a
-                  href={cafe.mapUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="p-2 rounded-xl border border-[#7A1018]/20 bg-white/70 dark:bg-black/30 hover:bg-[#7A1018]/10 text-[#7A1018] dark:text-[#F4B6C2] transition flex items-center justify-center"
-                  title="Buka Rute di Google Maps"
-                >
-                  <Navigation className="w-4 h-4" />
-                </a>
-              </div>
-            </motion.div>
-          );
-        })}
+            {/* Compact Action Bar */}
+            <div className="mt-2.5 flex items-center gap-1.5 border-t border-rose-200/40 pt-2 dark:border-white/10">
+              <button
+                type="button"
+                onClick={(e) => handleAddToWishlist(cafe, e)}
+                disabled={cafe.isAdded}
+                className={`flex min-h-[28px] flex-1 items-center justify-center gap-1 rounded-full px-2 text-[9.5px] font-extrabold transition active:scale-95 ${
+                  cafe.isAdded
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300'
+                    : 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-xs'
+                }`}
+              >
+                {cafe.isAdded ? (
+                  <>
+                    <Check className="h-3 w-3 stroke-[2.75]" />
+                    <span>Tersimpan</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-3 w-3 stroke-[2.75]" />
+                    <span>Wishlist</span>
+                  </>
+                )}
+              </button>
+
+              <a
+                href={cafe.mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/90 bg-white/90 text-rose-500 shadow-2xs transition hover:scale-105 active:scale-90 dark:border-white/15 dark:bg-white/10 dark:text-rose-200"
+                title="Rute Google Maps"
+              >
+                <Navigation className="h-3 w-3" />
+              </a>
+            </div>
+          </motion.div>
+        ))}
       </div>
 
       {/* Empty State */}
       {filteredCafes.length === 0 && !isLoadingPlaces && (
-        <div className="text-center py-12 bg-white/50 dark:bg-black/20 rounded-3xl border border-dashed border-[#7A1018]/20 p-6 space-y-3">
-          <Coffee className="w-10 h-10 text-gray-400 mx-auto" />
-          <h4 className="font-serif-title text-lg font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
-            Tidak ada kafe yang cocok dengan filter
+        <div className="rounded-[2rem] border border-white/90 bg-white/75 p-8 text-center shadow-inner dark:border-white/10 dark:bg-white/5">
+          <Coffee className="mx-auto mb-2 h-8 w-8 text-rose-400" />
+          <h4 className="text-sm font-black text-[#4a1623] dark:text-rose-50">
+            Tidak ada kafe yang cocok
           </h4>
-          <p className="text-xs text-gray-500 max-w-sm mx-auto font-sans-clean">
-            Coba ganti kata kunci pencarian atau pilih tab filter lain untuk melihat kafe rekomendasi di Semarang.
-          </p>
           <button
+            type="button"
             onClick={() => {
               setSearchQuery('');
               setFilterTab('semua');
             }}
-            className="px-4 py-1.5 rounded-xl bg-[#7A1018] text-[#EFE6DA] text-xs font-bold font-sans-clean"
+            className="mt-3 rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] px-4 py-1.5 text-xs font-extrabold text-white shadow-sm"
           >
             Reset Filter
           </button>
         </div>
       )}
 
-      {/* Interactive Modal: Detail Kafe Realtime & Ide Kencan */}
+      {/* DETAIL MODAL KAFE (Compact 3D Clay Sheet) */}
       <AnimatePresence>
         {selectedCafe && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-md"
             onClick={() => setSelectedCafe(null)}
           >
             <motion.div
-              initial={{ scale: 0.92, y: 20 }}
+              initial={{ scale: 0.92, y: 18 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.92, y: 20 }}
+              exit={{ scale: 0.92, y: 18 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-[#EFE6DA] dark:bg-[#250709] max-w-lg w-full rounded-3xl p-5 sm:p-6 border-2 border-[#7A1018]/30 shadow-2xl relative my-8 text-left max-h-[90vh] overflow-y-auto scrollbar-none"
+              className="clay-card-3d relative my-auto max-h-[88vh] w-full max-w-md overflow-y-auto rounded-[2.4rem] p-4 text-left text-[#4a1623] scrollbar-none dark:text-rose-50"
             >
-              {/* Close Button */}
-              <CloseButton onClick={() => setSelectedCafe(null)} label="Tutup detail tempat" className="absolute right-4 top-4 z-20" />
+              <CloseButton
+                onClick={() => setSelectedCafe(null)}
+                label="Tutup detail"
+                className="absolute right-3.5 top-3.5 z-20"
+              />
 
-              {/* Photo Cover & Gallery */}
-              <div className="relative h-56 sm:h-64 w-full rounded-2xl overflow-hidden mb-4 shadow-md bg-gray-900">
+              {/* Photo Cover */}
+              <div className="relative mb-3 h-48 w-full overflow-hidden rounded-[1.8rem] border-2 border-white bg-black shadow-md dark:border-white/15">
                 <ManagedImage
                   src={
                     selectedCafe.photos && selectedCafe.photos.length > 0
@@ -927,193 +737,149 @@ export const RealtimeCafeRecommendations: React.FC<RealtimeCafeRecommendationsPr
                       : selectedCafe.photoUrl
                   }
                   alt={selectedCafe.name}
-                  className="w-full h-full object-cover transition-all duration-300"
+                  className="h-full w-full object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/30" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                {/* Photo Switcher Arrows if multiple photos */}
                 {selectedCafe.photos && selectedCafe.photos.length > 1 && (
-                  <div className="absolute inset-x-2 top-1/2 -translate-y-1/2 flex items-center justify-between pointer-events-none z-10">
+                  <div className="pointer-events-none absolute inset-x-2 top-1/2 z-10 flex -translate-y-1/2 items-center justify-between">
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setModalPhotoIndex((prev) =>
                           prev === 0 ? selectedCafe.photos.length - 1 : prev - 1
                         );
                       }}
-                      className="p-1.5 rounded-full bg-black/50 text-white hover:bg-black/80 transition pointer-events-auto"
+                      className="pointer-events-auto rounded-full bg-black/50 p-1.5 text-white backdrop-blur-md hover:bg-black/75"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="h-4 w-4" />
                     </button>
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setModalPhotoIndex((prev) =>
                           prev === selectedCafe.photos.length - 1 ? 0 : prev + 1
                         );
                       }}
-                      className="p-1.5 rounded-full bg-black/50 text-white hover:bg-black/80 transition pointer-events-auto"
+                      className="pointer-events-auto rounded-full bg-black/50 p-1.5 text-white backdrop-blur-md hover:bg-black/75"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
                 )}
 
-                {/* Photo Counter Badge */}
                 {selectedCafe.photos && selectedCafe.photos.length > 1 && (
-                  <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1 rounded-full font-mono flex items-center space-x-1">
-                    <Camera className="w-3 h-3 text-[#D9B26F]" />
+                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-0.5 text-[9.5px] font-bold text-white backdrop-blur-md">
+                    <Camera className="h-3 w-3 text-rose-300" />
                     <span>
-                      {modalPhotoIndex + 1} / {selectedCafe.photos.length} Foto Asli
+                      {modalPhotoIndex + 1}/{selectedCafe.photos.length}
                     </span>
                   </div>
                 )}
 
-                <div className="absolute bottom-3 left-3 right-3 text-white">
-                  <div className="flex flex-wrap gap-1.5 mb-1.5">
-                    <span className="text-[10px] font-sans-clean font-bold tracking-widest uppercase bg-[#7A1018] px-2.5 py-0.5 rounded-md inline-block">
-                      {selectedCafe.statusBadgeLabel}
-                    </span>
-                    <span className="text-[10px] font-sans-clean font-bold bg-black/50 backdrop-blur-md px-2 py-0.5 rounded-md text-emerald-300">
-                      Google Maps Verified
-                    </span>
-                  </div>
-                  <h3 className="font-serif-title text-xl sm:text-2xl font-bold leading-tight">
-                    {selectedCafe.name}
-                  </h3>
-                  <div className="flex items-center space-x-1 text-xs text-white/90 font-sans-clean mt-1">
-                    <MapPin className="w-3.5 h-3.5 text-[#D9B26F] flex-shrink-0" />
-                    <span className="line-clamp-1">{selectedCafe.address}</span>
-                  </div>
+                <div className="absolute bottom-2.5 inset-x-3 text-white">
+                  <span className="rounded-full bg-rose-500 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider">
+                    {selectedCafe.statusBadgeLabel}
+                  </span>
+                  <h3 className="mt-1 text-lg font-black leading-tight">{selectedCafe.name}</h3>
+                  <p className="mt-0.5 flex items-center gap-1 truncate text-[10.5px] text-white/85">
+                    <MapPin className="h-3 w-3 shrink-0 text-rose-300" />
+                    <span className="truncate">{selectedCafe.address}</span>
+                  </p>
                 </div>
               </div>
 
-              {/* Photo Thumbnail Strip if multiple photos */}
-              {selectedCafe.photos && selectedCafe.photos.length > 1 && (
-                <div className="flex items-center space-x-2 mb-4 overflow-x-auto pb-1 scrollbar-none">
-                  {selectedCafe.photos.map((ph, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setModalPhotoIndex(idx)}
-                      className={`relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border-2 transition ${
-                        modalPhotoIndex === idx
-                          ? 'border-[#7A1018] scale-105 shadow-md'
-                          : 'border-transparent opacity-60 hover:opacity-100'
-                      }`}
-                    >
-                      <ManagedImage src={ph} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Body Content */}
-              <div className="space-y-4 font-sans-clean text-xs">
-                {/* Realtime Status Alert */}
-                <div className="p-3 rounded-2xl bg-white/70 dark:bg-black/40 border border-[#7A1018]/15 flex items-center justify-between">
+              {/* Compact Info Pills */}
+              <div className="space-y-2.5 text-xs">
+                <div className="clay-subcard-3d flex items-center justify-between rounded-2xl p-2.5">
                   <div>
-                    <div className="text-[10px] uppercase font-bold text-gray-500">
-                      Status Operasional Live:
-                    </div>
-                    <div className="font-bold text-sm text-[#7A1018] dark:text-[#F4B6C2] flex items-center space-x-1.5 mt-0.5">
-                      <Clock className="w-4 h-4" />
+                    <span className="text-[9.5px] font-extrabold uppercase text-[#8c4f60] dark:text-rose-300">
+                      Status Live
+                    </span>
+                    <div className="flex items-center gap-1 font-black text-[#4a1623] dark:text-rose-50">
+                      <Clock className="h-3.5 w-3.5 text-rose-500" />
                       <span>{selectedCafe.statusLabel}</span>
                     </div>
-                    <div className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">
+                    <span className="text-[10px] font-semibold text-[#8c4f60] dark:text-rose-200/75">
                       {selectedCafe.detailMessage}
-                    </div>
+                    </span>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] uppercase font-bold text-gray-500">
-                      Jarak dari GPS:
-                    </div>
-                    <div className="font-bold text-base text-[#D9B26F]">
+                    <span className="text-[9.5px] font-extrabold uppercase text-[#8c4f60] dark:text-rose-300">
+                      Jarak
+                    </span>
+                    <div className="text-sm font-black text-rose-500 dark:text-rose-300">
                       {selectedCafe.distanceKm} km
                     </div>
-                    <div className="text-[10px] text-gray-500 flex items-center justify-end space-x-1 mt-0.5">
-                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                      <span>{selectedCafe.rating} ({selectedCafe.reviewCount} ulasan)</span>
-                    </div>
+                    <span className="flex items-center justify-end gap-0.5 text-[10px] font-bold">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      {selectedCafe.rating} ({selectedCafe.reviewCount})
+                    </span>
                   </div>
                 </div>
 
-                {/* Highlight Khusus Pasangan Savero & Soffie */}
-                <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#7A1018]/10 to-[#F4B6C2]/20 dark:from-white/5 dark:to-white/10 border border-[#7A1018]/20">
-                  <div className="flex items-center space-x-1.5 text-[10px] font-bold text-[#7A1018] dark:text-[#F4B6C2] uppercase tracking-wider mb-1">
-                    <Sparkles className="w-3.5 h-3.5 text-[#D9B26F]" />
-                    <span>Rekomendasi Kencan Savero & Soffie:</span>
+                {/* Couple Highlight */}
+                <div className="clay-subcard-3d rounded-2xl p-3">
+                  <div className="mb-0.5 flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-300">
+                    <Sparkles className="h-3 w-3" />
+                    <span>Catatan Kencan Kita</span>
                   </div>
-                  <p className="font-editorial text-sm text-[#3B0A0F] dark:text-[#EFE6DA] leading-relaxed">
+                  <p className="text-[11.5px] font-semibold italic leading-relaxed text-[#4a1623] dark:text-rose-100">
                     "{selectedCafe.highlightForCouple}"
                   </p>
                 </div>
 
-                {/* Operating Schedule & Address Actions */}
-                <div className="p-3 rounded-2xl bg-white/60 dark:bg-black/30 border border-[#7A1018]/10 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-gray-500">
-                      Alamat Lengkap:
-                    </span>
-                    <button
-                      onClick={() => handleCopyAddress(selectedCafe.address)}
-                      className="text-[10px] font-bold text-[#7A1018] dark:text-[#F4B6C2] flex items-center space-x-1 hover:underline"
-                    >
-                      <Copy className="w-3 h-3" />
-                      <span>{copiedToast ? 'Tersalin!' : 'Salin Alamat'}</span>
-                    </button>
-                  </div>
-                  <p className="text-[#3B0A0F] dark:text-[#EFE6DA] font-medium">
+                {/* Copy Address */}
+                <div className="clay-subcard-3d flex items-center justify-between rounded-2xl px-3 py-2">
+                  <span className="truncate text-[10.5px] font-semibold text-[#6b3140] dark:text-rose-200">
                     {selectedCafe.address}
-                  </p>
-
-                  {selectedCafe.weekdayDescriptions &&
-                    selectedCafe.weekdayDescriptions.length > 0 && (
-                      <div className="pt-2 border-t border-black/10 dark:border-white/10 text-[11px] text-gray-600 dark:text-gray-400">
-                        <span className="font-bold block text-gray-700 dark:text-gray-300 mb-1">
-                          Jam Buka Mingguan (Google Places):
-                        </span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[10px]">
-                          {selectedCafe.weekdayDescriptions.slice(0, 4).map((d, i) => (
-                            <div key={i}>{d}</div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyAddress(selectedCafe.address)}
+                    className="ml-2 flex shrink-0 items-center gap-1 rounded-full bg-rose-100 px-2.5 py-1 text-[9.5px] font-extrabold text-rose-700 dark:bg-white/10 dark:text-rose-200"
+                  >
+                    <Copy className="h-2.5 w-2.5" />
+                    <span>{copiedToast ? 'Tersalin' : 'Salin'}</span>
+                  </button>
                 </div>
 
-                {/* Modal Footer Actions */}
-                <div className="pt-3 border-t border-[#7A1018]/15 flex items-center justify-end space-x-2">
+                {/* Modal Action Buttons */}
+                <div className="flex items-center gap-2 pt-1">
                   <a
                     href={selectedCafe.mapUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2.5 rounded-xl border border-[#7A1018]/30 font-bold text-[#7A1018] dark:text-[#F4B6C2] hover:bg-black/5 dark:hover:bg-white/5 transition flex items-center space-x-1.5"
+                    className="flex items-center justify-center gap-1.5 rounded-full border border-white/90 bg-white px-4 py-2.5 text-xs font-extrabold text-[#7a243b] shadow-xs dark:border-white/15 dark:bg-white/10 dark:text-rose-100"
                   >
-                    <Navigation className="w-4 h-4" />
-                    <span>Buka Rute Maps</span>
+                    <Navigation className="h-3.5 w-3.5 text-rose-500" />
+                    <span>Maps</span>
                   </a>
 
                   <button
+                    type="button"
                     onClick={() => {
                       handleAddToWishlist(selectedCafe);
                       setSelectedCafe(null);
                     }}
                     disabled={selectedCafe.isAdded}
-                    className={`px-5 py-2.5 rounded-xl font-bold flex items-center space-x-1.5 shadow-md transition ${
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 px-4 text-xs font-extrabold shadow-md transition active:scale-95 ${
                       selectedCafe.isAdded
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                        : 'bg-[#7A1018] hover:bg-[#5e0a11] text-[#EFE6DA]'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white'
                     }`}
                   >
                     {selectedCafe.isAdded ? (
                       <>
-                        <Check className="w-4 h-4" />
-                        <span>Tersimpan di Wishlist</span>
+                        <Check className="h-4 w-4" />
+                        <span>Sudah di Wishlist</span>
                       </>
                     ) : (
                       <>
-                        <Plus className="w-4 h-4" />
-                        <span>Simpan ke Wishlist Kita</span>
+                        <Plus className="h-4 w-4" />
+                        <span>Simpan ke Wishlist</span>
                       </>
                     )}
                   </button>

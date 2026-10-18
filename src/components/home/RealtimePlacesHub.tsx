@@ -226,7 +226,7 @@ export const RealtimePlacesHub: React.FC<RealtimePlacesHubProps> = ({
             <h2 className="font-serif-title text-2xl sm:text-3xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
               Rekomendasi Kafe & Penginapan
             </h2>
-            <p className="font-editorial italic text-xs sm:text-sm text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 mt-0.5">
+            <p className="font-editorial italic text-xs sm:text-sm text-[#5c2432] dark:text-rose-200 mt-0.5">
               Temukan tempat nyaman untuk kencan berikutnya.
             </p>
           </div>
@@ -254,7 +254,7 @@ export const RealtimePlacesHub: React.FC<RealtimePlacesHubProps> = ({
             className={`flex items-center space-x-2 px-5 py-2 rounded-xl text-sm font-sans-clean font-bold transition-all ${
               activeTab === 'kafe'
                 ? 'bg-[#7A1018] text-[#EFE6DA] shadow-md'
-                : 'text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 hover:bg-[#7A1018]/10'
+                : 'text-[#6b3140] dark:text-rose-200 hover:bg-[#7A1018]/10'
             }`}
           >
             <Coffee className="w-4 h-4" />
@@ -270,7 +270,7 @@ export const RealtimePlacesHub: React.FC<RealtimePlacesHubProps> = ({
             className={`flex items-center space-x-2 px-5 py-2 rounded-xl text-sm font-sans-clean font-bold transition-all ${
               activeTab === 'penginapan'
                 ? 'bg-[#7A1018] text-[#EFE6DA] shadow-md'
-                : 'text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 hover:bg-[#7A1018]/10'
+                : 'text-[#6b3140] dark:text-rose-200 hover:bg-[#7A1018]/10'
             }`}
           >
             <Hotel className="w-4 h-4" />
@@ -378,7 +378,7 @@ export const RealtimePlacesHub: React.FC<RealtimePlacesHubProps> = ({
                         </p>
 
                         {place.editorialSummary && (
-                          <p className="text-[11px] font-editorial text-[#3B0A0F]/80 dark:text-[#EFE6DA]/70 mt-2 line-clamp-2 italic">
+                          <p className="text-[11px] font-editorial text-[#5c2432] dark:text-rose-200 mt-2 line-clamp-2 italic">
                             {place.editorialSummary}
                           </p>
                         )}

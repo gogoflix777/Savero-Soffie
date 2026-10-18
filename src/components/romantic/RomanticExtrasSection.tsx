@@ -426,7 +426,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
             <h2 className="font-serif-title text-2xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA] sm:text-4xl">
               Ruang Romantis
             </h2>
-            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 sm:text-sm">
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#5c2432] dark:text-rose-200 sm:text-sm">
               Surat, kenangan, foto, dan lagu kita—pilih yang ingin dibuka.
             </p>
           </div>
@@ -611,7 +611,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
               <h3 className="font-serif-title text-3xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA] mb-2">
                 "Apa Yang Terjadi Pada Hari Ini?"
               </h3>
-              <p className="font-editorial italic text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+              <p className="font-editorial italic text-xs sm:text-sm text-[#5c2432] dark:text-rose-200">
                 Pilih tanggal bersejarah untuk memutar kembali momen indah yang pernah kita lewati di Semarang.
               </p>
             </div>

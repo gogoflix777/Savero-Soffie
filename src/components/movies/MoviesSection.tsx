@@ -8,16 +8,15 @@ import {
   Star,
   Users,
   Calendar,
-  Clock,
   Sparkles,
-  CheckCircle,
   Plus,
   Play,
-  ListOrdered,
-  Eye,
-  Coffee,
-  MapPin,
-  ExternalLink
+  Tv,
+  Layers,
+  Clapperboard,
+  ArrowUpDown,
+  X,
+  Bookmark
 } from 'lucide-react';
 import { CloseButton } from '../common/CloseButton';
 import { MovieItem, ActorItem, MovieCollection, TvSeries, MemoryPin, AppSettings } from '../../types';
@@ -36,6 +35,7 @@ import {
   searchTmdb,
   TmdbSearchResult
 } from '../../services/tmdbService';
+import { soundManager } from '../../utils/audio';
 
 interface MoviesSectionProps {
   movies: MovieItem[];
@@ -63,8 +63,6 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   actors,
   catalogSyncError,
   collections,
-  pins,
-  settings,
   activeProfile,
   onAddMovie,
   onRemoveMovie,
@@ -174,10 +172,10 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
       ]);
 
       movieMetadata.forEach((movie, index) => {
-        if (JSON.stringify(movie) !== JSON.stringify(movies[index])) onUpdateMovie(movie);
+        if (JSON.stringify(movie) !== JSON.stringify(movies[index])) void onUpdateMovie(movie);
       });
       actorMetadata.forEach((actor, index) => {
-        if (JSON.stringify(actor) !== JSON.stringify(actors[index])) onUpdateActor(actor);
+        if (JSON.stringify(actor) !== JSON.stringify(actors[index])) void onUpdateActor(actor);
       });
       seriesMetadata.forEach((series, index) => {
         if (JSON.stringify(series) !== JSON.stringify(tvSeries[index])) void onUpdateTvSeries(series);
@@ -192,6 +190,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   }, [hasTmdbKey, allTmdbMetadataReady]);
 
   const handleCatalogSearch = async (kind: 'movie' | 'tv' | 'person') => {
+    soundManager.playTap();
     const query = catalogQuery.trim();
     if (!query) {
       catalogSearchRequest.current += 1;
@@ -237,6 +236,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   }, [catalogQuery, catalogType, hasTmdbKey]);
 
   const openCatalogResult = async (kind: 'movie' | 'tv' | 'person', result: TmdbSearchResult) => {
+    soundManager.playTap();
     setSelectedCatalogResult({ kind, result });
     setSelectedCatalogDetails(null);
     setCatalogDetailsLoading(true);
@@ -290,6 +290,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
           tmdbMetadataFetched: true
         });
       }
+      soundManager.playSuccess();
       setSelectedCatalogResult(null);
       setSelectedCatalogDetails(null);
     } catch (error) {
@@ -306,9 +307,8 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   const [plannedDrink, setPlannedDrink] = useState('Iced Matcha Latte Soffie & Kopi V60 Savero');
   const plannedMovie = movies.find((movie) => movie.id === plannedMovieId) ?? movies[0];
 
-  // Filtered & Sorted Movies
   const filteredMovies = useMemo(() => {
-    const localList = movies
+    return movies
       .filter((m) => {
         if (movieFilter === 'all') return true;
         return m.status === movieFilter;
@@ -322,8 +322,6 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
         }
         return (b.watchedDate || '0').localeCompare(a.watchedDate || '0');
       });
-
-    return localList;
   }, [movies, movieFilter, sortBy]);
 
   const selectedResult = selectedCatalogResult?.result;
@@ -349,168 +347,176 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   const selectedInWishlist = savedSelectedMovie?.status === 'watchlist' || savedSelectedSeries?.status === 'watchlist';
 
   return (
-    <section id="film-aktor" className="py-12 px-4 bg-[#EFE6DA] dark:bg-[#1a0507] border-b border-[#7A1018]/15 transition-colors">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+    <section id="film-aktor" className="min-h-[70vh] bg-[#fffaf0] px-3.5 py-5 transition-colors dark:bg-[#21151a] sm:px-5 sm:py-9">
+      <div className="mx-auto max-w-5xl">
+        {/* COMPACT HEADER & 3D CLAY TABS */}
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="flex items-center space-x-2 text-[11px] font-sans-clean font-bold tracking-[0.25em] uppercase text-[#7A1018] dark:text-[#F4B6C2] mb-1">
-              <Film className="w-3.5 h-3.5" />
+            <div className="mb-0.5 flex items-center gap-1.5 text-[10px] font-black tracking-[0.18em] uppercase text-[#b84661] dark:text-rose-300">
+              <Film className="h-3 w-3" />
               <span>SINEMA & FILMOGRAFI</span>
             </div>
-            <h2 className="font-serif-title text-3xl sm:text-4xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
-              Film, Aktor & Movie Night
+            <h2 className="text-xl font-black tracking-tight text-[#4a1623] dark:text-rose-50 sm:text-3xl">
+              Film & Movie Night
             </h2>
-            <p className="font-editorial italic text-xs sm:text-sm text-[#3B0A0F]/70 dark:text-[#EFE6DA]/70 mt-0.5">
-              Koleksi tontonan berdua Savero & Soffie, rating hati terpisah, dan target maraton serial.
-            </p>
           </div>
 
-          {/* Sub Navigation Tabs */}
-          <div className="flex max-w-full items-center space-x-1.5 overflow-x-auto rounded-2xl border border-rose-200/70 bg-white/65 p-1.5 text-xs font-sans-clean font-bold scrollbar-none dark:border-white/10 dark:bg-white/5">
-            <button
-              onClick={() => setActiveTab('film')}
-              className={`shrink-0 px-3 py-1.5 rounded-xl transition ${
-                activeTab === 'film' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
-              }`}
-            >
-              Film ({movies.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('serial')}
-              className={`shrink-0 px-3 py-1.5 rounded-xl transition ${
-                activeTab === 'serial' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
-              }`}
-            >
-              Serial TV ({tvSeries.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('aktor')}
-              className={`shrink-0 px-3 py-1.5 rounded-xl transition ${
-                activeTab === 'aktor' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
-              }`}
-            >
-              Aktor ({actors.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('koleksi')}
-              className={`shrink-0 px-3 py-1.5 rounded-xl transition ${
-                activeTab === 'koleksi' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
-              }`}
-            >
-              Franchise ({collections.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('planner')}
-              className={`shrink-0 px-3 py-1.5 rounded-xl transition ${
-                activeTab === 'planner' ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm' : 'text-[#3B0A0F] dark:text-[#EFE6DA]'
-              }`}
-            >
-              Movie Night
-            </button>
+          <div className="clay-pill-dock-3d grid grid-cols-5 gap-1 rounded-full p-1">
+            {[
+              { id: 'film', label: 'Film', count: movies.length },
+              { id: 'serial', label: 'Serial', count: tvSeries.length },
+              { id: 'aktor', label: 'Aktor', count: actors.length },
+              { id: 'koleksi', label: 'Franchise', count: collections.length },
+              { id: 'planner', label: 'Nonton' }
+            ].map((tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    soundManager.playTap();
+                    setActiveTab(tab.id as any);
+                  }}
+                  className={`flex items-center justify-center gap-0.5 rounded-full py-1.5 px-2 text-[10.5px] font-extrabold transition-all ${
+                    active
+                      ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-sm'
+                      : 'text-[#753546] hover:text-[#4a1623] dark:text-rose-200/80'
+                  }`}
+                >
+                  <span className="truncate">{tab.label}</span>
+                  {tab.count !== undefined && <span className="text-[9px] opacity-80">({tab.count})</span>}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {metadataSyncState === 'loading' && (
-          <p className="mb-4 text-xs text-[#956d74] dark:text-rose-100/60" role="status">Koleksi tersimpan tetap bisa dilihat selagi detail terbaru dimuat.</p>
-        )}
         {metadataSyncState === 'missing-key' && (
-          <p className="mb-4 rounded-2xl bg-amber-100/70 px-4 py-3 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100" role="alert">
-            TMDB belum dikonfigurasi. Tambahkan <code>VITE_TMDB_API_KEY</code> ke file <code>.env</code> dan mulai ulang aplikasi agar pencarian film, poster, dan detail metadata aktif.
+          <p className="mb-3 rounded-2xl bg-amber-100/70 px-3.5 py-2.5 text-[11px] font-bold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+            TMDB API key belum dikonfigurasi. Tambahkan <code>VITE_TMDB_API_KEY</code> ke file <code>.env</code> agar poster & sinopsis aktif.
           </p>
         )}
-        {metadataSyncState === 'error' && (
-          <p className="mb-4 rounded-2xl bg-rose-100/70 px-4 py-3 text-xs text-[#75414c] dark:bg-white/5 dark:text-rose-100/70" role="status">Sebagian detail belum tersedia. Koleksi dan catatan kalian tetap aman.</p>
+        {catalogSyncError && (
+          <p className="mb-3 rounded-2xl bg-rose-100/70 px-3.5 py-2.5 text-[11px] font-bold text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
+            Sinkronisasi katalog gagal: {catalogSyncError}
+          </p>
         )}
 
-        <div className="mb-6 rounded-2xl border border-[#7A1018]/15 bg-white/60 p-4 dark:bg-black/20">
-          <div className="mb-3">
-            <h3 className="font-sans-clean text-sm font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">Cari di TMDB</h3>
-            <p className="mt-0.5 text-xs text-[#6e5156] dark:text-rose-100/65">Pilih jenis katalog lalu ketik; hasil diperbarui otomatis.</p>
+        {/* COMPACT TMDB SEARCH HUB */}
+        <div className="clay-card-3d mb-5 rounded-[2rem] p-3.5">
+          <div className="mb-2.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-xs">
+                <Clapperboard className="h-3.5 w-3.5" />
+              </span>
+              <div className="min-w-0 text-left">
+                <h3 className="truncate text-xs font-black text-[#4a1623] dark:text-rose-50 sm:text-sm">
+                  Cari Film, Serial & Aktor (TMDB)
+                </h3>
+              </div>
+            </div>
+            <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[8.5px] font-black text-emerald-700 dark:text-emerald-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {catalogLoading ? 'Mencari...' : 'Aktif'}
+            </span>
           </div>
+
+          <div className="mb-2 flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
+            {[
+              { id: 'movie', label: 'Film', icon: Film },
+              { id: 'tv', label: 'Serial TV', icon: Tv },
+              { id: 'person', label: 'Aktor', icon: Users }
+            ].map((type) => {
+              const active = catalogType === type.id;
+              const Icon = type.icon;
+              return (
+                <button
+                  key={type.id}
+                  type="button"
+                  onClick={() => {
+                    soundManager.playTap();
+                    setCatalogType(type.id as any);
+                    setCatalogResults([]);
+                    setCatalogKind(null);
+                    setCatalogError('');
+                  }}
+                  className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[10px] font-extrabold transition-all active:scale-95 ${
+                    active
+                      ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-xs'
+                      : 'clay-subcard-3d text-[#6e2438] dark:text-rose-100'
+                  }`}
+                >
+                  <Icon className="h-3 w-3" />
+                  <span>{type.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
           <form
-            className="flex flex-col gap-2 sm:flex-row"
-            onSubmit={(event) => {
-              event.preventDefault();
+            className="relative"
+            onSubmit={(e) => {
+              e.preventDefault();
               void handleCatalogSearch(catalogType);
             }}
           >
-            <select
-              value={catalogType}
-              onChange={(event) => {
-                setCatalogType(event.target.value as 'movie' | 'tv' | 'person');
-                setCatalogResults([]);
-                setCatalogKind(null);
-                setCatalogError('');
-              }}
-              className="rounded-xl border border-[#7A1018]/20 bg-white px-3 py-2.5 text-sm text-[#3B0A0F] dark:bg-black/30 dark:text-[#EFE6DA] sm:w-44"
-              aria-label="Jenis katalog TMDB"
-            >
-              <option value="movie">Film</option>
-              <option value="tv">Serial TV</option>
-              <option value="person">Aktor</option>
-            </select>
-            <div className="relative min-w-0 flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-              <input
-                value={catalogQuery}
-                onChange={(event) => setCatalogQuery(event.target.value)}
-                placeholder={catalogType === 'person' ? 'Nama aktor atau aktris' : catalogType === 'tv' ? 'Judul serial TV' : 'Judul film'}
-                className="w-full rounded-xl border border-[#7A1018]/20 bg-white py-2.5 pl-9 pr-3 text-sm text-[#3B0A0F] dark:bg-black/30 dark:text-[#EFE6DA]"
-                aria-label={`Cari ${catalogType === 'person' ? 'aktor' : catalogType === 'tv' ? 'serial TV' : 'film'} di TMDB`}
-              />
-            </div>
-            <span className="inline-flex min-h-10 items-center justify-center gap-2 px-2 text-xs font-semibold text-[#7A1018] dark:text-[#F4B6C2]" role="status" aria-live="polite">
-              <Search className="h-4 w-4" aria-hidden="true" />
-              {catalogLoading ? 'Mencari…' : 'Otomatis'}
-            </span>
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-rose-400" />
+            <input
+              type="text"
+              value={catalogQuery}
+              onChange={(e) => setCatalogQuery(e.target.value)}
+              placeholder={`Cari judul ${catalogType === 'person' ? 'aktor' : catalogType === 'tv' ? 'serial' : 'film'}...`}
+              className="w-full rounded-full border border-rose-200/80 bg-white/90 py-2 pl-9 pr-8 text-[11px] font-bold text-[#4a1623] shadow-inner placeholder:text-[#8c4f60]/55 focus:border-rose-300 focus:outline-none dark:border-white/10 dark:bg-black/30 dark:text-rose-50 dark:placeholder:text-rose-200/40"
+            />
+            {catalogQuery && (
+              <button
+                type="button"
+                onClick={() => setCatalogQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600"
+              >
+                ✕
+              </button>
+            )}
           </form>
-          {catalogError && <p className="mt-3 text-xs text-red-700 dark:text-red-300" role="status">{catalogError}</p>}
-          {catalogSyncError && <p className="mt-3 rounded-xl bg-red-100 px-3 py-2 text-xs text-red-800 dark:bg-red-950/40 dark:text-red-200" role="alert">Sinkronisasi Supabase gagal: {catalogSyncError}. Jalankan migration 202610170007_shared_tmdb_catalog.sql dan pastikan akun sudah terpasang sebagai anggota pasangan.</p>}
-          {wishlistActionError && <p className="mt-3 text-xs text-red-700 dark:text-red-300" role="alert">{wishlistActionError}</p>}
+
+          {catalogError && <p className="mt-2 text-[11px] font-bold text-red-600 dark:text-red-300">{catalogError}</p>}
+          {wishlistActionError && <p className="mt-2 text-[11px] font-bold text-red-600 dark:text-red-300">{wishlistActionError}</p>}
+
           {catalogKind && catalogResults.length > 0 && (
-            <div className="mt-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-[#7A1018] dark:text-[#F4B6C2]">
-                  Hasil {catalogKind === 'movie' ? 'film' : catalogKind === 'tv' ? 'serial' : 'aktor'} · {catalogResults.length}
-                </h4>
-                <button type="button" onClick={() => setCatalogResults([])} className="text-xs font-semibold text-[#6e5156] hover:text-[#7A1018] dark:text-rose-100/65">
-                  Bersihkan
-                </button>
+            <div className="mt-3.5 border-t border-rose-200/40 pt-3 dark:border-white/10">
+              <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase text-[#8c4f60] dark:text-rose-300">
+                <span>Hasil TMDB ({catalogResults.length})</span>
+                <button type="button" onClick={() => setCatalogResults([])} className="hover:underline">Tutup</button>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                 {catalogResults.map((result) => {
                   const isMovie = catalogKind === 'movie';
                   const isTv = catalogKind === 'tv';
                   const movie = isMovie ? mapMovieSearchResult(result) : null;
                   const series = isTv ? mapTvSearchResult(result) : null;
                   const person = !isMovie && !isTv ? mapPersonSearchResult(result) : null;
-                  const title = movie?.title ?? series?.title ?? person?.name ?? 'Hasil TMDB';
+                  const title = movie?.title ?? series?.title ?? person?.name ?? '';
                   const image = movie?.posterUrl ?? series?.posterUrl ?? person?.photoUrl ?? '';
                   const year = movie?.year ?? (result.first_air_date ? Number(result.first_air_date.slice(0, 4)) : undefined);
-                  const alreadyAdded = isMovie
-                    ? movies.some((item) => item.tmdbId === result.id)
-                    : isTv
-                      ? tvSeries.some((item) => item.tmdbId === result.id)
-                      : actors.some((item) => item.tmdbId === result.id);
 
                   return (
                     <button
-                      key={`${catalogKind}-${result.id}`}
+                      key={result.id}
                       type="button"
                       onClick={() => void openCatalogResult(catalogKind, result)}
-                      className="group overflow-hidden rounded-xl border border-[#7A1018]/15 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7A1018] dark:bg-[#2a1015]"
+                      className="clay-subcard-3d group relative flex flex-col overflow-hidden rounded-2xl p-1.5 text-left transition hover:scale-102"
                     >
-                      <div className="relative aspect-[2/3] bg-[#7A1018]/5 dark:bg-white/5">
-                        {image
-                          ? <ManagedImage src={image} alt={title} className={`h-full w-full ${isMovie || isTv ? 'object-cover' : 'object-cover object-top'}`} />
-                          : <div className="flex h-full items-center justify-center p-3 text-center text-xs text-[#6e5156] dark:text-rose-100/65">{isMovie || isTv ? 'Poster tidak tersedia' : 'Foto tidak tersedia'}</div>}
-                        {alreadyAdded && <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[9px] font-bold text-white">Sudah ditambahkan</span>}
+                      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-xl bg-black/10">
+                        {image ? (
+                          <ManagedImage src={image} alt={title} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full items-center justify-center p-1 text-[9px] text-gray-400">No Image</div>
+                        )}
                       </div>
-                      <div className="p-2.5">
-                        <p className="line-clamp-2 min-h-9 text-xs font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">{title}</p>
-                        {year && <p className="mt-0.5 text-[10px] text-gray-500">{year}</p>}
-                        <p className="mt-2 text-[10px] font-semibold text-[#7A1018] dark:text-[#F4B6C2]">Ketuk poster untuk detail</p>
+                      <div className="p-1">
+                        <p className="line-clamp-1 text-[10px] font-black text-[#4a1623] dark:text-rose-50">{title}</p>
+                        {year && <span className="text-[8.5px] text-gray-500">{year}</span>}
                       </div>
                     </button>
                   );
@@ -520,132 +526,80 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
           )}
         </div>
 
+        {/* TMDB ITEM DETAILS MODAL */}
         <AnimatePresence>
           {selectedCatalogResult && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/65 p-3 backdrop-blur-sm sm:p-6"
-              onMouseDown={(event) => {
-                if (event.target === event.currentTarget) {
-                  setSelectedCatalogResult(null);
-                  setSelectedCatalogDetails(null);
-                  setCatalogActionError('');
-                }
-              }}
+              className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-md"
+              onClick={() => setSelectedCatalogResult(null)}
             >
               <motion.div
-                initial={{ opacity: 0, y: 14, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                className="my-auto w-full max-w-xl overflow-hidden rounded-3xl border border-[#7A1018]/20 bg-[#EFE6DA] shadow-2xl dark:bg-[#250709]"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="tmdb-detail-title"
+                initial={{ scale: 0.92, y: 18 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.92, y: 18 }}
+                onClick={(e) => e.stopPropagation()}
+                className="clay-card-3d relative my-auto max-h-[85vh] w-full max-w-md overflow-y-auto rounded-[2.4rem] p-5 text-left shadow-2xl scrollbar-none"
               >
-                <div className="flex items-start justify-between gap-3 border-b border-[#7A1018]/15 px-5 py-4 sm:px-6">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#7A1018] dark:text-[#F4B6C2]">
-                      TMDB · {selectedCatalogResult.kind === 'movie' ? 'Film' : selectedCatalogResult.kind === 'tv' ? 'Serial TV' : 'Aktor'}
-                    </p>
-                    <h3 id="tmdb-detail-title" className="mt-1 text-lg font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
-                      {selectedTitle}
-                    </h3>
-                  </div>
-                  <CloseButton onClick={() => {
-                    setSelectedCatalogResult(null);
-                    setSelectedCatalogDetails(null);
-                    setCatalogActionError('');
-                  }} />
-                </div>
+                <CloseButton onClick={() => setSelectedCatalogResult(null)} className="absolute right-3.5 top-3.5 z-20" />
 
-                <div className="max-h-[calc(100dvh-190px)] overflow-y-auto p-5 sm:p-6">
-                  <div className="flex flex-col gap-4 sm:flex-row">
-                    <div className="mx-auto h-56 w-40 shrink-0 overflow-hidden rounded-2xl bg-[#7A1018]/10 sm:mx-0">
-                      {selectedPoster
-                        ? <ManagedImage src={selectedPoster} alt={selectedTitle} className="h-full w-full object-cover" />
-                        : <div className="flex h-full items-center justify-center p-4 text-center text-xs text-[#6e5156] dark:text-rose-100/65">Gambar belum tersedia</div>}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      {catalogDetailsLoading && <p className="mb-2 text-xs text-[#6e5156] dark:text-rose-100/65" role="status">Memuat detail dari TMDB…</p>}
-                      {selectedCatalogDetails && 'year' in selectedCatalogDetails && selectedCatalogDetails.year && (
-                        <p className="mb-2 text-xs text-[#6e5156] dark:text-rose-100/65">
-                          {selectedCatalogDetails.year}
-                          {selectedCatalogDetails.tmdbRating !== undefined ? ` · Rating TMDB ${selectedCatalogDetails.tmdbRating.toFixed(1)}` : ''}
-                          {selectedCatalogDetails.durationMinutes ? ` · ${selectedCatalogDetails.durationMinutes} menit` : ''}
-                        </p>
-                      )}
-                      {selectedCatalogDetails && 'totalSeasons' in selectedCatalogDetails && (
-                        <p className="mb-2 text-xs text-[#6e5156] dark:text-rose-100/65">
-                          {selectedCatalogDetails.totalSeasons} season · {selectedCatalogDetails.totalEpisodes} episode
-                          {selectedCatalogDetails.tmdbRating !== undefined ? ` · Rating TMDB ${selectedCatalogDetails.tmdbRating.toFixed(1)}` : ''}
-                        </p>
-                      )}
-                      {selectedCatalogDetails && 'birthDate' in selectedCatalogDetails && selectedCatalogDetails.birthDate && (
-                        <p className="mb-2 text-xs text-[#6e5156] dark:text-rose-100/65">
-                          {selectedCatalogDetails.birthDate}{selectedCatalogDetails.birthPlace ? ` · ${selectedCatalogDetails.birthPlace}` : ''}
-                        </p>
-                      )}
-                      {!!selectedGenres?.length && (
-                        <p className="mb-2 text-xs text-[#6e5156] dark:text-rose-100/65">{selectedGenres.join(' · ')}</p>
-                      )}
-                      <p className="text-sm leading-relaxed text-[#3B0A0F]/85 dark:text-[#EFE6DA]/85">
-                        {selectedOverview || (catalogDetailsLoading ? '' : 'Sinopsis atau biografi belum tersedia di TMDB.')}
+                <div className="flex flex-col gap-3.5 sm:flex-row">
+                  <div className="mx-auto h-48 w-32 shrink-0 overflow-hidden rounded-2xl bg-black/10 shadow-md sm:mx-0">
+                    {selectedPoster ? <ManagedImage src={selectedPoster} alt={selectedTitle} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center p-2 text-xs">No Poster</div>}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-rose-600 dark:bg-rose-400/20 dark:text-rose-300">
+                      TMDB Verified
+                    </span>
+                    <h3 className="mt-1 text-base font-black text-[#4a1623] dark:text-rose-50 sm:text-lg">{selectedTitle}</h3>
+                    {catalogDetailsLoading && <p className="text-[10.5px] text-rose-400">Memuat detail...</p>}
+                    {selectedCatalogDetails && 'year' in selectedCatalogDetails && (
+                      <p className="text-[10.5px] font-bold text-[#8c4f60] dark:text-rose-200/75">
+                        {selectedCatalogDetails.year} {selectedCatalogDetails.tmdbRating ? `• ⭐ ${selectedCatalogDetails.tmdbRating.toFixed(1)}` : ''}
                       </p>
-                      {!!selectedCast?.length && <p className="mt-3 text-xs text-[#6e5156] dark:text-rose-100/65">Pemeran: {selectedCast.slice(0, 6).join(', ')}</p>}
-                      {!!selectedCredits?.length && <p className="mt-3 text-xs text-[#6e5156] dark:text-rose-100/65">Filmografi: {selectedCredits.slice(0, 5).join(', ')}</p>}
-                    </div>
+                    )}
+                    <p className="mt-2 line-clamp-4 text-[11px] font-medium leading-relaxed text-[#5c2432] dark:text-rose-100/85">
+                      {selectedOverview || 'Sinopsis belum tersedia.'}
+                    </p>
                   </div>
-                  {catalogActionError && <p className="mt-4 rounded-xl bg-red-100 px-3 py-2 text-xs text-red-800 dark:bg-red-950/40 dark:text-red-200" role="alert">{catalogActionError}</p>}
                 </div>
 
-                <div className="flex flex-col-reverse gap-2 border-t border-[#7A1018]/15 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCatalogResult(null);
-                      setSelectedCatalogDetails(null);
-                      setCatalogActionError('');
-                    }}
-                    className="rounded-xl border border-[#7A1018]/20 px-4 py-2.5 text-sm font-semibold text-[#6e5156] transition hover:bg-[#7A1018]/5 dark:text-rose-100/75"
-                  >
-                    Tutup
-                  </button>
+                {catalogActionError && <p className="mt-3 text-[11px] font-bold text-red-600">{catalogActionError}</p>}
+
+                <div className="mt-4 flex items-center justify-end gap-2 border-t border-rose-200/50 pt-3 dark:border-white/10">
                   {selectedInWishlist && (savedSelectedMovie || savedSelectedSeries) ? (
                     <button
                       type="button"
                       disabled={addingCatalogId === selectedCatalogResult.result.id}
                       onClick={async () => {
                         setAddingCatalogId(selectedCatalogResult.result.id);
-                        setCatalogActionError('');
                         try {
                           if (savedSelectedMovie) await onRemoveMovie(savedSelectedMovie);
                           else if (savedSelectedSeries) await onRemoveTvSeries(savedSelectedSeries);
                           setSelectedCatalogResult(null);
-                          setSelectedCatalogDetails(null);
-                        } catch (error) {
-                          setCatalogActionError(error instanceof Error ? error.message : 'Wishlist gagal dihapus.');
+                        } catch (err) {
+                          setCatalogActionError(err instanceof Error ? err.message : 'Gagal menghapus');
                         } finally {
                           setAddingCatalogId(null);
                         }
                       }}
-                      className="rounded-xl border border-red-300 px-4 py-2.5 text-sm font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-200 dark:hover:bg-red-950/40"
+                      className="rounded-full bg-red-600 px-4 py-2 text-xs font-extrabold text-white shadow-md"
                     >
-                      {addingCatalogId === selectedCatalogResult.result.id ? 'Menghapus…' : 'Hapus dari wishlist'}
+                      Hapus dari Wishlist
                     </button>
                   ) : selectedAlreadySaved ? (
-                    <span className="rounded-xl bg-[#7A1018]/10 px-4 py-2.5 text-center text-sm font-semibold text-[#7A1018] dark:text-[#F4B6C2]">Sudah ada di koleksi</span>
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Sudah ada di koleksi</span>
                   ) : (
                     <button
                       type="button"
-                      disabled={catalogDetailsLoading || !selectedCatalogDetails || addingCatalogId === selectedCatalogResult.result.id}
+                      disabled={catalogDetailsLoading || addingCatalogId === selectedCatalogResult.result.id}
                       onClick={() => void saveSelectedCatalogResult()}
-                      className="rounded-xl bg-[#7A1018] px-5 py-2.5 text-sm font-bold text-[#EFE6DA] shadow-sm transition hover:bg-[#5e0a11] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] px-5 py-2 text-xs font-extrabold text-white shadow-md active:scale-95 disabled:opacity-50"
                     >
-                      {addingCatalogId === selectedCatalogResult.result.id
-                        ? 'Menyimpan…'
-                        : selectedCatalogResult.kind === 'person' ? 'Simpan aktor' : 'Tambah ke wishlist'}
+                      <Plus className="h-3.5 w-3.5 stroke-[2.75]" />
+                      <span>{addingCatalogId ? 'Menyimpan...' : 'Tambah ke Wishlist'}</span>
                     </button>
                   )}
                 </div>
@@ -654,51 +608,57 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Tab 1: Film List */}
+        {/* TAB 1: FILM LIST (Compact 2-Column Mobile Grid) */}
         {activeTab === 'film' && (
-          <div className="space-y-6">
-            {/* Search and Filters */}
-            <div className="bg-white/60 dark:bg-black/20 p-4 rounded-2xl border border-[#7A1018]/15 flex flex-col md:flex-row gap-4 items-center justify-between">
-              {/* Status Filters */}
-              <div className="flex flex-wrap items-center gap-1.5 text-xs font-sans-clean">
+          <div className="space-y-4">
+            {/* Filter & Sort Bar */}
+            <div className="clay-card-3d flex flex-col gap-2.5 rounded-[1.8rem] p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
                 {[
                   { id: 'all', label: 'Semua' },
-                  { id: 'together', label: 'Ditonton Berdua' },
+                  { id: 'together', label: 'Berdua' },
                   { id: 'savero', label: 'Savero' },
                   { id: 'soffie', label: 'Soffie' },
                   { id: 'watchlist', label: 'Watchlist' }
-                ].map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setMovieFilter(f.id as any)}
-                    className={`px-3 py-1 rounded-lg font-semibold transition ${
-                      movieFilter === f.id
-                        ? 'bg-[#7A1018] text-white shadow-sm'
-                        : 'bg-white/40 dark:bg-white/5 hover:bg-white/80 text-[#3B0A0F] dark:text-[#EFE6DA]'
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+                ].map((f) => {
+                  const active = movieFilter === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => {
+                        soundManager.playTap();
+                        setMovieFilter(f.id as any);
+                      }}
+                      className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[10.5px] font-extrabold transition-all active:scale-95 ${
+                        active
+                          ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-xs'
+                          : 'clay-subcard-3d text-[#6e2438] dark:text-rose-100'
+                      }`}
+                    >
+                      <span>{f.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Sort Dropdown */}
-              <div className="flex items-center space-x-2 text-xs font-sans-clean">
-                <span className="text-gray-500 font-bold uppercase text-[10px]">Urutkan:</span>
+              <div className="clay-subcard-3d flex items-center gap-1.5 rounded-full px-3 py-1 text-[10.5px] font-extrabold text-[#7a3444] dark:text-rose-200 self-end sm:self-auto">
+                <ArrowUpDown className="h-3 w-3 text-rose-500" />
+                <span>Urutkan:</span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-2.5 py-1.5 rounded-lg bg-white dark:bg-black/30 border border-[#7A1018]/20 font-medium"
+                  className="bg-transparent font-black text-[#4a1623] focus:outline-none dark:text-rose-50 cursor-pointer"
                 >
-                  <option value="date">Tanggal Nonton</option>
-                  <option value="rating">Rating Tertinggi</option>
-                  <option value="title">Judul (A-Z)</option>
+                  <option value="date" className="dark:bg-[#2b0c16]">Tanggal</option>
+                  <option value="rating" className="dark:bg-[#2b0c16]">Rating</option>
+                  <option value="title" className="dark:bg-[#2b0c16]">Judul</option>
                 </select>
               </div>
             </div>
 
-            {/* Movies Posters Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {/* Poster Grid (2 cols mobile, 4-6 cols desktop) */}
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 sm:gap-3.5">
               {filteredMovies.map((movie) => {
                 const isTogether = movie.status === 'together';
                 const isSavero = movie.status === 'savero';
@@ -707,614 +667,411 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                 return (
                   <div
                     key={movie.id}
-                    onClick={() => setSelectedMovie(movie)}
-                    className="group relative bg-white/70 dark:bg-black/30 rounded-2xl overflow-hidden border border-[#7A1018]/20 shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col"
+                    onClick={() => {
+                      soundManager.playTap();
+                      setSelectedMovie(movie);
+                    }}
+                    className="clay-card-3d group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-[1.6rem] p-2 transition-all duration-300 hover:-translate-y-1"
                   >
-                    {/* Poster with Aspect Ratio */}
-                    <div className="relative aspect-[2/3] w-full overflow-hidden bg-black/10">
-                      {movie.posterUrl
-                        ? <ManagedImage
-                            src={movie.posterUrl}
-                            alt={movie.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        : <div className="flex h-full items-center justify-center p-3 text-center text-xs text-[#6e5156] dark:text-rose-100/70">Poster belum tersedia di TMDB</div>}
+                    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[1.2rem] bg-black/10 shadow-inner">
+                      {movie.posterUrl ? (
+                        <ManagedImage
+                          src={movie.posterUrl}
+                          alt={movie.title}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center p-2 text-center text-[10px] text-gray-400">No Poster</div>
+                      )}
 
-                      {/* Status Badges on Poster (avatar S, avatar F, heart berdua) as required */}
-                      <div className="absolute top-2 left-2 flex flex-col gap-1">
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/20" />
+
+                      {/* Top Status badges */}
+                      <div className="absolute top-1.5 left-1.5 flex flex-wrap gap-1">
                         {isTogether && (
-                          <span
-                            className="w-6 h-6 rounded-full bg-[#7A1018] text-white flex items-center justify-center shadow-md border border-white/20"
-                            title="Ditonton Berdua"
-                          >
-                            <Heart className="w-3.5 h-3.5 fill-[#F4B6C2] text-[#F4B6C2]" />
+                          <span className="flex h-5.5 items-center gap-0.5 rounded-full bg-black/60 px-2 text-[8.5px] font-black text-rose-300 backdrop-blur-md">
+                            <Heart className="h-2.5 w-2.5 fill-rose-500 text-rose-500" />
+                            <span>Berdua</span>
                           </span>
                         )}
                         {isSavero && (
-                          <span
-                            className="w-6 h-6 rounded-full bg-[#C9A58B] text-[#3B0A0F] font-bold flex items-center justify-center text-[10px] shadow-md border border-white"
-                            title="Savero Sudah Nonton"
-                          >
+                          <span className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[#C9A58B] text-[#3B0A0F] font-black text-[9px] shadow-xs">
                             S
                           </span>
                         )}
                         {isSoffie && (
-                          <span
-                            className="w-6 h-6 rounded-full bg-[#BFD8B8] text-[#3B0A0F] font-bold flex items-center justify-center text-[10px] shadow-md border border-white"
-                            title="Soffie Sudah Nonton"
-                          >
+                          <span className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[#BFD8B8] text-[#3B0A0F] font-black text-[9px] shadow-xs">
                             F
                           </span>
                         )}
                         {movie.status === 'watchlist' && (
-                          <span
-                            className="px-2 py-0.5 rounded-full bg-black/70 text-[#EFE6DA] text-[9px] font-bold uppercase tracking-wider backdrop-blur-xs"
-                            title="Masuk Watchlist"
-                          >
-                            Wishlist
+                          <span className="flex h-5.5 items-center gap-0.5 rounded-full bg-amber-500 px-2 text-[8px] font-black uppercase text-white shadow-xs">
+                            <Bookmark className="h-2.5 w-2.5 fill-current" />
+                            <span>Wishlist</span>
                           </span>
                         )}
                       </div>
 
-                      {/* TMDB Rating Badge */}
                       {movie.tmdbRating && (
-                        <div className="absolute top-2 right-2 bg-black/70 text-[#D9B26F] text-[10px] font-bold px-1.5 py-0.5 rounded backdrop-blur-xs flex items-center space-x-0.5">
-                          <Star className="w-2.5 h-2.5 fill-current" />
+                        <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[8.5px] font-black text-amber-300 backdrop-blur-md">
+                          <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
                           <span>{movie.tmdbRating}</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Movie Info */}
-                    <div className="p-3 flex-1 flex flex-col justify-between">
-                      <div>
-                        <h4 className="font-serif-title font-bold text-xs sm:text-sm text-[#3B0A0F] dark:text-[#EFE6DA] line-clamp-1 group-hover:text-[#7A1018] dark:group-hover:text-[#F4B6C2] transition-colors">
-                          {movie.title}
-                        </h4>
-                        <div className="text-[10px] text-gray-500 font-sans-clean mt-0.5 flex items-center justify-between">
-                          <span>{movie.year || 'Tahun tidak tersedia'}</span>
-                          {movie.addedBy && <span className="text-[#a94761] dark:text-rose-200">oleh {movie.addedBy}</span>}
-                        </div>
-                      </div>
-
-                      {/* Ratings Preview */}
-                      <div className="mt-2 pt-2 border-t border-[#7A1018]/10 text-[10px] font-sans-clean flex items-center justify-between text-gray-600 dark:text-gray-400">
-                        {movie.ratingSavero ? (
-                          <div className="flex items-center space-x-1" title="Rating Savero">
-                            <span className="font-bold text-[9px]">S:</span>
-                            <HeartRating rating={movie.ratingSavero} size={9} />
-                          </div>
-                        ) : null}
-                        {movie.ratingSoffie ? (
-                          <div className="flex items-center space-x-1" title="Rating Soffie">
-                            <span className="font-bold text-[9px]">F:</span>
-                            <HeartRating rating={movie.ratingSoffie} size={9} />
-                          </div>
-                        ) : null}
-                      </div>
-                      {movie.status === 'watchlist' && (
-                        <button
-                          type="button"
-                          disabled={removingWishlistId === movie.tmdbId}
-                          onClick={async (event) => {
-                            event.stopPropagation();
-                            if (!movie.tmdbId) return;
-                            setRemovingWishlistId(movie.tmdbId);
-                            setWishlistActionError('');
-                            try {
-                              await onRemoveMovie(movie);
-                            } catch (error) {
-                              setWishlistActionError(error instanceof Error ? error.message : 'Wishlist gagal dihapus.');
-                            } finally {
-                              setRemovingWishlistId(null);
-                            }
-                          }}
-                          className="mt-2 w-full rounded-lg border border-red-300 px-2 py-1.5 text-[10px] font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-200 dark:hover:bg-red-950/40"
-                        >
-                          {removingWishlistId === movie.tmdbId ? 'Menghapus…' : 'Hapus dari wishlist'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {!filteredMovies.length && (
-              <p className="rounded-2xl border border-dashed border-[#7A1018]/25 px-4 py-8 text-center text-sm text-[#6e5156] dark:text-rose-100/70">
-                Belum ada film tersimpan. Cari judul di TMDB, lalu tambahkan ke watchlist.
-              </p>
-            )}
-
-          </div>
-        )}
-
-        {/* Tab: Serial TV & Episode Tracker */}
-        {activeTab === 'serial' && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="font-serif-title text-xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
-                Pelacak Episode Serial TV Bersama
-              </h3>
-              <p className="text-xs text-gray-500 font-sans-clean">
-                Catat kemajuan tontonan serial favorit Savero & Soffie. Cari serial melalui kotak pencarian TMDB di atas.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {!tvSeries.length && (
-                <p className="md:col-span-3 rounded-2xl border border-dashed border-[#7A1018]/25 px-4 py-8 text-center text-sm text-[#6e5156] dark:text-rose-100/70">
-                  Belum ada serial tersimpan. Cari serial di TMDB untuk menambahkannya.
-                </p>
-              )}
-              {tvSeries.map((series) => {
-                const pct = series.totalEpisodes ? Math.round((series.watchedEpisodes / series.totalEpisodes) * 100) : 0;
-                const isCompleted = series.watchedEpisodes >= series.totalEpisodes;
-
-                return (
-                  <div
-                    key={series.id}
-                    className="bg-white/70 dark:bg-black/30 rounded-2xl p-5 border border-[#7A1018]/15 shadow-sm flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="w-full h-44 rounded-xl overflow-hidden mb-3 bg-black/10">
-                        {series.posterUrl ? <ManagedImage src={series.posterUrl} alt={series.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs">Poster belum tersedia di TMDB</div>}
-                      </div>
-
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-sans-clean font-bold tracking-widest uppercase text-[#7A1018] dark:text-[#F4B6C2]">
-                          {series.totalSeasons} Season · {series.totalEpisodes} episode
-                        </span>
-                        <span
-                          className={`text-[9px] font-sans-clean font-bold uppercase px-2 py-0.5 rounded-full ${
-                            series.status === 'watchlist'
-                              ? 'bg-amber-100 text-amber-800'
-                              : isCompleted ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                          }`}
-                        >
-                          {series.status === 'watchlist' ? 'Wishlist' : isCompleted ? 'Tamat Nonton' : 'Sedang Ditonton'}
-                        </span>
-                      </div>
-
-                      <h4 className="font-serif-title font-bold text-lg text-[#3B0A0F] dark:text-[#EFE6DA] mb-1">
-                        {series.title}
+                    <div className="p-1 pt-2 text-left">
+                      <h4 className="line-clamp-1 text-xs font-black text-[#4a1623] group-hover:text-rose-600 dark:text-rose-50">
+                        {movie.title}
                       </h4>
-                      <p className="text-[10px] text-gray-500 mb-2">
-                        {series.firstAirDate ? `Tayang perdana ${series.firstAirDate}` : ''}
-                        {series.tmdbRating !== undefined ? ` · Rating TMDB ${series.tmdbRating.toFixed(1)}` : ''}
-                        {series.genres?.length ? ` · ${series.genres.join(', ')}` : ''}
-                      </p>
-                      {series.overview && <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-3 mb-3">{series.overview}</p>}
-                      {!!series.cast?.length && <p className="text-[10px] text-gray-500 mb-3">Pemeran: {series.cast.slice(0, 4).join(', ')}</p>}
-                      {series.notes && (
-                        <p className="text-xs font-editorial italic text-gray-600 dark:text-gray-400 mb-3">
-                          "{series.notes}"
-                        </p>
-                      )}
-
-                      {/* Progress Bar */}
-                      {series.status !== 'watchlist' && (
-                        <div className="mb-4 space-y-1">
-                          <div className="flex justify-between text-xs font-sans-clean font-bold">
-                            <span>Episode {series.watchedEpisodes} dari {series.totalEpisodes}</span>
-                            <span>{pct}%</span>
-                          </div>
-                          <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
-                            <div
-                              className="h-full rounded-full bg-gradient-to-r from-[#7A1018] to-[#F4B6C2] transition-all duration-300"
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
+                      <div className="mt-0.5 flex items-center justify-between text-[9.5px] font-bold text-[#8c4f60] dark:text-rose-200/75">
+                        <span>{movie.year || 'Film'}</span>
+                        {movie.addedBy && <span>{movie.addedBy}</span>}
+                      </div>
                     </div>
-
-                    {/* Interactive Episode Counter Buttons */}
-                    {series.status === 'watchlist' ? (
-                      <div className="flex gap-2 border-t border-[#7A1018]/10 pt-3 text-xs font-sans-clean">
-                        <button
-                          type="button"
-                          onClick={() => void onUpdateTvSeries({ ...series, status: 'watching' }).catch((error) => setWishlistActionError(error instanceof Error ? error.message : 'Serial gagal diperbarui.'))}
-                          className="flex-1 rounded-lg bg-[#7A1018] px-3 py-2 font-bold text-white hover:bg-[#5e0a11]"
-                        >
-                          Mulai nonton
-                        </button>
-                        <button
-                          type="button"
-                          disabled={removingWishlistId === series.tmdbId}
-                          onClick={async () => {
-                            if (!series.tmdbId) return;
-                            setRemovingWishlistId(series.tmdbId);
-                            setWishlistActionError('');
-                            try {
-                              await onRemoveTvSeries(series);
-                            } catch (error) {
-                              setWishlistActionError(error instanceof Error ? error.message : 'Wishlist gagal dihapus.');
-                            } finally {
-                              setRemovingWishlistId(null);
-                            }
-                          }}
-                          className="rounded-lg border border-red-300 px-3 py-2 font-bold text-red-700 hover:bg-red-50 disabled:opacity-60 dark:border-red-900 dark:text-red-200 dark:hover:bg-red-950/40"
-                        >
-                          {removingWishlistId === series.tmdbId ? 'Menghapus…' : 'Hapus'}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-2 border-t border-[#7A1018]/10 pt-3 text-xs font-sans-clean">
-                        <button
-                          onClick={() => void onUpdateTvSeries({ ...series, watchedEpisodes: Math.max(0, series.watchedEpisodes - 1) }).catch((error) => setWishlistActionError(error instanceof Error ? error.message : 'Progres serial gagal disimpan.'))}
-                          className="rounded-lg bg-gray-200 px-3 py-1.5 font-bold hover:bg-gray-300 dark:bg-gray-800"
-                        >
-                          -1 Ep
-                        </button>
-                        <button
-                          onClick={() => void onUpdateTvSeries({ ...series, watchedEpisodes: Math.min(series.totalEpisodes, series.watchedEpisodes + 1) }).catch((error) => setWishlistActionError(error instanceof Error ? error.message : 'Progres serial gagal disimpan.'))}
-                          className="flex-1 rounded-lg bg-[#7A1018] py-1.5 text-center font-bold text-white hover:bg-[#5e0a11]"
-                        >
-                          +1 Episode Selesai
-                        </button>
-                      </div>
-                    )}
                   </div>
                 );
               })}
             </div>
-          </div>
-        )}
 
-        {/* Tab 2: Aktor & Aktris */}
-        {activeTab === 'aktor' && (
-          <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-            {!actors.length && (
-              <p className="sm:col-span-2 md:col-span-4 rounded-2xl border border-dashed border-[#7A1018]/25 px-4 py-8 text-center text-sm text-[#6e5156] dark:text-rose-100/70">
-                Belum ada aktor tersimpan. Cari nama aktor di TMDB untuk melihat profil dan filmografinya.
-              </p>
-            )}
-            {actors.map((actor) => (
-              <div
-                key={actor.id}
-                className="bg-white/60 dark:bg-black/30 rounded-2xl overflow-hidden border border-[#7A1018]/15 shadow-sm p-4 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="w-full h-56 rounded-xl overflow-hidden mb-3 shadow-inner bg-[#7A1018]/10">
-                    {actor.photoUrl ? <ManagedImage src={actor.photoUrl} alt={actor.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-xs">Foto belum tersedia di TMDB</div>}
-                  </div>
-                  <h4 className="font-serif-title font-bold text-base text-[#3B0A0F] dark:text-[#EFE6DA]">
-                    {actor.name}
-                  </h4>
-                  <div className="text-[10px] text-gray-500 font-sans-clean mb-2">
-                    {actor.birthPlace || 'Pemeran Film'}
-                  </div>
-                  {actor.birthDate && <div className="text-[10px] text-gray-500 mb-2">Lahir {actor.birthDate}</div>}
-                  <p className="text-xs font-editorial text-gray-700 dark:text-gray-300 line-clamp-3 mb-3">
-                    {actor.biography}
-                  </p>
-                  {!!actor.topMovies?.length && <p className="text-[10px] text-gray-500 line-clamp-2">Film/serial: {actor.topMovies.slice(0, 4).join(', ')}</p>}
-                </div>
-
-                <div className="pt-3 border-t border-[#7A1018]/10 flex items-center justify-between">
-                  <span className="text-[10px] font-sans-clean text-[#7A1018] dark:text-[#F4B6C2] font-bold uppercase">
-                    Disukai: {actor.likedBy}
-                  </span>
-
-                  {/* Suka Toggle Button */}
-                  <div className="flex space-x-1">
-                    <button
-                      onClick={() => onToggleActorLike(actor.id, 'Berdua')}
-                      className={`p-1.5 rounded-lg text-xs flex items-center justify-center ${
-                        actor.likedBy === 'Berdua'
-                          ? 'bg-[#7A1018] text-white'
-                          : 'bg-gray-100 dark:bg-white/10 hover:bg-[#F4B6C2]/30 text-[#7A1018]'
-                      }`}
-                      title="Disukai Berdua"
-                    >
-                      <Heart className="w-3.5 h-3.5 fill-current" />
-                    </button>
-                    <button
-                      onClick={() => onToggleActorLike(actor.id, activeProfile)}
-                      className={`p-1.5 rounded-lg text-xs font-bold ${actor.likedBy === activeProfile ? (activeProfile === 'Savero' ? 'bg-[#C9A58B] text-black' : 'bg-[#BFD8B8] text-black') : 'bg-gray-100 dark:bg-white/10 hover:bg-[#F4B6C2]/30'}`}
-                      title={`Disukai ${activeProfile}`}
-                    >
-                      {activeProfile === 'Savero' ? 'S' : 'F'}
-                    </button>
-                  </div>
-                </div>
+            {filteredMovies.length === 0 && (
+              <div className="clay-card-3d rounded-[2rem] p-8 text-center">
+                <Film className="mx-auto mb-2 h-8 w-8 text-rose-400" />
+                <h4 className="text-sm font-black text-[#4a1623] dark:text-rose-50">Belum ada film</h4>
+                <p className="mt-0.5 text-xs text-[#8c4f60] dark:text-rose-200/75">Cari judul film di atas untuk mulai menyimpannya.</p>
               </div>
-            ))}
-          </div>
+            )}
           </div>
         )}
 
-        {/* Tab 3: Franchise & Koleksi Film */}
-        {activeTab === 'koleksi' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {!collections.length && (
-                <p className="md:col-span-3 rounded-2xl border border-dashed border-[#7A1018]/25 px-4 py-8 text-center text-sm text-[#6e5156] dark:text-rose-100/70">
-                  Belum ada koleksi franchise tersimpan.
-                </p>
-              )}
-              {collections.map((col) => {
-                // Calculate progress
-                const totalTitles = col.movieTitles.length;
-                const watchedCount = col.movieTitles.filter((title) =>
-                  movies.some((m) => m.title.toLowerCase().includes(title.toLowerCase()) && m.status === 'together')
-                ).length;
-                const progressPct = Math.round((watchedCount / totalTitles) * 100);
+        {/* TAB 2: SERIAL TV */}
+        {activeTab === 'serial' && (
+          <div className="space-y-3.5">
+            {tvSeries.length === 0 ? (
+              <div className="clay-card-3d rounded-[2rem] p-8 text-center">
+                <Tv className="mx-auto mb-2 h-8 w-8 text-rose-400" />
+                <h4 className="text-sm font-black text-[#4a1623] dark:text-rose-50">Belum ada serial TV</h4>
+                <p className="mt-0.5 text-xs text-[#8c4f60] dark:text-rose-200/75">Cari serial TV di TMDB untuk melacak episodenya berdua.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {tvSeries.map((series) => {
+                  const pct = series.totalEpisodes ? Math.round((series.watchedEpisodes / series.totalEpisodes) * 100) : 0;
+                  const isCompleted = series.watchedEpisodes >= series.totalEpisodes;
 
-                return (
-                  <div
-                    key={col.id}
-                    className="bg-white/70 dark:bg-black/30 rounded-2xl p-5 border border-[#7A1018]/15 shadow-sm flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-sans-clean font-bold tracking-widest uppercase text-[#7A1018] dark:text-[#F4B6C2]">
-                          KOLEKSI FRANCHISE
-                        </span>
-                        {col.isTargetThisYear && (
-                          <span className="text-[9px] font-sans-clean font-bold bg-[#D9B26F] text-[#3B0A0F] px-2 py-0.5 rounded-full uppercase">
-                            Target Tahun Ini
+                  return (
+                    <div key={series.id} className="clay-card-3d flex flex-col justify-between rounded-[1.8rem] p-4">
+                      <div>
+                        <div className="relative mb-3 h-36 w-full overflow-hidden rounded-[1.3rem] bg-black/10 shadow-inner">
+                          {series.posterUrl ? <ManagedImage src={series.posterUrl} alt={series.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs">No Poster</div>}
+                        </div>
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-[9.5px] font-black uppercase text-rose-600 dark:text-rose-300">
+                            {series.totalSeasons} Season • {series.totalEpisodes} Episode
                           </span>
+                          <span className={`rounded-full px-2 py-0.5 text-[8.5px] font-extrabold uppercase ${
+                            series.status === 'watchlist'
+                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                              : isCompleted
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                          }`}>
+                            {series.status === 'watchlist' ? 'Wishlist' : isCompleted ? 'Tamat' : 'Nonton'}
+                          </span>
+                        </div>
+                        <h4 className="text-base font-black text-[#4a1623] dark:text-rose-50">{series.title}</h4>
+                        <p className="mt-1 line-clamp-2 text-[11px] font-medium text-[#6b3140] dark:text-rose-200/80">{series.overview}</p>
+
+                        {series.status !== 'watchlist' && (
+                          <div className="mt-3 space-y-1">
+                            <div className="flex justify-between text-[11px] font-extrabold text-[#4a1623] dark:text-rose-50">
+                              <span>Ep {series.watchedEpisodes} dari {series.totalEpisodes}</span>
+                              <span>{pct}%</span>
+                            </div>
+                            <div className="h-2 w-full overflow-hidden rounded-full bg-rose-200/60 dark:bg-white/10">
+                              <div className="h-full rounded-full bg-gradient-to-r from-rose-500 to-amber-400 transition-all" style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
                         )}
                       </div>
 
-                      <h4 className="font-serif-title text-lg font-bold text-[#3B0A0F] dark:text-[#EFE6DA] mb-1">
-                        {col.name}
-                      </h4>
-                      <p className="text-xs font-editorial text-gray-600 dark:text-gray-400 mb-4">
-                        {col.description}
-                      </p>
-
-                      {/* Progress Bar */}
-                      <div className="space-y-1.5 mb-4">
-                        <div className="flex justify-between text-xs font-sans-clean font-bold">
-                          <span>{watchedCount} dari {totalTitles} ditonton berdua</span>
-                          <span>{progressPct}%</span>
-                        </div>
-                        <div className="w-full h-2.5 rounded-full bg-gray-200 dark:bg-gray-800 overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-[#7A1018] to-[#F4B6C2] rounded-full transition-all duration-500"
-                            style={{ width: `${progressPct}%` }}
-                          />
-                        </div>
+                      <div className="mt-3.5 flex items-center gap-2 border-t border-rose-200/40 pt-2.5 dark:border-white/10">
+                        {series.status === 'watchlist' ? (
+                          <button
+                            type="button"
+                            onClick={() => void onUpdateTvSeries({ ...series, status: 'watching' })}
+                            className="w-full rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] py-2 text-xs font-extrabold text-white shadow-xs"
+                          >
+                            Mulai Nonton Berdua
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => void onUpdateTvSeries({ ...series, watchedEpisodes: Math.max(0, series.watchedEpisodes - 1) })}
+                              className="clay-subcard-3d rounded-full px-3 py-1.5 text-xs font-extrabold text-[#7a3444] dark:text-rose-200"
+                            >
+                              -1 Ep
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void onUpdateTvSeries({ ...series, watchedEpisodes: Math.min(series.totalEpisodes, series.watchedEpisodes + 1) })}
+                              className="flex-1 rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] py-1.5 text-xs font-extrabold text-white shadow-xs"
+                            >
+                              +1 Episode Selesai
+                            </button>
+                          </>
+                        )}
                       </div>
-
-                      {/* Titles list */}
-                      <ul className="text-xs font-sans-clean space-y-1 text-gray-700 dark:text-gray-300">
-                        {col.movieTitles.map((title, i) => (
-                          <li key={i} className="flex items-center space-x-1.5">
-                            <span className="text-[10px] text-gray-400">{i + 1}.</span>
-                            <span>{title}</span>
-                          </li>
-                        ))}
-                      </ul>
                     </div>
-
-                    <button
-                      onClick={() => alert(`Target "${col.name}" telah disimpan sebagai wishlist kencan maraton tahun 2026!`)}
-                      className="mt-6 w-full py-2 bg-[#7A1018] hover:bg-[#5e0a11] text-[#EFE6DA] text-xs font-sans-clean font-bold rounded-xl uppercase tracking-wider transition"
-                    >
-                      Jadikan Target Tahun Ini
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
-        {/* Tab 4: Movie Night Planner */}
-        {activeTab === 'planner' && (
-          <div className="max-w-2xl mx-auto bg-white/70 dark:bg-black/30 rounded-3xl p-6 border border-[#7A1018]/15 shadow-md">
-            <div className="text-center mb-6">
-              <span className="text-[10px] font-sans-clean font-bold tracking-[0.25em] uppercase text-[#7A1018] dark:text-[#F4B6C2] block mb-1">
-                KENCAN BIOSKOP & KOS
-              </span>
-              <h3 className="font-serif-title text-2xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
-                Movie Night Planner
-              </h3>
-              <p className="font-editorial italic text-xs text-gray-600 dark:text-gray-400 mt-1">
-                Pilih film, jadwal waktu, camilan dan minuman favorit untuk malam romantis berdua.
-              </p>
-            </div>
+        {/* TAB 3: AKTOR */}
+        {activeTab === 'aktor' && (
+          <div className="space-y-3.5">
+            {actors.length === 0 ? (
+              <div className="clay-card-3d rounded-[2rem] p-8 text-center">
+                <Users className="mx-auto mb-2 h-8 w-8 text-rose-400" />
+                <h4 className="text-sm font-black text-[#4a1623] dark:text-rose-50">Belum ada aktor</h4>
+                <p className="mt-0.5 text-xs text-[#8c4f60] dark:text-rose-200/75">Cari aktor favorit di TMDB untuk menyimpannya.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {actors.map((actor) => (
+                  <div key={actor.id} className="clay-card-3d flex flex-col justify-between rounded-[1.8rtm] p-3.5">
+                    <div>
+                      <div className="relative mb-2.5 aspect-[3/4] w-full overflow-hidden rounded-[1.3rem] bg-black/10 shadow-inner">
+                        {actor.photoUrl ? <ManagedImage src={actor.photoUrl} alt={actor.name} className="h-full w-full object-cover object-top" /> : <div className="flex h-full items-center justify-center text-xs">No Photo</div>}
+                      </div>
+                      <h4 className="text-sm font-black text-[#4a1623] dark:text-rose-50">{actor.name}</h4>
+                      <p className="mt-0.5 line-clamp-2 text-[10.5px] font-medium text-[#6b3140] dark:text-rose-200/80">{actor.biography || actor.birthPlace || 'Aktor'}</p>
+                    </div>
 
-            <div className="space-y-4 text-xs font-sans-clean">
+                    <div className="mt-3 flex items-center justify-between border-t border-rose-200/40 pt-2.5 dark:border-white/10">
+                      <span className="text-[9.5px] font-extrabold uppercase text-[#8c4f60] dark:text-rose-300">
+                        Suka: {actor.likedBy}
+                      </span>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => onToggleActorLike(actor.id, 'Berdua')}
+                          className={`flex h-6.5 w-6.5 items-center justify-center rounded-full shadow-2xs ${
+                            actor.likedBy === 'Berdua' ? 'bg-rose-500 text-white' : 'clay-subcard-3d text-rose-500'
+                          }`}
+                          title="Suka Berdua"
+                        >
+                          <Heart className="h-3 w-3 fill-current" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 4: KOLEKSI FRANCHISE */}
+        {activeTab === 'koleksi' && (
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+            {collections.map((col) => {
+              const total = col.movieTitles.length;
+              const watched = col.movieTitles.filter((t) =>
+                movies.some((m) => m.title.toLowerCase().includes(t.toLowerCase()) && m.status === 'together')
+              ).length;
+              const pct = Math.round((watched / total) * 100);
+
+              return (
+                <div key={col.id} className="clay-card-3d flex flex-col justify-between rounded-[1.8rem] p-4">
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="text-[9.5px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-300">Franchise</span>
+                      {col.isTargetThisYear && (
+                        <span className="rounded-full bg-amber-400 px-2.5 py-0.5 text-[8.5px] font-black text-amber-950 uppercase">Target</span>
+                      )}
+                    </div>
+                    <h4 className="text-base font-black text-[#4a1623] dark:text-rose-50">{col.name}</h4>
+                    <p className="mt-1 text-xs font-semibold text-[#8c4f60] dark:text-rose-200/80">{col.description}</p>
+
+                    <div className="my-3 space-y-1">
+                      <div className="flex justify-between text-[11px] font-extrabold text-[#4a1623] dark:text-rose-50">
+                        <span>{watched} dari {total} film</span>
+                        <span>{pct}%</span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-rose-200/60 dark:bg-white/10">
+                        <div className="h-full rounded-full bg-gradient-to-r from-rose-500 to-amber-400" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+
+                    <ul className="space-y-1 text-xs font-semibold text-[#6b3140] dark:text-rose-100/80">
+                      {col.movieTitles.map((t, idx) => (
+                        <li key={idx} className="flex items-center gap-1.5">
+                          <span className="text-[9.5px] font-black text-rose-400">{idx + 1}.</span>
+                          <span className="truncate">{t}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => alert(`Target "${col.name}" tersimpan!`)}
+                    className="mt-4 w-full rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] py-2 text-xs font-extrabold text-white shadow-xs"
+                  >
+                    Jadikan Target Tahun Ini
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* TAB 5: MOVIE NIGHT PLANNER */}
+        {activeTab === 'planner' && (
+          <div className="clay-card-3d mx-auto max-w-lg rounded-[2.2rem] p-5 sm:p-6 text-center">
+            <span className="text-[9.5px] font-black tracking-[0.2em] uppercase text-rose-500 dark:text-rose-300">
+              KENCAN BIOSKOP & RUMAH
+            </span>
+            <h3 className="mt-0.5 text-xl font-black text-[#4a1623] dark:text-rose-50">
+              Movie Night Planner
+            </h3>
+            <p className="mt-0.5 mb-4 text-xs font-semibold text-[#8c4f60] dark:text-rose-200/80">
+              Atur jadwal, camilan, dan minuman untuk kencan nonton berdua.
+            </p>
+
+            <div className="space-y-3 text-left text-xs">
               <div>
-                <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">
-                  Pilih Film Target
-                </label>
+                <label className="mb-1 block font-extrabold">Film Target</label>
                 <select
                   value={plannedMovie?.id ?? ''}
                   onChange={(e) => setPlannedMovieId(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20"
+                  className="w-full rounded-2xl border border-rose-200/80 bg-white px-3.5 py-2 font-bold text-[#4a1623] dark:border-white/15 dark:bg-[#1f070f] dark:text-rose-100"
                 >
-                  {!movies.length && <option value="">Tambahkan film dari TMDB terlebih dahulu</option>}
+                  {!movies.length && <option value="">Tambahkan film terlebih dahulu</option>}
                   {movies.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.title}{m.year ? ` (${m.year})` : ''}
-                    </option>
+                    <option key={m.id} value={m.id}>{m.title}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">
-                  Tanggal & Waktu Nonton
-                </label>
+                <label className="mb-1 block font-extrabold">Jadwal Tanggal & Waktu</label>
                 <input
                   type="datetime-local"
                   value={plannedDate}
                   onChange={(e) => setPlannedDate(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20"
+                  className="w-full rounded-2xl border border-rose-200/80 bg-white px-3.5 py-2 font-bold text-[#4a1623] dark:border-white/15 dark:bg-[#1f070f] dark:text-rose-100"
                 />
               </div>
 
               <div>
-                <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">
-                  Camilan Favorit
-                </label>
+                <label className="mb-1 block font-extrabold">Camilan & Minuman</label>
                 <input
                   type="text"
                   value={plannedSnack}
                   onChange={(e) => setPlannedSnack(e.target.value)}
-                  placeholder="Taichan Pleburan, Popcorn karamel, dll..."
-                  className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20"
+                  placeholder="Popcorn & Matcha Latte"
+                  className="w-full rounded-2xl border border-rose-200/80 bg-white px-3.5 py-2 font-bold text-[#4a1623] dark:border-rose-200/15 dark:bg-[#1f070f] dark:text-rose-100"
                 />
-              </div>
-
-              <div>
-                <label className="block font-bold mb-1 text-[#3B0A0F] dark:text-[#EFE6DA]">
-                  Minuman Peneman
-                </label>
-                <input
-                  type="text"
-                  value={plannedDrink}
-                  onChange={(e) => setPlannedDrink(e.target.value)}
-                  placeholder="Iced Matcha Soffie & Kopi Savero..."
-                  className="w-full px-3 py-2.5 rounded-xl bg-white dark:bg-black/30 border border-[#7A1018]/20"
-                />
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#7A1018] text-[#EFE6DA] text-center mt-6">
-                <span className="text-[10px] uppercase font-bold tracking-widest text-[#D9B26F] block mb-1">
-                  AGENDA KENCAN NONTON
-                </span>
-                <h4 className="font-serif-title text-xl font-bold text-white mb-2">
-                  {plannedMovie?.title ?? 'Pilih film dari koleksi TMDB'}
-                </h4>
-                <p className="text-xs text-[#EFE6DA]/80">
-                  {plannedDate.replace('T', ' Pukul ')} WIB • Bersama Soffie & Savero
-                </p>
-                <div className="mt-3 flex items-center justify-center space-x-3 text-xs text-[#F4B6C2]">
-                  <span className="inline-flex items-center space-x-1">
-                    <Sparkles className="w-3 h-3 text-[#D9B26F]" />
-                    <span>Camilan: {plannedSnack}</span>
-                  </span>
-                  <span className="inline-flex items-center space-x-1">
-                    <Coffee className="w-3 h-3 text-[#BFD8B8]" />
-                    <span>Minuman: {plannedDrink}</span>
-                  </span>
-                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Modal Movie Detail & Status Editor */}
+        {/* MOVIE DETAIL MODAL */}
         <AnimatePresence>
           {selectedMovie && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto"
+              className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-md"
+              onClick={() => setSelectedMovie(null)}
             >
               <motion.div
-                initial={{ scale: 0.92, opacity: 0, y: 25 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.92, opacity: 0, y: 25 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-                className="bg-[#EFE6DA] dark:bg-[#250709] max-w-xl w-full rounded-3xl p-6 border border-[#7A1018]/30 shadow-2xl my-8"
+                initial={{ scale: 0.92, y: 18 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.92, y: 18 }}
+                onClick={(e) => e.stopPropagation()}
+                className="clay-card-3d relative my-auto max-h-[85vh] w-full max-w-md overflow-y-auto rounded-[2.4rem] p-5 text-left shadow-2xl scrollbar-none"
               >
-                <div className="flex items-center justify-between pb-3 border-b border-[#7A1018]/15 mb-4">
-                  <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
-                    Detail Film & Catatan Kencan
-                  </h3>
-                  <CloseButton onClick={() => setSelectedMovie(null)} />
-                </div>
+                <CloseButton onClick={() => setSelectedMovie(null)} className="absolute right-3.5 top-3.5 z-20" />
 
-                <div className="flex flex-col sm:flex-row gap-5">
-                    {selectedMovie.posterUrl ? <ManagedImage
-                      src={selectedMovie.posterUrl}
-                      alt={selectedMovie.title}
-                      className="w-36 h-52 object-cover rounded-xl shadow-md mx-auto sm:mx-0"
-                    /> : <div className="w-36 h-52 rounded-xl bg-[#7A1018]/10 flex items-center justify-center text-center text-xs p-3 mx-auto sm:mx-0">Poster belum tersedia di TMDB</div>}
-                  <div className="flex-1 space-y-2 text-xs font-sans-clean">
-                    <h4 className="font-serif-title text-2xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
-                      {selectedMovie.title}{selectedMovie.year ? ` (${selectedMovie.year})` : ''}
-                    </h4>
-                    <p className="text-[11px] text-gray-500">
-                      {selectedMovie.tmdbRating !== undefined ? `Rating TMDB ${selectedMovie.tmdbRating.toFixed(1)}` : ''}
-                      {selectedMovie.durationMinutes ? ` · ${selectedMovie.durationMinutes} menit` : ''}
-                      {selectedMovie.genres.length ? ` · ${selectedMovie.genres.join(', ')}` : ''}
+                <div className="flex flex-col gap-3.5 sm:flex-row">
+                  <div className="mx-auto h-48 w-32 shrink-0 overflow-hidden rounded-2xl bg-black/10 shadow-md sm:mx-0">
+                    {selectedMovie.posterUrl ? <ManagedImage src={selectedMovie.posterUrl} alt={selectedMovie.title} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs">No Poster</div>}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-black text-[#4a1623] dark:text-rose-50 sm:text-lg">{selectedMovie.title}</h3>
+                    <p className="text-[10.5px] font-bold text-[#8c4f60] dark:text-rose-200/75">
+                      {selectedMovie.year || 'Film'} {selectedMovie.tmdbRating ? `• ⭐ ${selectedMovie.tmdbRating.toFixed(1)}` : ''}
                     </p>
-                    <p className="font-editorial text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                      {selectedMovie.overview}
+                    <p className="mt-2 line-clamp-4 text-[11px] font-medium leading-relaxed text-[#5c2432] dark:text-rose-100/85">
+                      {selectedMovie.overview || 'Sinopsis belum tersedia.'}
                     </p>
-                    {!!selectedMovie.cast?.length && <p className="text-[11px] text-gray-500">Pemeran: {selectedMovie.cast.join(', ')}</p>}
-                    {selectedMovie.trailerUrl && <a href={selectedMovie.trailerUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#7A1018] dark:text-[#F4B6C2] font-bold"><Play className="w-3.5 h-3.5" /> Trailer YouTube</a>}
-
-                    <div className="pt-2">
-                      <label className="block font-bold text-[#3B0A0F] dark:text-[#EFE6DA] mb-1">
-                        Status Nonton:
-                      </label>
-                      <select
-                        value={selectedMovie.status}
-                        onChange={(e) =>
-                          setSelectedMovie({ ...selectedMovie, status: e.target.value as any })
-                        }
-                        className="w-full px-3 py-1.5 rounded-lg bg-white dark:bg-black/30 border border-[#7A1018]/20"
-                      >
-                        <option value="together">Sudah ditonton berdua</option>
-                        <option value={activeProfile.toLowerCase()}>{`Sudah ditonton sendiri (${activeProfile})`}</option>
-                        <option value="watchlist">Rencana ditonton berdua</option>
-                        {selectedMovie.status === 'separate' && <option value="separate">Sudah ditonton terpisah</option>}
-                        {selectedMovie.status === (activeProfile === 'Savero' ? 'soffie' : 'savero') && <option value={selectedMovie.status}>{`Sudah ditonton sendiri (${activeProfile === 'Savero' ? 'Soffie' : 'Savero'})`}</option>}
-                      </select>
-                    </div>
-
-                    {/* Rating Savero & Soffie */}
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                      <div>
-                        <span className="font-bold block mb-1">Rating Savero:</span>
-                        <HeartRating
-                          rating={selectedMovie.ratingSavero || 0}
-                          interactive={true}
-                          size={18}
-                          onChange={(val) => setSelectedMovie({ ...selectedMovie, ratingSavero: val })}
-                        />
-                      </div>
-                      <div>
-                        <span className="font-bold block mb-1">Rating Soffie:</span>
-                        <HeartRating
-                          rating={selectedMovie.ratingSoffie || 0}
-                          interactive={true}
-                          size={18}
-                          onChange={(val) => setSelectedMovie({ ...selectedMovie, ratingSoffie: val })}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Notes & Reactions */}
-                    <div className="pt-2">
-                      <label className="block font-bold mb-1">Catatan Bebas / Kesan Film:</label>
-                      <textarea
-                        rows={2}
-                        value={selectedMovie.notes || ''}
-                        onChange={(e) => setSelectedMovie({ ...selectedMovie, notes: e.target.value })}
-                        placeholder="Apa yang bikin berkesan saat nonton film ini..."
-                        className="w-full px-3 py-1.5 rounded-lg bg-white dark:bg-black/30 border border-[#7A1018]/20 text-xs"
-                      />
-                    </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-2 pt-4 border-t border-[#7A1018]/15 mt-4 font-sans-clean text-xs">
+                <div className="mt-4 space-y-3 text-xs border-t border-rose-200/50 pt-3 dark:border-white/10">
+                  <div>
+                    <label className="mb-1 block font-extrabold">Status Nonton</label>
+                    <select
+                      value={selectedMovie.status}
+                      onChange={(e) => setSelectedMovie({ ...selectedMovie, status: e.target.value as any })}
+                      className="w-full rounded-xl border border-rose-200/80 bg-white px-3 py-2 font-bold text-[#4a1623] dark:border-white/15 dark:bg-[#1f070f] dark:text-rose-100"
+                    >
+                      <option value="together">Sudah Ditonton Berdua</option>
+                      <option value="savero">Sudah Ditonton Savero</option>
+                      <option value="soffie">Sudah Ditonton Soffie</option>
+                      <option value="watchlist">Watchlist Kencan</option>
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="mb-1 block font-extrabold">Rating Savero</span>
+                      <HeartRating rating={selectedMovie.ratingSavero || 0} interactive size={16} onChange={(val) => setSelectedMovie({ ...selectedMovie, ratingSavero: val })} />
+                    </div>
+                    <div>
+                      <span className="mb-1 block font-extrabold">Rating Soffie</span>
+                      <HeartRating rating={selectedMovie.ratingSoffie || 0} interactive size={16} onChange={(val) => setSelectedMovie({ ...selectedMovie, ratingSoffie: val })} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block font-extrabold">Catatan & Kesan Nonton</label>
+                    <textarea
+                      rows={2}
+                      value={selectedMovie.notes || ''}
+                      onChange={(e) => setSelectedMovie({ ...selectedMovie, notes: e.target.value })}
+                      placeholder="Bagian paling seru..."
+                      className="w-full rounded-xl border border-rose-200/80 bg-white px-3 py-2 font-bold text-[#4a1623] dark:border-white/15 dark:bg-[#1f070f] dark:text-rose-100"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-center justify-end gap-2 border-t border-rose-200/50 pt-3 dark:border-white/10">
                   <button
                     type="button"
                     onClick={() => setSelectedMovie(null)}
-                    className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl font-bold"
+                    className="clay-subcard-3d rounded-full px-4 py-2 font-extrabold text-[#7a3444] dark:text-rose-200"
                   >
                     Batal
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      onUpdateMovie(selectedMovie);
+                      soundManager.playSuccess();
+                      void onUpdateMovie(selectedMovie);
                       setSelectedMovie(null);
                     }}
-                    className="px-5 py-2 bg-[#7A1018] text-[#EFE6DA] rounded-xl font-bold hover:bg-[#5e0a11]"
+                    className="rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] px-5 py-2 font-extrabold text-white shadow-md active:scale-95"
                   >
                     Simpan Perubahan
                   </button>

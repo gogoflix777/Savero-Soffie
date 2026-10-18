@@ -243,8 +243,6 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
   const meetingWaveBackRef = useRef<SVGPathElement>(null);
   const meetingWaveFrontRef = useRef<SVGPathElement>(null);
   const upwellingRef = useRef<SVGCircleElement>(null);
-  const percentageLabelRef = useRef<HTMLElement>(null);
-  const meetingPercentageLabelRef = useRef<HTMLElement>(null);
   const bubbleRefs = useRef<Array<SVGCircleElement | null>>([]);
   const characterParticleRefs = useRef<Array<SVGTextElement | null>>([]);
   const bubbles = useRef<FloatingParticle[]>(Array.from({ length: 14 }, () => ({
@@ -397,8 +395,6 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
         const meetingLevel = visualMeetingPercentageRef.current;
         const glowLevel = Math.min(1, Math.max(0, level / 100));
         if (buttonRef.current) buttonRef.current.style.setProperty('--heart-glow-level', glowLevel.toFixed(3));
-        if (percentageLabelRef.current) percentageLabelRef.current.textContent = `${Math.round(level)}%`;
-        if (meetingPercentageLabelRef.current) meetingPercentageLabelRef.current.textContent = `${Math.round(meetingLevel)}%`;
         const levelMultiplier = level >= 70 ? 1.35 : level >= 30 ? 1.15 : 1;
         if (holdActiveRef.current) s.waveEnergy = Math.min(2.6, s.waveEnergy + 3.8 * dt);
         s.waveEnergy = Math.max(1, s.waveEnergy - dt * 1.2);
@@ -842,18 +838,18 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
           </linearGradient>
 
           <linearGradient id={meetingGradId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor={profileName === 'Soffie' ? '#fff1f7' : '#fff4c7'} stopOpacity=".9" />
-            <stop offset="38%" stopColor={profileName === 'Soffie' ? '#ff73a9' : '#ff8b4d'} stopOpacity=".78" />
-            <stop offset="100%" stopColor={profileName === 'Soffie' ? '#c51b59' : '#b90f39'} stopOpacity=".78" />
+            <stop offset="0%" stopColor="#fff4c7" stopOpacity=".95" />
+            <stop offset="38%" stopColor="#ffb347" stopOpacity=".85" />
+            <stop offset="100%" stopColor="#d97706" stopOpacity=".85" />
           </linearGradient>
           <linearGradient id={`${meetingGradId}-back`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#fff4c7" stopOpacity=".48" />
-            <stop offset="100%" stopColor={profileName === 'Soffie' ? '#ff4f91' : '#ff5b70'} stopOpacity=".56" />
+            <stop offset="0%" stopColor="#fff8db" stopOpacity=".65" />
+            <stop offset="100%" stopColor="#f59e0b" stopOpacity=".65" />
           </linearGradient>
           <radialGradient id={`${meetingGradId}-glow`} cx="50%" cy="72%" r="58%">
-            <stop offset="0%" stopColor="#fff5b5" stopOpacity=".7" />
-            <stop offset="55%" stopColor={profileName === 'Soffie' ? '#ff63a1' : '#ff7353'} stopOpacity=".34" />
-            <stop offset="100%" stopColor="#ff367f" stopOpacity="0" />
+            <stop offset="0%" stopColor="#fff5b5" stopOpacity=".8" />
+            <stop offset="55%" stopColor="#f59e0b" stopOpacity=".45" />
+            <stop offset="100%" stopColor="#d97706" stopOpacity="0" />
           </radialGradient>
 
           <radialGradient id={`${liquidGradId}-upwelling`} cx="50%" cy="92%" r="48%">
@@ -983,14 +979,15 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
 
       {isProfileProgressHeart && (
         <span className="profile-heart-center-label" aria-hidden="true">
-          <strong ref={percentageLabelRef}>{Math.round(visiblePercentage)}%</strong>
+          <strong key="heart-percentage">{Math.round(visiblePercentage)}%</strong>
           {isMeetingFillStage ? (
-            <>
-              <span className="profile-heart-layer-label">LIQUID PERTAMA • PENUH</span>
-              <span ref={meetingPercentageLabelRef} className="profile-heart-layer-progress">Liquid kedua {Math.round(visibleMeetingPercentage)}%</span>
-            </>
+            <span key="layer-meeting-progress" className="profile-heart-layer-progress">
+              Bertemu {Math.round(visibleMeetingPercentage)}%
+            </span>
           ) : (
-            <span>{currentPercentage >= 100 ? meetingLocked ? 'Bertemu ♥' : 'Tahan untuk bertemu' : profileName}</span>
+            <span key="layer-meeting-status">
+              {currentPercentage >= 100 ? (meetingLocked ? 'Bertemu ♥' : 'Tahan untuk bertemu') : profileName}
+            </span>
           )}
         </span>
       )}

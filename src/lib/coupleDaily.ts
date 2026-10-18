@@ -1,4 +1,4 @@
-import { CoupleProfile, DailyCheckin, DailyHeartProgress, MeetingConfirmation, StreakRestore } from '../types';
+import { CoupleProfile, DailyCheckin, DailyHeartProgress, InstantReply, MeetingConfirmation, StreakRestore } from '../types';
 import { supabase } from './supabase';
 
 export const getJakartaDate = (date = new Date()) => new Intl.DateTimeFormat('en-CA', {
@@ -294,3 +294,109 @@ export async function cancelMeetingConfirmation(profile?: CoupleProfile, adminMo
   const { error } = await supabase.rpc('cancel_my_meeting_confirmation');
   if (error) throw error;
 }
+
+export async function loadInstantReplies(): Promise<InstantReply[]> {
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('daily_checkin_replies')
+      .select('id, user_id, author_profile, target_profile, text, emoji, created_at')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (error) {
+      // If table does not exist yet (migration 013 not applied), gracefully return empty
+      return [];
+    }
+    const rows = (data ?? []) as Array<{
+      id: string;
+      author_profile: string;
+      target_profile: string;
+      text: string;
+      emoji: string | null;
+      created_at: string;
+    }>;
+    return rows.map((row) => ({
+      id: String(row.id),
+      targetProfile: row.target_profile as CoupleProfile,
+      authorProfile: row.author_profile as CoupleProfile,
+      text: row.text,
+      emoji: row.emoji ?? undefined,
+      createdAt: row.created_at
+    }));
+  } catch (err) {
+    console.warn('loadInstantReplies warning:', err);
+    return [];
+  }
+}
+
+export async function saveInstantReply(input: {
+  targetProfile: CoupleProfile;
+  authorProfile: CoupleProfile;
+  text: string;
+  emoji?: string;
+  adminMode?: boolean;
+}): Promise<InstantReply | null> {
+  if (!supabase) return null;
+  try {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return null;
+
+    let userId = user.id;
+    if (input.adminMode) {
+      const { data: owner } = await supabase
+        .from('couple_profiles')
+        .select('user_id')
+        .eq('profile_name', input.authorProfile)
+        .maybeSingle();
+      if (owner?.user_id) userId = owner.user_id;
+    }
+
+    const { data, error } = await supabase
+      .from('daily_checkin_replies')
+      .insert({
+        user_id: userId,
+        author_profile: input.authorProfile,
+        target_profile: input.targetProfile,
+        text: input.text.trim(),
+        emoji: input.emoji || null
+      })
+      .select('id, author_profile, target_profile, text, emoji, created_at')
+      .single();
+
+    if (error) {
+      console.warn('saveInstantReply warning:', error.message);
+      return null;
+    }
+
+    return {
+      id: String(data.id),
+      targetProfile: data.target_profile as CoupleProfile,
+      authorProfile: data.author_profile as CoupleProfile,
+      text: data.text,
+      emoji: data.emoji ?? undefined,
+      createdAt: data.created_at
+    };
+  } catch (err) {
+    console.warn('saveInstantReply error:', err);
+    return null;
+  }
+}
+
+export async function deleteInstantReply(replyId: string): Promise<boolean> {
+  if (!supabase) return true;
+  try {
+    const { error } = await supabase
+      .from('daily_checkin_replies')
+      .delete()
+      .eq('id', replyId);
+    if (error) {
+      console.warn('deleteInstantReply warning:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('deleteInstantReply error:', err);
+    return false;
+  }
+}
+
