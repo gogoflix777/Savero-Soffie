@@ -45,7 +45,6 @@ import { ChibiPageDecorations } from './components/effects/ChibiPageDecorations'
 import { Header } from './components/layout/Header';
 import { BottomNav } from './components/layout/BottomNav';
 import { MarqueeTicker } from './components/layout/MarqueeTicker';
-import { AppLauncherHub } from './components/home/AppLauncherHub';
 
 // Section Pages
 import { HeroSection } from './components/hero/HeroSection';
@@ -54,6 +53,7 @@ import { TimelineSection } from './components/timeline/TimelineSection';
 import { MemoryMapSection } from './components/map/MemoryMapSection';
 import { FloCycleSection } from './components/cycle/FloCycleSection';
 import { MoviesSection } from './components/movies/MoviesSection';
+import { MovieNightCard } from './components/home/MovieNightCard';
 import { WishlistSection } from './components/wishlist/WishlistSection';
 import { TrophyCabinetSection } from './components/badges/TrophyCabinetSection';
 import { RomanticExtrasSection } from './components/romantic/RomanticExtrasSection';
@@ -67,12 +67,14 @@ import { deleteInstantReply, cancelMeetingConfirmation, confirmMeeting, getAppAd
 import { loadSharedMediaCatalog, removeSharedMediaItem, saveSharedMediaItem, seedSharedMediaCatalog } from './lib/sharedMediaCatalog';
 import { deleteMemoryPin, loadMemoryPins, saveMemoryPin } from './lib/memoryPins';
 import { deleteWishlistPlace, loadWishlistPlaces, saveWishlistPlace, seedWishlistPlaces } from './lib/wishlistPlaces';
+import { deleteCycleRecord, deleteIntimateLog, loadCycleRecords, loadIntimateLogs, saveCycleRecord, saveIntimateLog, seedCycleRecords, seedIntimateLogs, wipeCycleAndIntimateRecords } from './lib/cycleRecords';
 import { CoupleProfileSetup } from './components/auth/CoupleProfileSetup';
 import { deleteFavoriteSinger, loadFavoriteSingers, saveFavoriteSinger } from './lib/favoriteSingers';
+import { deleteMovieNightPlan, loadMovieNightPlan, saveMovieNightPlan } from './lib/movieNightPlans';
 import { InAppToastContainer } from './components/common/InAppToastContainer';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { triggerNotification } from './utils/notifications';
-import { InstantReply } from './types';
+import { InstantReply, MovieNightPlan } from './types';
 
 export default function App() {
   const [authReady, setAuthReady] = useState(false);
@@ -113,6 +115,7 @@ export default function App() {
   const [actors, setActors] = useState<ActorItem[]>(() => appStorage.getActors());
   const [tvSeries, setTvSeries] = useState<TvSeries[]>(() => appStorage.getTvSeries());
   const [collections, setCollections] = useState<MovieCollection[]>(() => appStorage.getCollections());
+  const [movieNightPlan, setMovieNightPlan] = useState<MovieNightPlan | null>(() => appStorage.getMovieNightPlan());
   const [wishlistPlaces, setWishlistPlaces] = useState<WishlistPlace[]>(() => appStorage.getWishlistPlaces());
   const [wishlistPlacesError, setWishlistPlacesError] = useState<string | null>(null);
   const [wishlistDrinks, setWishlistDrinks] = useState<WishlistDrink[]>(() => appStorage.getWishlistDrinks());
@@ -307,6 +310,47 @@ export default function App() {
           } catch (error) {
             console.warn('Wishlist tempat gagal disinkronkan dari Supabase:', error);
           }
+          try {
+            let sharedCycles = await loadCycleRecords();
+            if (!sharedCycles.length) {
+              const localCycles = appStorage.getCycles();
+              if (localCycles.length) {
+                await seedCycleRecords(localCycles);
+                sharedCycles = await loadCycleRecords();
+              }
+            }
+            if (sharedCycles.length) {
+              setCycles(sharedCycles);
+              appStorage.saveCycles(sharedCycles);
+            }
+          } catch (error) {
+            console.warn('Data siklus menstruasi gagal disinkronkan dari Supabase:', error);
+          }
+          try {
+            let sharedIntimateLogs = await loadIntimateLogs();
+            if (!sharedIntimateLogs.length) {
+              const localLogs = appStorage.getIntimateLogs();
+              if (localLogs.length) {
+                await seedIntimateLogs(localLogs);
+                sharedIntimateLogs = await loadIntimateLogs();
+              }
+            }
+            if (sharedIntimateLogs.length) {
+              setIntimateLogs(sharedIntimateLogs);
+              appStorage.saveIntimateLogs(sharedIntimateLogs);
+            }
+          } catch (error) {
+            console.warn('Data keintiman gagal disinkronkan dari Supabase:', error);
+          }
+          try {
+            const remotePlan = await loadMovieNightPlan();
+            if (remotePlan) {
+              setMovieNightPlan(remotePlan);
+              appStorage.saveMovieNightPlan(remotePlan);
+            }
+          } catch (error) {
+            console.warn('Jadwal movie night gagal disinkronkan dari Supabase:', error);
+          }
           setDailyActionError(loadErrors.length ? loadErrors.join(' ') : null);
         } else if (adminResult.status === 'rejected') {
           setDailyActionError('Status admin gagal diverifikasi. Jalankan migration admin terbaru.');
@@ -417,7 +461,55 @@ export default function App() {
         setWishlistPlacesError(error instanceof Error ? error.message : 'Wishlist tempat bersama gagal diperbarui.');
       }
     };
+    const refreshCycleRecords = async () => {
+      try {
+        const sharedCycles = await loadCycleRecords();
+        setCycles(sharedCycles);
+        appStorage.saveCycles(sharedCycles);
+      } catch (error) {
+        console.warn('Gagal memuat ulang data siklus dari Supabase realtime:', error);
+      }
+    };
+    const refreshIntimateLogs = async () => {
+      try {
+        const sharedLogs = await loadIntimateLogs();
+        setIntimateLogs(sharedLogs);
+        appStorage.saveIntimateLogs(sharedLogs);
+      } catch (error) {
+        console.warn('Gagal memuat ulang data keintiman dari Supabase realtime:', error);
+      }
+    };
+    const refreshMovieNightPlan = async () => {
+      try {
+        const remotePlan = await loadMovieNightPlan();
+        setMovieNightPlan(remotePlan);
+        appStorage.saveMovieNightPlan(remotePlan);
+      } catch (error) {
+        console.warn('Gagal memuat ulang jadwal Movie Night dari Supabase realtime:', error);
+      }
+    };
     const channel = realtimeClient.channel('couple-daily-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'movie_night_plans' }, (payload) => {
+        void refreshMovieNightPlan();
+        const row = (payload.new || {}) as { payload?: MovieNightPlan; planned_by?: string; movie_title?: string };
+        const plan = row.payload;
+        const plannedBy = plan?.plannedBy || row.planned_by;
+        const movieTitle = plan?.movieTitle || row.movie_title;
+        if (payload.eventType === 'INSERT' && plannedBy && plannedBy !== activeProfile) {
+          triggerNotification({
+            category: 'movie',
+            title: `Jadwal Nonton Baru dari ${plannedBy} 🎬`,
+            message: movieTitle ? `Kencan nonton "${movieTitle}" telah dikonfirmasi!` : 'Jadwal kencan nonton baru dikonfirmasi!',
+            settings: settings.notifications
+          });
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cycle_records' }, () => {
+        void refreshCycleRecords();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'intimate_logs' }, () => {
+        void refreshIntimateLogs();
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_checkins' }, (payload) => {
         void refreshDaily();
         const row = payload.new as { profile?: string; diary_text?: string } | undefined;
@@ -545,6 +637,19 @@ export default function App() {
         }
         if (payload?.category === 'wishlist' || payload?.type === 'wishlist_update') {
           void refreshWishlistPlaces();
+        }
+      })
+      .on('broadcast', { event: 'movie_night_update' }, ({ payload }) => {
+        const plan = (payload ?? null) as MovieNightPlan | null;
+        setMovieNightPlan(plan);
+        appStorage.saveMovieNightPlan(plan);
+        if (plan && plan.plannedBy !== activeProfile) {
+          triggerNotification({
+            category: 'movie',
+            title: `Jadwal Nonton dari ${plan.plannedBy} 🎬`,
+            message: `Kencan nonton "${plan.movieTitle}" telah dikonfirmasi!`,
+            settings: settings.notifications
+          });
         }
       })
       .subscribe();
@@ -1107,27 +1212,39 @@ export default function App() {
   };
 
   const handleAddCycle = (cycle: CycleRecord) => {
-    const updated = [cycle, ...cycles];
+    const updated = [cycle, ...cycles.filter((c) => c.id !== cycle.id)];
     setCycles(updated);
     appStorage.saveCycles(updated);
+    if (isSupabaseConfigured) {
+      void saveCycleRecord(cycle).catch((err) => console.warn('Supabase save cycle failed:', err));
+    }
   };
 
   const handleUpdateCycle = (cycle: CycleRecord) => {
     const updated = cycles.map((c) => (c.id === cycle.id ? cycle : c));
     setCycles(updated);
     appStorage.saveCycles(updated);
+    if (isSupabaseConfigured) {
+      void saveCycleRecord(cycle).catch((err) => console.warn('Supabase update cycle failed:', err));
+    }
   };
 
   const handleAddIntimateLog = (log: IntimateLog) => {
-    const updated = [log, ...intimateLogs];
+    const updated = [log, ...intimateLogs.filter((l) => l.id !== log.id)];
     setIntimateLogs(updated);
     appStorage.saveIntimateLogs(updated);
+    if (isSupabaseConfigured) {
+      void saveIntimateLog(log).catch((err) => console.warn('Supabase save intimate log failed:', err));
+    }
   };
 
   const handleDeleteIntimateLog = (id: string) => {
     const updated = intimateLogs.filter((l) => l.id !== id);
     setIntimateLogs(updated);
     appStorage.saveIntimateLogs(updated);
+    if (isSupabaseConfigured) {
+      void deleteIntimateLog(id).catch((err) => console.warn('Supabase delete intimate log failed:', err));
+    }
   };
 
   const persistMediaItem = async (kind: 'movie' | 'tv' | 'person', item: MovieItem | TvSeries | ActorItem) => {
@@ -1156,6 +1273,63 @@ export default function App() {
       appStorage.saveMovies(updated);
       return updated;
     });
+  };
+
+  const handleSaveMovieNightPlan = async (plan: MovieNightPlan | null) => {
+    setMovieNightPlan(plan);
+    appStorage.saveMovieNightPlan(plan);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        if (plan) {
+          await saveMovieNightPlan(plan);
+        } else if (movieNightPlan?.id) {
+          await deleteMovieNightPlan(movieNightPlan.id);
+        }
+      } catch (err) {
+        console.warn('Gagal menyinkronkan jadwal movie night ke Supabase:', err);
+      }
+
+      // Broadcast realtime event ke pasangan
+      void supabase.channel('couple-daily-live').send({
+        type: 'broadcast',
+        event: 'movie_night_update',
+        payload: plan
+      });
+    }
+  };
+
+  const handleCompleteMovieNightPlan = async () => {
+    if (!movieNightPlan) return;
+    const planId = movieNightPlan.id;
+    const targetMovie = movies.find(
+      (m) => m.id === movieNightPlan.movieId || m.title.toLowerCase() === movieNightPlan.movieTitle.toLowerCase()
+    );
+    if (targetMovie) {
+      await handleUpdateMovie({
+        ...targetMovie,
+        status: 'together',
+        watchedDate: new Date().toISOString().slice(0, 10)
+      });
+    }
+
+    setMovieNightPlan(null);
+    appStorage.saveMovieNightPlan(null);
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await deleteMovieNightPlan(planId);
+      } catch (err) {
+        console.warn('Gagal menyelesaikan jadwal movie night di Supabase:', err);
+      }
+
+      // Broadcast realtime clear event ke pasangan
+      void supabase.channel('couple-daily-live').send({
+        type: 'broadcast',
+        event: 'movie_night_update',
+        payload: null
+      });
+    }
   };
 
   const handleRemoveMovie = async (movie: MovieItem) => {
@@ -1426,6 +1600,9 @@ export default function App() {
     appStorage.wipeCycleData();
     setCycles([]);
     setIntimateLogs([]);
+    if (isSupabaseConfigured) {
+      void wipeCycleAndIntimateRecords().catch((err) => console.warn('Supabase wipe cycle data failed:', err));
+    }
   };
 
   const handleSelectSection = (sectionId: string) => {
@@ -1625,14 +1802,16 @@ export default function App() {
                 />
               </ErrorBoundary>
 
+              {/* Hasil Konfirmasi Movie Night di Beranda */}
+              <MovieNightCard
+                plan={movieNightPlan}
+                onNavigateToCinema={() => handleSelectSection('film')}
+                onCompletePlan={handleCompleteMovieNightPlan}
+                onCancelPlan={() => handleSaveMovieNightPlan(null)}
+              />
+
               {/* Intro Section: Savero & Soffie */}
               <IntroSection settings={settings} />
-
-              {/* Mobile Quick App Launcher Grid */}
-              <AppLauncherHub
-                onSelectSection={handleSelectSection}
-                isGuestMode={settings.isGuestMode}
-              />
 
               {/* Peta Kenangan — langsung di Beranda */}
               <MemoryMapSection
@@ -1702,6 +1881,9 @@ export default function App() {
                 pins={pins}
                 settings={settings}
                 activeProfile={activeProfile}
+                movieNightPlan={movieNightPlan}
+                onSaveMovieNightPlan={handleSaveMovieNightPlan}
+                onNavigateToHome={() => handleSelectSection('beranda')}
                 onAddMovie={(movie) => handleAddMovie({ ...movie, addedBy: activeProfile })}
                 onUpdateMovie={handleUpdateMovie}
                 onRemoveMovie={handleRemoveMovie}

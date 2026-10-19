@@ -103,6 +103,7 @@ export interface CycleRecord {
   id: string;
   startDate: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD (typically ~5 days)
+  recordedPeriodEndDate?: string; // YYYY-MM-DD (confirmed bleeding days; subsequent days up to endDate are predicted)
   fertileStartDate?: string; // optional manually corrected fertile-window start
   fertileEndDate?: string; // optional manually corrected fertile-window end
   ovulationDate?: string; // optional manually corrected ovulation date
@@ -136,6 +137,22 @@ export interface MovieItem {
   ratingSoffie?: number; // 1-5
   notes?: string;
   emojiReaction?: string;
+}
+
+export interface MovieNightPlan {
+  id: string;
+  movieId?: string;
+  movieTitle: string;
+  posterUrl?: string;
+  scheduledAt: string;
+  snacks?: string;
+  drinks?: string;
+  plannedBy: 'Savero' | 'Soffie' | 'Berdua';
+  confirmedBySavero: boolean;
+  confirmedBySoffie: boolean;
+  status: 'confirmed' | 'pending' | 'completed' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ActorItem {

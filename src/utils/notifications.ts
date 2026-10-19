@@ -1,6 +1,6 @@
 import { NotificationSettings } from '../types';
 
-export type NotificationCategory = 'pin' | 'photo' | 'wishlist' | 'reply' | 'streak' | 'notes';
+export type NotificationCategory = 'pin' | 'photo' | 'wishlist' | 'reply' | 'streak' | 'notes' | 'movie';
 
 export interface InAppToast {
   id: string;

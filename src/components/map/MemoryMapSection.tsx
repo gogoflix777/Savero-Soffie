@@ -681,38 +681,36 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
   };
 
   return (
-    <section id="peta-kenangan" className="py-12 px-3 sm:px-6 bg-[#EFE6DA] dark:bg-[#1a0507] border-b border-[#7A1018]/15 transition-colors">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <div className="flex items-center space-x-2 text-[11px] font-sans-clean font-bold tracking-[0.25em] uppercase text-[#7A1018] dark:text-[#F4B6C2] mb-1">
-              <MapPin className="w-4 h-4 text-[#7A1018] dark:text-[#F4B6C2]" />
-              <span>JEJAK LANGKAH DI KOTA SEMARANG</span>
-            </div>
-            <h2 className="font-serif-title text-3xl sm:text-4xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
-              Peta Kenangan Savero & Soffie
+    <section id="peta-kenangan" className="py-4 sm:py-6 px-3 sm:px-6 bg-[#EFE6DA] dark:bg-[#1a0507] border-b border-[#7A1018]/15 transition-colors">
+      <div className="max-w-7xl mx-auto space-y-2">
+        {/* Row 1: Header & Actions (No text cut-off, fully responsive) */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <h2 className="font-serif-title text-base sm:text-lg font-bold text-[#3B0A0F] dark:text-[#EFE6DA] flex items-center gap-1.5 whitespace-nowrap">
+              <MapPin className="w-4 h-4 text-[#7A1018] dark:text-[#F4B6C2] flex-shrink-0" />
+              <span>Peta Kenangan</span>
             </h2>
-            <p className="font-editorial italic text-xs sm:text-sm text-[#5c2432] dark:text-rose-200 mt-0.5">
-              Klik titik kenangan untuk melihat cerita, atau ketuk langsung di peta untuk menandai tempat baru kita.
-            </p>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-[#7A1018]/10 text-[#7A1018] dark:bg-rose-950/60 dark:text-rose-300 whitespace-nowrap">
+              {pins.length}
+            </span>
           </div>
 
           {/* Quick Actions Bar */}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               onClick={() => {
                 if (isReplaying) stopRouteReplay();
                 else startRouteReplay();
               }}
-              className={`px-4 py-2 rounded-xl text-xs font-sans-clean font-bold shadow-md transition flex items-center space-x-2 ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-sans-clean font-bold shadow-xs transition flex items-center space-x-1 whitespace-nowrap ${
                 isReplaying
                   ? 'bg-amber-600 text-white animate-pulse'
                   : 'bg-[#7A1018] text-[#EFE6DA] hover:bg-[#5e0a11]'
               }`}
             >
-              {isReplaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              <span>{isReplaying ? 'Hentikan Putar Jejak' : 'Putar Ulang Perjalanan'}</span>
+              {isReplaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{isReplaying ? 'Stop' : 'Putar Jejak'}</span>
+              <span className="sm:hidden">{isReplaying ? 'Stop' : 'Putar'}</span>
             </button>
 
             <button
@@ -740,133 +738,116 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
                 });
                 setIsFormOpen(true);
               }}
-              className="px-4 py-2 rounded-xl text-xs font-sans-clean font-bold bg-white/80 dark:bg-black/40 text-[#7A1018] dark:text-[#F4B6C2] border border-[#7A1018]/25 hover:bg-[#7A1018] hover:text-[#EFE6DA] transition shadow-xs flex items-center space-x-1.5"
+              className="px-2.5 py-1 rounded-lg text-xs font-sans-clean font-bold bg-white/80 dark:bg-black/40 text-[#7A1018] dark:text-[#F4B6C2] border border-[#7A1018]/25 hover:bg-[#7A1018] hover:text-[#EFE6DA] transition shadow-xs flex items-center space-x-1 whitespace-nowrap"
             >
-              <Plus className="w-4 h-4" />
-              <span>Tambah Pin Baru</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Tambah Pin</span>
+              <span className="sm:hidden">Pin</span>
             </button>
           </div>
         </div>
 
         {syncError && (
-          <p className="rounded-xl bg-red-100 px-4 py-3 text-xs text-red-800 dark:bg-red-950/40 dark:text-red-200" role="alert">
-            Sinkronisasi pin Supabase gagal: {syncError}. Pastikan migration tabel memory_pins sudah dijalankan.
+          <p className="rounded-lg bg-red-100 px-2.5 py-1 text-xs text-red-800 dark:bg-red-950/40 dark:text-red-200" role="alert">
+            {syncError}
           </p>
         )}
 
-        {filteredPins.length > 0 && (
-          <div className="bg-white/70 dark:bg-black/30 p-3 rounded-2xl border border-[#7A1018]/15 shadow-xs">
-            <div className="flex items-center space-x-2 text-[10px] font-sans-clean font-bold tracking-wider text-[#7A1018] dark:text-[#F4B6C2] uppercase mb-2">
-              <Compass className="w-3.5 h-3.5" />
-              <span>PILIH CEPAT LOKASI KENANGAN:</span>
-            </div>
-            <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none pb-1">
-              {filteredPins.slice(0, 8).map((pin) => (
-                <button
-                  key={pin.id}
-                  onClick={() => flyToPin(pin)}
-                  className="flex-shrink-0 px-3 py-1.5 rounded-xl bg-[#EFE6DA]/80 dark:bg-black/50 hover:bg-[#7A1018] hover:text-[#EFE6DA] dark:hover:bg-[#7A1018] text-[#3B0A0F] dark:text-[#EFE6DA] text-xs font-sans-clean border border-[#7A1018]/15 transition-all flex items-center space-x-1.5 shadow-xs"
-                >
-                  <MapPin className="w-3 h-3 text-[#7A1018] dark:text-[#F4B6C2]" />
-                  <span className="font-bold">{pin.title}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Controls Ribbon (Search, Filters, Map Tiles) */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-sans-clean">
+        {/* Row 2: Search & Filter without overflow truncation */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 text-xs font-sans-clean">
           {/* Search Box */}
-          <div className="relative w-full md:w-72">
-            <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-500" />
+          <div className="relative w-full sm:w-52 flex-shrink-0">
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-gray-400" />
             <input
               type="text"
               value={searchPinQuery}
               onChange={(e) => setSearchPinQuery(e.target.value)}
-              placeholder="Cari tempat, catatan, atau tag..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/80 dark:bg-black/40 border border-[#7A1018]/20 focus:outline-hidden focus:ring-2 focus:ring-[#7A1018] text-xs"
+              placeholder="Cari tempat atau tag..."
+              className="w-full pl-8 pr-2.5 py-1 rounded-lg bg-white/80 dark:bg-black/40 border border-[#7A1018]/20 focus:outline-hidden focus:ring-1 focus:ring-[#7A1018] text-xs h-7.5"
             />
           </div>
 
-          {/* Category Filter Pills */}
-          <div className="flex items-center space-x-1 overflow-x-auto w-full md:w-auto pb-1 scrollbar-none">
+          {/* Category Filter Pills (Scrollable smoothly without overflow-hidden clipping) */}
+          <div className="flex items-center space-x-1.5 overflow-x-auto w-full pb-0.5 scrollbar-none">
             <button
               onClick={() => setActiveCategoryFilter('all')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1 whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition flex items-center whitespace-nowrap flex-shrink-0 ${
                 activeCategoryFilter === 'all'
                   ? 'bg-[#7A1018] text-[#EFE6DA] shadow-xs'
-                  : 'bg-white/60 dark:bg-black/30 text-gray-700 dark:text-gray-300'
+                  : 'bg-white/60 dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:bg-white/80'
               }`}
             >
-              <span>Semua ({pins.length})</span>
+              Semua ({pins.length})
             </button>
             {(['restoran', 'kafe', 'motel', 'jalan', 'rumah', 'kos', 'rekreasi'] as PinCategory[]).map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategoryFilter(cat)}
-                className={`px-2.5 py-1.5 rounded-lg font-medium transition capitalize whitespace-nowrap flex items-center space-x-1 ${
+                className={`px-2 py-1 rounded-md text-[11px] font-medium transition capitalize whitespace-nowrap flex items-center flex-shrink-0 ${
                   activeCategoryFilter === cat
                     ? 'bg-[#7A1018] text-[#EFE6DA] font-bold shadow-xs'
-                    : 'bg-white/60 dark:bg-black/30 text-gray-700 dark:text-gray-300'
+                    : 'bg-white/60 dark:bg-black/30 text-gray-700 dark:text-gray-300 hover:bg-white/80'
                 }`}
               >
-                <span>{CATEGORY_ICONS[cat]?.label || cat}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Map Tile Layers */}
-          <div className="flex items-center space-x-1 bg-white/70 dark:bg-black/30 p-1 rounded-xl border border-[#7A1018]/15 flex-shrink-0">
-            <Layers className="w-3.5 h-3.5 text-[#7A1018] dark:text-[#F4B6C2] ml-1.5 mr-1" />
-            {(['voyager', 'dark', 'satellite'] as const).map((tileKey) => (
-              <button
-                key={tileKey}
-                onClick={() => changeTile(tileKey)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
-                  activeTile === tileKey
-                    ? 'bg-[#7A1018] text-white shadow-xs'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-black'
-                }`}
-              >
-                {tileKey === 'voyager' ? 'Krem' : tileKey === 'dark' ? 'Noir' : 'Satelit'}
+                {CATEGORY_ICONS[cat]?.label || cat}
               </button>
             ))}
           </div>
         </div>
 
         {/* Map Viewport Container */}
-        <div className="relative w-full h-[min(60dvh,520px)] sm:h-[520px] rounded-3xl overflow-hidden border-2 border-[#7A1018]/30 shadow-2xl">
+        <div className="relative w-full h-[min(60dvh,520px)] sm:h-[520px] rounded-2xl sm:rounded-3xl overflow-hidden border-2 border-[#7A1018]/30 shadow-xl">
           <div ref={mapContainerRef} className="w-full h-full z-0" />
+
+          {/* Floating Map Tile Layer Controls (Top Right of Map) */}
+          <div className="absolute top-3 right-3 z-20 flex items-center space-x-0.5 p-1 rounded-xl bg-white/90 dark:bg-black/85 backdrop-blur-md border border-[#7A1018]/20 shadow-md">
+            <Layers className="w-3 h-3 text-[#7A1018] dark:text-[#F4B6C2] ml-1 mr-0.5" />
+            {(['voyager', 'dark', 'satellite'] as const).map((tileKey) => (
+              <button
+                key={tileKey}
+                onClick={() => changeTile(tileKey)}
+                className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition ${
+                  activeTile === tileKey
+                    ? 'bg-[#7A1018] text-white shadow-xs'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white'
+                }`}
+              >
+                {tileKey === 'voyager' ? 'Krem' : tileKey === 'dark' ? 'Noir' : 'Satelit'}
+              </button>
+            ))}
+          </div>
 
           {/* Replay HUD Overlay */}
           {isReplaying && (
-            <div className="absolute top-4 left-4 z-20 bg-[#7A1018]/95 text-[#EFE6DA] px-4 py-2 rounded-2xl shadow-xl backdrop-blur-md border border-[#D9B26F]/40 flex items-center space-x-3">
-              <RouteIcon className="w-4 h-4 animate-spin text-[#D9B26F]" />
-              <div className="text-xs font-sans-clean">
-                <span className="font-bold block">Memutar Perjalanan Kisah...</span>
-                <span className="text-[10px] text-[#EFE6DA]/80">Titik {replayIdx + 1} dari {filteredPins.length}</span>
+            <div className="absolute top-3 left-3 z-20 bg-[#7A1018]/95 text-[#EFE6DA] px-3 py-1.5 rounded-xl shadow-xl backdrop-blur-md border border-[#D9B26F]/40 flex items-center space-x-2">
+              <RouteIcon className="w-3.5 h-3.5 animate-spin text-[#D9B26F]" />
+              <div className="text-[11px] font-sans-clean">
+                <span className="font-bold block">Memutar Perjalanan...</span>
+                <span className="text-[9px] text-[#EFE6DA]/80">Titik {replayIdx + 1} dari {filteredPins.length}</span>
               </div>
             </div>
           )}
 
           {/* Tap-to-add Helper Badge */}
-          <div className="absolute bottom-4 right-4 z-20 bg-white/90 dark:bg-black/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-[#7A1018]/20 shadow-md text-[10px] font-sans-clean font-bold text-[#7A1018] dark:text-[#F4B6C2] pointer-events-none flex items-center space-x-1.5">
-            <Sparkles className="w-3 h-3 text-[#D9B26F]" />
-            <span>Ketuk area peta mana saja untuk menambah pin kenangan</span>
+          <div className="absolute bottom-3 right-3 z-20 bg-white/90 dark:bg-black/90 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#7A1018]/20 shadow-md text-[9px] sm:text-[10px] font-sans-clean font-bold text-[#7A1018] dark:text-[#F4B6C2] pointer-events-none flex items-center space-x-1">
+            <Sparkles className="w-2.5 h-2.5 text-[#D9B26F]" />
+            <span>Ketuk peta untuk tambah pin</span>
           </div>
         </div>
 
-        {/* Horizontal Pin Cards Carousel (Fast Inspection below map) */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs font-sans-clean">
-            <span className="font-bold text-[#7A1018] dark:text-[#F4B6C2] uppercase tracking-wider">
-              DAFTAR PIN KENANGAN ({filteredPins.length} LOKASI)
+        {/* Compact Horizontal Pin Cards Carousel */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between text-xs font-sans-clean px-0.5">
+            <span className="font-bold text-[#7A1018] dark:text-[#F4B6C2] uppercase tracking-wider flex items-center gap-1.5 text-[11px]">
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Daftar Kenangan ({filteredPins.length})</span>
             </span>
-            <span className="text-gray-500">Geser untuk memilih kartu</span>
+            <span className="text-[10px] text-gray-500 font-sans-clean">
+              Geser kartu untuk jelajahi
+            </span>
           </div>
 
-          <div className="flex space-x-4 overflow-x-auto pb-4 pt-1 scrollbar-none">
+          <div className="flex space-x-2.5 overflow-x-auto pb-2 pt-0.5 scrollbar-none">
             {filteredPins.map((pin) => {
               const meta = CATEGORY_ICONS[pin.category] || CATEGORY_ICONS.lainnya;
               const isSelected = highlightedPinId === pin.id;
@@ -875,68 +856,82 @@ export const MemoryMapSection: React.FC<MemoryMapProps> = ({
                 <div
                   key={pin.id}
                   onClick={() => flyToPin(pin)}
-                  className={`flex-shrink-0 w-72 rounded-2xl p-3.5 bg-white/80 dark:bg-black/40 border transition-all cursor-pointer shadow-sm hover:shadow-md flex flex-col justify-between ${
+                  className={`flex-shrink-0 w-[285px] sm:w-[320px] rounded-xl p-2.5 bg-white/85 dark:bg-black/50 border transition-all cursor-pointer shadow-xs hover:shadow-md flex items-center gap-2.5 ${
                     isSelected
-                      ? 'border-[#7A1018] dark:border-[#F4B6C2] ring-2 ring-[#7A1018]/30 dark:ring-[#F4B6C2]/30 scale-[1.02]'
+                      ? 'border-[#7A1018] dark:border-[#F4B6C2] ring-2 ring-[#7A1018]/30 dark:ring-[#F4B6C2]/30 scale-[1.01]'
                       : 'border-[#7A1018]/15 hover:border-[#7A1018]/40'
                   }`}
                 >
-                  <div>
-                    {pin.photos && pin.photos[0] && (
-                      <div className="w-full h-32 rounded-xl overflow-hidden mb-2 relative">
-                        <ManagedImage src={pin.photos[0]} photoKey={`pin-photo:${pin.id}:0`} alt={pin.title} className="w-full h-full object-cover" />
-                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-[#7A1018] text-[#EFE6DA]">
-                          {meta.label}
-                        </span>
+                  {/* Left Side: Thumbnail Photo with Category Tag */}
+                  <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-lg overflow-hidden relative flex-shrink-0 bg-rose-100 dark:bg-black/40 border border-black/5">
+                    {pin.photos && pin.photos[0] ? (
+                      <ManagedImage
+                        src={pin.photos[0]}
+                        photoKey={`pin-photo:${pin.id}:0`}
+                        alt={pin.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[#7A1018] dark:text-rose-300">
+                        <MapPin className="w-6 h-6 opacity-40" />
                       </div>
                     )}
-
-                    <div className="flex items-center space-x-2 text-[10px] text-gray-500 font-sans-clean mb-1">
-                      <Calendar className="w-3 h-3 text-[#7A1018]" />
-                      <span>{pin.date} {pin.time ? `• ${pin.time}` : ''}</span>
-                    </div>
-
-                    <h4 className="font-serif-title font-bold text-sm text-[#3B0A0F] dark:text-[#EFE6DA] line-clamp-1 mb-1">
-                      {pin.title}
-                    </h4>
-
-                    <p className="text-xs text-gray-600 dark:text-gray-300 font-editorial line-clamp-2 mb-2">
-                      {pin.description}
-                    </p>
+                    <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-[#7A1018]/90 text-[#EFE6DA] backdrop-blur-xs">
+                      {meta.label}
+                    </span>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-[#7A1018]/10 text-xs font-sans-clean">
-                    <span className="text-[10px] text-gray-500">Oleh: <strong>{pin.addedBy}</strong></span>
-                    <div className="flex items-center gap-2">
-                      {pin.mapUrl && (
-                        <a
-                          href={pin.mapUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-[#7A1018] dark:text-[#F4B6C2] font-bold hover:underline flex items-center space-x-1 text-[11px]"
+                  {/* Right Side: Info & Actions */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between self-stretch py-0.5">
+                    <div>
+                      <div className="flex items-center space-x-1 text-[10px] text-gray-500 dark:text-gray-400 font-sans-clean mb-0.5">
+                        <Calendar className="w-2.5 h-2.5 text-[#7A1018] flex-shrink-0" />
+                        <span className="truncate">{pin.date} {pin.time ? `• ${pin.time}` : ''}</span>
+                      </div>
+
+                      <h4 className="font-serif-title font-bold text-xs sm:text-sm text-[#3B0A0F] dark:text-[#EFE6DA] truncate mb-0.5" title={pin.title}>
+                        {pin.title}
+                      </h4>
+
+                      <p className="text-[11px] text-gray-600 dark:text-gray-300 font-editorial line-clamp-1 leading-snug">
+                        {pin.description}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-[#7A1018]/10 text-[10px] font-sans-clean mt-1">
+                      <span className="text-gray-500 truncate max-w-[90px]">Oleh: <strong className="text-[#3B0A0F] dark:text-[#EFE6DA]">{pin.addedBy}</strong></span>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {pin.mapUrl && (
+                          <a
+                            href={pin.mapUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-[#7A1018] dark:text-[#F4B6C2] font-bold hover:underline flex items-center space-x-0.5 text-[10px]"
+                            title="Buka di Google Maps"
+                          >
+                            <span>Maps</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          aria-label={`Edit pin ${pin.title}`}
+                          onClick={(event) => { event.stopPropagation(); startEditingPin(pin); }}
+                          className="rounded p-1 text-[#7A1018] hover:bg-[#7A1018]/10 dark:text-[#F4B6C2]"
                         >
-                          <span>Maps</span>
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                      <button
-                        type="button"
-                        aria-label={`Edit pin ${pin.title}`}
-                        onClick={(event) => { event.stopPropagation(); startEditingPin(pin); }}
-                        className="rounded-lg p-1.5 text-[#7A1018] hover:bg-[#7A1018]/10 dark:text-[#F4B6C2]"
-                      >
-                        <Edit2 className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Hapus pin ${pin.title}`}
-                        disabled={deletingPinId === pin.id}
-                        onClick={(event) => { event.stopPropagation(); void handleDeletePin(pin); }}
-                        className="rounded-lg p-1.5 text-red-700 hover:bg-red-100 disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950/40"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                          <Edit2 className="h-3 w-3" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Hapus pin ${pin.title}`}
+                          disabled={deletingPinId === pin.id}
+                          onClick={(event) => { event.stopPropagation(); void handleDeletePin(pin); }}
+                          className="rounded p-1 text-red-700 hover:bg-red-100 disabled:opacity-50 dark:text-red-300 dark:hover:bg-red-950/40"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

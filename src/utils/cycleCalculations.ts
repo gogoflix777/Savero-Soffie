@@ -8,14 +8,18 @@ export interface CycleStats {
   nextPredictedPeriod: string | null;
   nextPredictedOvulation: string | null;
   daysUntilNextPeriod: number | null;
+  isPeriodDelayed?: boolean;
+  daysDelayed?: number;
 }
 
 export interface DayStatus {
   dateStr: string; // YYYY-MM-DD
-  isRecordedPeriod: boolean;
-  isPredictedPeriod: boolean;
-  isFertile: boolean;
-  isOvulation: boolean;
+  isRecordedPeriod: boolean; // 🔴 Solid red/coral-pink
+  isPredictedPeriod: boolean; // 🔴 Dotted red/coral-pink
+  isFertile: boolean; // 🔵 Teal text
+  isOvulation: boolean; // ⭕ Dotted teal circle around teal text
+  isDelayed?: boolean; // ⚪ Dotted gray circle or Delay
+  delayDaysCount?: number;
   intimateLogs: IntimateLog[];
   cycleDayNumber?: number;
 }
@@ -47,13 +51,15 @@ export function getDaysDiff(d1: Date, d2: Date): number {
 export function calculateCycleStats(cycles: CycleRecord[]): CycleStats {
   if (cycles.length === 0) {
     return {
-      averageCycleLength: 28,
+      averageCycleLength: 26,
       averagePeriodLength: 5,
       totalCyclesTracked: 0,
       lastPeriodStart: null,
       nextPredictedPeriod: null,
       nextPredictedOvulation: null,
-      daysUntilNextPeriod: null
+      daysUntilNextPeriod: null,
+      isPeriodDelayed: false,
+      daysDelayed: 0
     };
   }
 
@@ -67,21 +73,24 @@ export function calculateCycleStats(cycles: CycleRecord[]): CycleStats {
     const prev = parseDate(sorted[i - 1].startDate);
     const curr = parseDate(sorted[i].startDate);
     const diff = getDaysDiff(prev, curr);
-    if (diff > 15 && diff < 60) {
+    if (diff >= 18 && diff <= 50) {
       totalCycleDays += diff;
       cycleIntervalCount++;
     }
   }
 
-  const avgCycle = cycleIntervalCount > 0 ? Math.round(totalCycleDays / cycleIntervalCount) : 28;
+  const avgCycle = cycleIntervalCount > 0 ? Math.round(totalCycleDays / cycleIntervalCount) : (sorted[sorted.length - 1].cycleLength || 26);
   const lastCycle = sorted[sorted.length - 1];
   const lastStart = parseDate(lastCycle.startDate);
   const nextPeriod = addDays(lastStart, avgCycle);
-  const nextOvulation = addDays(nextPeriod, -14);
+  // In Flo algorithm: ovulation is 15 days before next expected period (e.g. 26 - 15 = day 11/12)
+  const nextOvulation = addDays(nextPeriod, -15);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const daysUntilNext = getDaysDiff(today, nextPeriod);
+  const isDelayed = today > nextPeriod && !sorted.some(c => c.startDate >= formatDateKey(nextPeriod));
+  const daysDelayed = isDelayed ? getDaysDiff(nextPeriod, today) : 0;
 
   return {
     averageCycleLength: avgCycle,
@@ -90,7 +99,9 @@ export function calculateCycleStats(cycles: CycleRecord[]): CycleStats {
     lastPeriodStart: lastCycle.startDate,
     nextPredictedPeriod: formatDateKey(nextPeriod),
     nextPredictedOvulation: formatDateKey(nextOvulation),
-    daysUntilNextPeriod: daysUntilNext
+    daysUntilNextPeriod: daysUntilNext,
+    isPeriodDelayed: isDelayed,
+    daysDelayed
   };
 }
 
@@ -103,53 +114,100 @@ export function getDayStatus(
   const dateStr = formatDateKey(date);
   const dateObj = new Date(date);
   dateObj.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   let isRecordedPeriod = false;
   let isPredictedPeriod = false;
   let isFertile = false;
   let isOvulation = false;
+  let isDelayed = false;
+  let delayDaysCount = 0;
 
-  // Check recorded periods
+  // 1. Check recorded cycles
   for (const c of cycles) {
     const start = parseDate(c.startDate);
     const periodDays = c.periodLength || stats.averagePeriodLength || 5;
     const periodEnd = c.endDate ? parseDate(c.endDate) : addDays(start, periodDays - 1);
-    if (dateObj >= start && dateObj <= periodEnd) {
-      isRecordedPeriod = true;
+
+    if (c.recordedPeriodEndDate) {
+      const confirmedEnd = parseDate(c.recordedPeriodEndDate);
+      if (dateObj >= start && dateObj <= confirmedEnd) {
+        isRecordedPeriod = true;
+      } else if (dateObj > confirmedEnd && dateObj <= periodEnd) {
+        isPredictedPeriod = true;
+      }
+    } else {
+      if (dateObj >= start && dateObj <= periodEnd) {
+        if (dateObj <= today) {
+          isRecordedPeriod = true;
+        } else {
+          isPredictedPeriod = true;
+        }
+      }
     }
 
-    if (c.fertileStartDate && c.fertileEndDate) {
-      const fertileStart = parseDate(c.fertileStartDate);
-      const fertileEnd = parseDate(c.fertileEndDate);
-      if (dateObj >= fertileStart && dateObj <= fertileEnd) isFertile = true;
-      if (c.ovulationDate === dateStr) isOvulation = true;
+    // Fertile window & Ovulation for recorded cycle
+    if (c.ovulationDate && c.fertileStartDate && c.fertileEndDate) {
+      if (dateStr === c.ovulationDate) {
+        isOvulation = true;
+        isFertile = true;
+      } else if (dateObj >= parseDate(c.fertileStartDate) && dateObj <= parseDate(c.fertileEndDate)) {
+        isFertile = true;
+      }
+    } else {
+      const cLen = c.cycleLength || stats.averageCycleLength || 26;
+      const cNextPeriod = addDays(start, cLen);
+      const cOvulation = addDays(cNextPeriod, -15);
+      const cFertileStart = addDays(cOvulation, -4);
+      const cFertileEnd = addDays(cOvulation, 2);
+
+      if (formatDateKey(cOvulation) === dateStr) {
+        isOvulation = true;
+        isFertile = true;
+      } else if (dateObj >= cFertileStart && dateObj <= cFertileEnd) {
+        isFertile = true;
+      }
     }
   }
 
-  // Check predicted periods and fertile windows for the future or unrecorded cycles
+  // 2. Check predicted future cycles (projecting forward)
   if (stats.lastPeriodStart) {
     const lastStart = parseDate(stats.lastPeriodStart);
-    const avgCycle = stats.averageCycleLength;
-    const avgPeriod = stats.averagePeriodLength;
+    const avgCycle = stats.averageCycleLength || 26;
+    const avgPeriod = stats.averagePeriodLength || 5;
 
-    // Project up to 6 cycles ahead
-    for (let i = 1; i <= 6; i++) {
-      const predStart = addDays(lastStart, avgCycle * i);
-      const diffPeriod = getDaysDiff(predStart, dateObj);
-      if (diffPeriod >= 0 && diffPeriod < avgPeriod) {
+    for (let i = 1; i <= 12; i++) {
+      const predPeriodStart = addDays(lastStart, avgCycle * i);
+      const predPeriodEnd = addDays(predPeriodStart, avgPeriod - 1);
+      const nextCycleStart = addDays(lastStart, avgCycle * (i + 1));
+      const predOvulation = addDays(nextCycleStart, -15);
+      const fertileStart = addDays(predOvulation, -4);
+      const fertileEnd = addDays(predOvulation, 2);
+
+      if (dateObj >= predPeriodStart && dateObj <= predPeriodEnd) {
         if (!isRecordedPeriod) isPredictedPeriod = true;
       }
 
-      // Ovulation is approximately 14 days before next period start
-      const predOvulation = addDays(predStart, -14);
       if (formatDateKey(predOvulation) === dateStr) {
         isOvulation = true;
-      }
-
-      // Fertile window: 5 days prior to ovulation through ovulation day
-      const diffOvu = getDaysDiff(predOvulation, dateObj);
-      if (diffOvu >= -5 && diffOvu <= 0) {
         isFertile = true;
+      } else if (dateObj >= fertileStart && dateObj <= fertileEnd) {
+        isFertile = true;
+      }
+    }
+
+    // 3. Check for Delay (Keterlambatan Haid)
+    if (stats.nextPredictedPeriod) {
+      const nextPeriodDate = parseDate(stats.nextPredictedPeriod);
+      if (today > nextPeriodDate) {
+        const hasLoggedNewCycle = cycles.some(c => c.startDate >= stats.nextPredictedPeriod!);
+        if (!hasLoggedNewCycle && dateObj >= nextPeriodDate && dateObj <= today) {
+          if (!isRecordedPeriod && !isPredictedPeriod) {
+            isDelayed = true;
+            delayDaysCount = getDaysDiff(nextPeriodDate, dateObj) + 1;
+          }
+        }
       }
     }
   }
@@ -162,6 +220,8 @@ export function getDayStatus(
     isPredictedPeriod,
     isFertile,
     isOvulation,
+    isDelayed,
+    delayDaysCount,
     intimateLogs: logsForDay
   };
 }

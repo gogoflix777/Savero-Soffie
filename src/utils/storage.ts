@@ -4,6 +4,7 @@ import {
   CycleRecord,
   IntimateLog,
   MovieItem,
+  MovieNightPlan,
   ActorItem,
   MovieCollection,
   TvSeries,
@@ -121,14 +122,31 @@ export const appStorage = {
   getPins: (): MemoryPin[] => load<MemoryPin[]>('pins', []),
   savePins: (pins: MemoryPin[]) => save('pins', pins),
 
-  getCycles: (): CycleRecord[] => load<CycleRecord[]>('cycles', initialCycles),
+  getCycles: (): CycleRecord[] => {
+    const cycles = load<CycleRecord[]>('cycles', initialCycles);
+    if (cycles && cycles.length > 0 && (cycles[0].startDate === '2026-09-01' || cycles[0].startDate === '2026-09-29')) {
+      save('cycles', initialCycles);
+      return initialCycles;
+    }
+    return cycles;
+  },
   saveCycles: (cycles: CycleRecord[]) => save('cycles', cycles),
 
-  getIntimateLogs: (): IntimateLog[] => load<IntimateLog[]>('intimate_logs', initialIntimateLogs),
+  getIntimateLogs: (): IntimateLog[] => {
+    const logs = load<IntimateLog[]>('intimate_logs', initialIntimateLogs);
+    if (logs && (logs.length <= 2 || (logs.length > 0 && logs[0].time === '02:30'))) {
+      save('intimate_logs', initialIntimateLogs);
+      return initialIntimateLogs;
+    }
+    return logs;
+  },
   saveIntimateLogs: (logs: IntimateLog[]) => save('intimate_logs', logs),
 
   getMovies: (): MovieItem[] => loadCatalog('movies', initialMovies, 'mov', true),
   saveMovies: (movies: MovieItem[]) => save('movies', movies),
+
+  getMovieNightPlan: (): MovieNightPlan | null => load<MovieNightPlan | null>('movie_night_plan', null),
+  saveMovieNightPlan: (plan: MovieNightPlan | null) => save('movie_night_plan', plan),
 
   getActors: (): ActorItem[] => loadCatalog('actors', initialActors, 'act'),
   saveActors: (actors: ActorItem[]) => save('actors', actors),

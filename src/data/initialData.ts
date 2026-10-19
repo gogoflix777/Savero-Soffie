@@ -42,25 +42,32 @@ export const initialSettings: AppSettings = {
 export const initialCycles: CycleRecord[] = [
   {
     id: 'cycle-1',
-    startDate: '2026-09-01',
-    endDate: '2026-09-05',
-    cycleLength: 28,
+    startDate: '2026-09-17',
+    endDate: '2026-09-21',
+    cycleLength: 26,
     periodLength: 5,
+    ovulationDate: '2026-09-28',
+    fertileStartDate: '2026-09-22',
+    fertileEndDate: '2026-09-30',
     flow: 'sedang',
     pain: 'ringan',
     mood: 'tenang',
-    notes: 'Siklus teratur, minum air hangat dan istirahat cukup.'
+    notes: 'Siklus teratur 26 hari sesuai catatan Flo Soffie.'
   },
   {
     id: 'cycle-2',
-    startDate: '2026-09-29',
-    endDate: '2026-10-03',
-    cycleLength: 28,
+    startDate: '2026-10-13',
+    endDate: '2026-10-17',
+    recordedPeriodEndDate: '2026-10-14',
+    cycleLength: 26,
     periodLength: 5,
+    ovulationDate: '2026-10-24',
+    fertileStartDate: '2026-10-20',
+    fertileEndDate: '2026-10-26',
     flow: 'sedang',
-    pain: 'sedang',
-    mood: 'rindu',
-    notes: 'Hari pertama kram perut, Savero bawakan kompres hangat.'
+    pain: 'ringan',
+    mood: 'hangat',
+    notes: 'Catatan siklus Oktober di aplikasi Flo.'
   }
 ];
 
@@ -68,23 +75,82 @@ export const initialIntimateLogs: IntimateLog[] = [
   {
     id: 'intimate-1',
     date: '2026-09-06',
-    time: '02:30',
+    time: '21:00',
     protection: 'kondom',
     protectionIssue: false,
     mood: 'romantis',
-    notes: 'Di Alam Indah Gombel, momen intim yang manis dan aman berdua.',
-    pinId: 'pin-5',
-    createdAt: '2026-09-06T02:30:00Z'
+    notes: 'Momen manis dan aman berdua.',
+    createdAt: '2026-09-06T21:00:00Z'
   },
   {
     id: 'intimate-2',
-    date: '2026-09-18',
-    time: '22:15',
+    date: '2026-09-13',
+    time: '22:00',
     protection: 'kondom',
     protectionIssue: false,
     mood: 'hangat',
-    notes: 'Malam tenang dan hangat bersama.',
-    createdAt: '2026-09-18T22:15:00Z'
+    notes: 'Malam tenang bersama.',
+    createdAt: '2026-09-13T22:00:00Z'
+  },
+  {
+    id: 'intimate-3',
+    date: '2026-09-22',
+    time: '23:00',
+    protection: 'kondom',
+    protectionIssue: false,
+    mood: 'romantis',
+    notes: 'Masa subur, menggunakan kondom dengan aman.',
+    createdAt: '2026-09-22T23:00:00Z'
+  },
+  {
+    id: 'intimate-4',
+    date: '2026-09-26',
+    time: '22:30',
+    protection: 'kondom',
+    protectionIssue: false,
+    mood: 'romantis',
+    notes: 'Masa subur, hubungan intim aman.',
+    createdAt: '2026-09-26T22:30:00Z'
+  },
+  {
+    id: 'intimate-5',
+    date: '2026-09-28',
+    time: '23:30',
+    protection: 'kondom',
+    protectionIssue: false,
+    mood: 'romantis',
+    notes: 'Hari ovulasi, ekstra protektif dan aman.',
+    createdAt: '2026-09-28T23:30:00Z'
+  },
+  {
+    id: 'intimate-6',
+    date: '2026-10-04',
+    time: '21:30',
+    protection: 'kondom',
+    protectionIssue: false,
+    mood: 'hangat',
+    notes: 'Momen intim berdua yang manis.',
+    createdAt: '2026-10-04T21:30:00Z'
+  },
+  {
+    id: 'intimate-7',
+    date: '2026-10-07',
+    time: '22:00',
+    protection: 'kondom',
+    protectionIssue: false,
+    mood: 'romantis',
+    notes: 'Momen berdua hangat dan aman.',
+    createdAt: '2026-10-07T22:00:00Z'
+  },
+  {
+    id: 'intimate-8',
+    date: '2026-10-11',
+    time: '23:00',
+    protection: 'kondom',
+    protectionIssue: false,
+    mood: 'hangat',
+    notes: 'Momen intim sebelum siklus haid.',
+    createdAt: '2026-10-11T23:00:00Z'
   }
 ];
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Sparkles,
@@ -9,7 +9,11 @@ import {
   Shuffle,
   ExternalLink,
   MapPin,
-  Trash2
+  Trash2,
+  Search,
+  X,
+  RotateCcw,
+  ListFilter
 } from 'lucide-react';
 import { CloseButton } from '../common/CloseButton';
 import { WishlistPlace, WishlistDrink, PinCategory, AppSettings, MemoryPin } from '../../types';
@@ -44,6 +48,73 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
   onUpdateDrink
 }) => {
   const [activeTab, setActiveTab] = useState<'tempat' | 'rekomendasi' | 'minuman' | 'roulette'>('tempat');
+
+  // Filter & Sort State
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<'newest' | 'priority' | 'budget_asc' | 'budget_desc' | 'name_asc'>('newest');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'unvisited' | 'visited'>('all');
+  const [filterCreator, setFilterCreator] = useState<'all' | 'Soffie' | 'Savero' | 'Berdua'>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [filterSearch, setFilterSearch] = useState<string>('');
+
+  const availableCategories = useMemo(() => {
+    const cats = new Set<string>();
+    places.forEach((p) => {
+      if (p.category) cats.add(p.category);
+    });
+    return Array.from(cats);
+  }, [places]);
+
+  const filteredPlaces = useMemo(() => {
+    const result = places.filter((p) => {
+      if (filterStatus === 'unvisited' && p.isVisited) return false;
+      if (filterStatus === 'visited' && !p.isVisited) return false;
+      if (filterCreator !== 'all' && p.requestedBy !== filterCreator) return false;
+      if (filterCategory !== 'all' && p.category !== filterCategory) return false;
+      if (filterSearch.trim()) {
+        const q = filterSearch.toLowerCase().trim();
+        const matchName = p.name.toLowerCase().includes(q);
+        const matchArea = p.area.toLowerCase().includes(q);
+        const matchNotes = p.notes ? p.notes.toLowerCase().includes(q) : false;
+        if (!matchName && !matchArea && !matchNotes) return false;
+      }
+      return true;
+    });
+
+    return [...result].sort((a, b) => {
+      if (sortBy === 'priority') {
+        const weight: Record<string, number> = { tinggi: 3, sedang: 2, rendah: 1 };
+        return (weight[b.priority] || 0) - (weight[a.priority] || 0);
+      }
+      if (sortBy === 'budget_asc') {
+        const weight: Record<string, number> = { murah: 1, rendah: 1, sedang: 2, mewah: 3, tinggi: 3 };
+        return (weight[a.budgetEstimate] || 2) - (weight[b.budgetEstimate] || 2);
+      }
+      if (sortBy === 'budget_desc') {
+        const weight: Record<string, number> = { murah: 1, rendah: 1, sedang: 2, mewah: 3, tinggi: 3 };
+        return (weight[b.budgetEstimate] || 2) - (weight[a.budgetEstimate] || 2);
+      }
+      if (sortBy === 'name_asc') {
+        return a.name.localeCompare(b.name, 'id');
+      }
+      return (b.createdAt || '').localeCompare(a.createdAt || '');
+    });
+  }, [places, filterStatus, filterCreator, filterCategory, filterSearch, sortBy]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterStatus !== 'all') count++;
+    if (filterCreator !== 'all') count++;
+    if (filterCategory !== 'all') count++;
+    if (filterSearch.trim() !== '') count++;
+    if (sortBy !== 'newest') count++;
+    return count;
+  }, [filterStatus, filterCreator, filterCategory, filterSearch, sortBy]);
+
+  const isFilterActive = activeFilterCount > 0;
+
+  const unvisitedCount = useMemo(() => places.filter((p) => !p.isVisited).length, [places]);
+  const visitedCount = useMemo(() => places.filter((p) => p.isVisited).length, [places]);
 
   // Roulette State
   const [rouletteCategory, setRouletteCategory] = useState<string>('all');
@@ -219,65 +290,136 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
     .filter((d) => d.type === 'kopi' && d.status === 'sudah_coba')
     .sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
+  const getCategoryMeta = (cat: string) => {
+    switch (cat) {
+      case 'restoran': return { icon: '🍽️', label: 'Restoran' };
+      case 'kafe': return { icon: '☕', label: 'Kafe' };
+      case 'bioskop': return { icon: '🎬', label: 'Bioskop' };
+      case 'rekreasi': return { icon: '🎡', label: 'Rekreasi' };
+      case 'hotel':
+      case 'motel': return { icon: '🏨', label: 'Hotel' };
+      case 'pantai': return { icon: '🌊', label: 'Pantai' };
+      case 'gunung': return { icon: '⛰️', label: 'Gunung' };
+      case 'taman': return { icon: '🌳', label: 'Taman' };
+      case 'rumah': return { icon: '🏠', label: 'Rumah' };
+      case 'kos': return { icon: '🏡', label: 'Kos' };
+      case 'jalan': return { icon: '🚗', label: 'Jalan' };
+      default: return { icon: '📍', label: cat };
+    }
+  };
+
+  const getBudgetSymbol = (budget?: string) => {
+    if (budget === 'murah' || budget === 'rendah') return '$';
+    if (budget === 'sedang') return '$$';
+    if (budget === 'mewah' || budget === 'tinggi') return '$$$';
+    return '$$';
+  };
+
+  const renderPriorityLamp = (priority: string) => {
+    if (priority === 'tinggi') {
+      return (
+        <span
+          className="relative flex h-2.5 w-2.5 items-center justify-center shrink-0"
+          title="Prioritas: Tinggi"
+        >
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.95)]" />
+        </span>
+      );
+    }
+    if (priority === 'sedang') {
+      return (
+        <span
+          className="relative flex h-2.5 w-2.5 items-center justify-center shrink-0"
+          title="Prioritas: Sedang"
+        >
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.95)]" />
+        </span>
+      );
+    }
+    return (
+      <span
+        className="relative flex h-2.5 w-2.5 items-center justify-center shrink-0"
+        title="Prioritas: Rendah"
+      >
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.95)]" />
+      </span>
+    );
+  };
+
   return (
     <section
       id="wishlist-section"
-      className="min-h-[70vh] bg-[#fffaf0] px-3.5 py-5 transition-colors dark:bg-[#21151a] sm:px-5 sm:py-9"
+      className="min-h-[70vh] bg-[#fffaf0] px-3.5 py-4 transition-colors dark:bg-[#21151a] sm:px-5 sm:py-7"
     >
       <div className="mx-auto max-w-5xl">
-        {/* COMPACT 3D CLAY HEADER & NAVIGATION DOCK */}
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="mb-0.5 flex items-center gap-1.5 text-[10px] font-black tracking-[0.18em] uppercase text-[#b84661] dark:text-rose-300">
+        {/* HEADER WITH CHIBI BERDUA & NAVIGATION DOCK */}
+        <div className="mb-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3 text-left">
+            <div className="min-w-0 flex-1">
+              <div className="mb-0.5 flex items-center gap-1.5 text-[9.5px] font-black tracking-[0.16em] uppercase text-[#b84661] dark:text-rose-300">
                 <Compass className="h-3 w-3" />
                 <span>RENCANA KENCAN</span>
               </div>
-              <h2 className="text-xl font-black tracking-tight text-[#4a1623] dark:text-rose-50 sm:text-3xl">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-[#4a1623] dark:text-rose-50">
                 Wishlist Kita
               </h2>
+              <p className="mt-0.5 max-w-md text-[11px] sm:text-xs leading-relaxed text-[#5c2432] dark:text-rose-200">
+                Daftar tempat impian, kuliner, dan agenda jalan-jalan berdua.
+              </p>
+
+              {/* Action buttons */}
+              <div className="mt-2.5 flex items-center gap-2">
+                {activeTab === 'tempat' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundManager.playTap();
+                      setEditingPlace(null);
+                      setPlaceForm((f) => ({ ...f, name: '', notes: '', mapUrl: '', requestedBy: activeProfile }));
+                      setIsNewPlaceOpen(true);
+                    }}
+                    className="flex items-center gap-1 rounded-full bg-gradient-to-r from-[#FF5C77] to-[#d9386a] px-3.5 py-1 text-[10.5px] font-extrabold text-white shadow-2xs transition active:scale-95"
+                  >
+                    <Plus className="h-3 w-3 stroke-[2.75]" />
+                    <span>Tambah Tempat</span>
+                  </button>
+                )}
+                {activeTab === 'minuman' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundManager.playTap();
+                      setEditingDrink(null);
+                      setDrinkForm((f) => ({
+                        ...f,
+                        name: '',
+                        venueName: '',
+                        tastingNotes: '',
+                        forWhom: activeProfile,
+                        type: activeProfile === 'Savero' ? 'kopi' : 'matcha'
+                      }));
+                      setIsNewDrinkOpen(true);
+                    }}
+                    className="flex items-center gap-1 rounded-full bg-gradient-to-r from-[#FF5C77] to-[#d9386a] px-3.5 py-1 text-[10.5px] font-extrabold text-white shadow-2xs transition active:scale-95"
+                  >
+                    <Plus className="h-3 w-3 stroke-[2.75]" />
+                    <span>Tambah Minuman</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            {activeTab === 'tempat' && (
-              <button
-                type="button"
-                onClick={() => {
-                  soundManager.playTap();
-                  setEditingPlace(null);
-                  setPlaceForm((f) => ({ ...f, name: '', notes: '', mapUrl: '', requestedBy: activeProfile }));
-                  setIsNewPlaceOpen(true);
-                }}
-                className="flex items-center gap-1 rounded-full border border-white/40 bg-gradient-to-b from-[#ff6b98] to-[#d9386a] px-3.5 py-1.5 text-[11px] font-extrabold text-white shadow-md active:scale-95 sm:hidden"
-              >
-                <Plus className="h-3.5 w-3.5 stroke-[2.75]" />
-                <span>Tempat</span>
-              </button>
-            )}
-            {activeTab === 'minuman' && (
-              <button
-                type="button"
-                onClick={() => {
-                  soundManager.playTap();
-                  setEditingDrink(null);
-                  setDrinkForm((f) => ({
-                    ...f,
-                    name: '',
-                    venueName: '',
-                    tastingNotes: '',
-                    forWhom: activeProfile,
-                    type: activeProfile === 'Savero' ? 'kopi' : 'matcha'
-                  }));
-                  setIsNewDrinkOpen(true);
-                }}
-                className="flex items-center gap-1 rounded-full border border-white/40 bg-gradient-to-b from-[#ff6b98] to-[#d9386a] px-3.5 py-1.5 text-[11px] font-extrabold text-white shadow-md active:scale-95 sm:hidden"
-              >
-                <Plus className="h-3.5 w-3.5 stroke-[2.75]" />
-                <span>Minuman</span>
-              </button>
-            )}
+            <div className="shrink-0">
+              <img
+                src="/characters/berdua/Rushed Travel Prep Chaos.png"
+                alt="Rushed Travel Prep Chaos"
+                className="h-28 w-28 sm:h-36 sm:w-36 md:h-44 md:w-44 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
+              />
+            </div>
           </div>
 
-          {/* 3D Clay Segmented Tab Bar */}
+          {/* Compact Cute Segmented Tab Bar */}
           <div className="clay-pill-dock-3d grid grid-cols-4 gap-1 rounded-full p-1">
             <button
               type="button"
@@ -285,14 +427,14 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                 soundManager.playTap();
                 setActiveTab('tempat');
               }}
-              className={`flex items-center justify-center gap-1 rounded-full py-1.5 px-2 text-[11px] font-extrabold transition-all ${
+              className={`flex items-center justify-center gap-1 rounded-full py-1 px-1.5 text-[10.5px] font-extrabold transition-all ${
                 activeTab === 'tempat'
-                  ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-xs'
                   : 'text-[#753546] hover:text-[#4a1623] dark:text-rose-200/80'
               }`}
             >
               <span className="truncate">Tempat</span>
-              <span className="text-[9.5px] opacity-80">({places.length})</span>
+              <span className="text-[9px] opacity-80">({places.length})</span>
             </button>
 
             <button
@@ -301,9 +443,9 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                 soundManager.playTap();
                 setActiveTab('rekomendasi');
               }}
-              className={`flex items-center justify-center gap-1 rounded-full py-1.5 px-2 text-[11px] font-extrabold transition-all ${
+              className={`flex items-center justify-center gap-1 rounded-full py-1 px-1.5 text-[10.5px] font-extrabold transition-all ${
                 activeTab === 'rekomendasi'
-                  ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-xs'
                   : 'text-[#753546] hover:text-[#4a1623] dark:text-rose-200/80'
               }`}
             >
@@ -320,9 +462,9 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                 soundManager.playTap();
                 setActiveTab('minuman');
               }}
-              className={`flex items-center justify-center gap-1 rounded-full py-1.5 px-2 text-[11px] font-extrabold transition-all ${
+              className={`flex items-center justify-center gap-1 rounded-full py-1 px-1.5 text-[10.5px] font-extrabold transition-all ${
                 activeTab === 'minuman'
-                  ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-xs'
                   : 'text-[#753546] hover:text-[#4a1623] dark:text-rose-200/80'
               }`}
             >
@@ -335,13 +477,13 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                 soundManager.playTap();
                 setActiveTab('roulette');
               }}
-              className={`flex items-center justify-center gap-1 rounded-full py-1.5 px-2 text-[11px] font-extrabold transition-all ${
+              className={`flex items-center justify-center gap-1 rounded-full py-1 px-1.5 text-[10.5px] font-extrabold transition-all ${
                 activeTab === 'roulette'
-                  ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-sm'
+                  ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-xs'
                   : 'text-[#753546] hover:text-[#4a1623] dark:text-rose-200/80'
               }`}
             >
-              <Shuffle className="h-3 w-3 shrink-0" />
+              <Shuffle className="h-2.5 w-2.5 shrink-0" />
               <span className="truncate">Acak</span>
             </button>
           </div>
@@ -349,139 +491,485 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
 
         {/* TAB 1: WISHLIST TEMPAT */}
         {activeTab === 'tempat' && (
-          <div className="space-y-4">
-            <div className="hidden sm:flex sm:justify-end">
-              <button
-                type="button"
-                onClick={() => {
-                  soundManager.playTap();
-                  setEditingPlace(null);
-                  setPlaceForm((form) => ({ ...form, name: '', notes: '', mapUrl: '', requestedBy: activeProfile }));
-                  setIsNewPlaceOpen(true);
-                }}
-                className="flex items-center gap-1.5 rounded-full border border-white/40 bg-gradient-to-b from-[#ff6b98] to-[#d9386a] px-4 py-2 text-xs font-extrabold text-white shadow-md transition hover:-translate-y-0.5 active:scale-95"
-              >
-                <Plus className="h-4 w-4 stroke-[2.5]" />
-                <span>Tambah Wishlist Tempat</span>
-              </button>
-            </div>
+          <div className="space-y-3">
+            {/* COMPACT CONTROLS BAR: COUNT, SEARCH & LISTFILTER ICON */}
+            <div className="relative flex items-center justify-between gap-2 px-1 py-0.5">
+              {/* Left: Place Count & Active Filter Indicator */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-[#57202c] dark:text-rose-100">
+                  {filteredPlaces.length} Tempat
+                </span>
 
-            {places.length === 0 ? (
-              <div className="clay-card-3d rounded-[2rem] px-5 py-10 text-center">
-                <Sparkles className="mx-auto mb-2 h-7 w-7 text-rose-400" />
-                <h3 className="text-sm font-black text-[#57202c] dark:text-rose-50">
-                  Wishlist masih kosong
-                </h3>
-                <p className="mt-0.5 text-xs text-[#8c4f60] dark:text-rose-200/75">
-                  Simpan kafe, penginapan, atau tempat yang ingin kalian kunjungi.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {places.map((place) => (
-                  <div
-                    key={place.id}
-                    className={`clay-card-3d group relative flex flex-col justify-between rounded-[1.75rem] p-3.5 transition-all hover:-translate-y-0.5 ${
-                      place.isVisited ? 'opacity-70' : ''
-                    }`}
+                {isFilterActive && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundManager.playTap();
+                      setFilterStatus('all');
+                      setFilterCreator('all');
+                      setFilterCategory('all');
+                      setFilterSearch('');
+                      setSortBy('newest');
+                    }}
+                    className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[9.5px] font-extrabold text-rose-600 dark:bg-rose-400/15 dark:text-rose-300 hover:bg-rose-500/20 transition active:scale-95"
+                    title="Klik untuk reset semua filter"
                   >
-                    <div>
-                      <div className="mb-2 flex items-center justify-between gap-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className="rounded-full bg-rose-500/15 px-2.5 py-0.5 text-[9.5px] font-black uppercase tracking-wider text-[#9c2848] dark:bg-rose-400/20 dark:text-rose-200">
-                            {place.category}
-                          </span>
-                          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[9px] font-extrabold uppercase text-rose-700 dark:bg-rose-950/80 dark:text-rose-200">
-                            {place.priority}
-                          </span>
-                        </div>
+                    <span>{activeFilterCount} filter aktif</span>
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                )}
+              </div>
 
-                        <div className="flex items-center gap-1">
-                          {place.mapUrl && (
-                            <a
-                              href={place.mapUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="clay-subcard-3d flex h-6.5 w-6.5 items-center justify-center rounded-full text-rose-500 transition hover:scale-105 active:scale-90 dark:text-rose-200"
-                              title="Buka Google Maps"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => openPlaceEditor(place)}
-                            className="clay-subcard-3d flex h-6.5 w-6.5 items-center justify-center rounded-full text-[#7a3444] transition hover:scale-105 active:scale-90 dark:text-rose-100"
-                            title="Ubah detail"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
-                          {onDeletePlace && (
+              {/* Right: Search Input & ListFilter Button */}
+              <div className="flex items-center gap-1.5">
+                {/* Compact Search Input */}
+                <div className="relative flex items-center">
+                  <Search className="absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-rose-400" />
+                  <input
+                    type="text"
+                    value={filterSearch}
+                    onChange={(e) => setFilterSearch(e.target.value)}
+                    placeholder="Cari tempat..."
+                    className="h-8 w-28 sm:w-44 rounded-full border border-rose-200/60 bg-white/90 py-1 pl-7 pr-6 text-[10.5px] font-bold text-[#4a1623] placeholder-rose-300 outline-none focus:border-rose-400 dark:border-white/10 dark:bg-[#200508]/80 dark:text-rose-100 dark:placeholder-rose-400/50 transition-all focus:w-36 sm:focus:w-52"
+                  />
+                  {filterSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setFilterSearch('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* THE LISTFILTER ICON BUTTON */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundManager.playTap();
+                    setIsFilterOpen(!isFilterOpen);
+                  }}
+                  title="Filter & Urutkan"
+                  className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition active:scale-90 ${
+                    isFilterOpen || isFilterActive
+                      ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-2xs'
+                      : 'border border-rose-200/60 bg-white/90 text-[#7a3444] hover:bg-rose-100/60 shadow-2xs dark:border-white/10 dark:bg-[#200508]/80 dark:text-rose-200'
+                  }`}
+                >
+                  <ListFilter className="h-4 w-4 stroke-[2.25]" />
+                  {activeFilterCount > 0 && !isFilterOpen && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[8.5px] font-black text-white shadow-xs">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* POPUP / POPOVER CARD: FILTER & SORT */}
+              <AnimatePresence>
+                {isFilterOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]"
+                      onClick={() => setIsFilterOpen(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                      transition={{ duration: 0.16 }}
+                      className="clay-card-3d absolute right-0 top-10 z-50 w-[310px] sm:w-[360px] rounded-2xl p-3.5 shadow-xl border border-rose-200/60 dark:border-white/10 dark:bg-[#1f070f] space-y-3"
+                    >
+                      {/* Popover Header */}
+                      <div className="flex items-center justify-between border-b border-rose-200/40 pb-2 dark:border-white/10">
+                        <div className="flex items-center gap-1.5 text-xs font-black text-[#57202c] dark:text-rose-100">
+                          <ListFilter className="h-3.5 w-3.5 text-rose-500" />
+                          <span>Filter & Urutkan</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isFilterActive && (
                             <button
                               type="button"
-                              onClick={() => setPlaceToDelete(place)}
-                              className="clay-subcard-3d flex h-6.5 w-6.5 items-center justify-center rounded-full text-rose-500 transition hover:bg-rose-500 hover:text-white active:scale-90 dark:text-rose-300"
-                              title="Hapus"
+                              onClick={() => {
+                                soundManager.playTap();
+                                setFilterStatus('all');
+                                setFilterCreator('all');
+                                setFilterCategory('all');
+                                setFilterSearch('');
+                                setSortBy('newest');
+                              }}
+                              className="text-[9.5px] font-extrabold text-rose-500 hover:text-rose-600 underline dark:text-rose-300"
                             >
-                              <Trash2 className="h-3 w-3" />
+                              Reset
                             </button>
                           )}
+                          <CloseButton onClick={() => setIsFilterOpen(false)} />
                         </div>
                       </div>
 
-                      <h4 className="line-clamp-1 text-base font-black tracking-tight text-[#4a1623] dark:text-rose-50">
-                        {place.name}
-                      </h4>
-                      <div className="mt-0.5 flex items-center gap-1 text-[11px] font-bold text-[#8c4f60] dark:text-rose-200/75">
-                        <MapPin className="h-3 w-3 shrink-0 text-rose-500 dark:text-rose-300" />
-                        <span className="truncate">
-                          {place.area} • Budget {place.budgetEstimate}
+                      {/* 1. Sort Options */}
+                      <div>
+                        <span className="mb-1 block text-[9.5px] font-black uppercase tracking-wider text-[#9c4c60] dark:text-rose-300/80">
+                          Urutkan Berdasarkan
                         </span>
-                      </div>
-
-                      {place.notes && (
-                        <p className="clay-subcard-3d mt-2 line-clamp-2 rounded-2xl px-2.5 py-1.5 text-[11px] font-medium leading-relaxed text-[#5c2432] dark:text-rose-100/85">
-                          {place.notes}
-                        </p>
-                      )}
-
-                      {place.tags && place.tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {place.tags.slice(0, 3).map((tag, idx) => (
-                            <span
-                              key={idx}
-                              className="clay-subcard-3d rounded-full px-2 py-0.5 text-[9px] font-bold text-[#8c4053] dark:text-rose-200"
+                        <div className="grid grid-cols-2 gap-1 text-[10px] font-bold">
+                          {[
+                            { id: 'newest', label: '🕒 Terbaru' },
+                            { id: 'priority', label: '🔥 Prioritas Tertinggi' },
+                            { id: 'budget_asc', label: '💲 Budget Terendah' },
+                            { id: 'budget_desc', label: '💎 Budget Tertinggi' },
+                            { id: 'name_asc', label: '🔤 Nama (A - Z)' }
+                          ].map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                soundManager.playTap();
+                                setSortBy(item.id as any);
+                              }}
+                              className={`rounded-xl py-1 px-2 text-left transition active:scale-95 ${
+                                sortBy === item.id
+                                  ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-2xs font-extrabold'
+                                  : 'bg-rose-50/80 text-[#7a3444] hover:bg-rose-100/70 dark:bg-white/5 dark:text-rose-200'
+                              }`}
                             >
-                              #{tag}
-                            </span>
+                              {item.label}
+                            </button>
                           ))}
                         </div>
-                      )}
-                    </div>
+                      </div>
 
-                    <div className="mt-3 flex items-center justify-between border-t border-rose-200/45 pt-2.5 dark:border-rose-200/10">
-                      <span className="text-[10px] font-bold text-[#8c4f60] dark:text-rose-200/75">
-                        Oleh: <strong className="text-[#57202c] dark:text-rose-100">{place.requestedBy}</strong>
-                      </span>
+                      {/* 2. Status Kunjungan */}
+                      <div>
+                        <span className="mb-1 block text-[9.5px] font-black uppercase tracking-wider text-[#9c4c60] dark:text-rose-300/80">
+                          Status Kunjungan
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {[
+                            { id: 'all', label: `Semua (${places.length})` },
+                            { id: 'unvisited', label: `Belum (${unvisitedCount})` },
+                            { id: 'visited', label: `Sudah (${visitedCount})` }
+                          ].map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                soundManager.playTap();
+                                setFilterStatus(item.id as any);
+                              }}
+                              className={`flex-1 rounded-xl py-1 text-center text-[10px] font-extrabold transition active:scale-95 ${
+                                filterStatus === item.id
+                                  ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-2xs'
+                                  : 'bg-rose-50/80 text-[#7a3444] hover:bg-rose-100/70 dark:bg-white/5 dark:text-rose-200'
+                              }`}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
+                      {/* 3. Pengusul (Chibi Avatars) */}
+                      <div>
+                        <span className="mb-1 block text-[9.5px] font-black uppercase tracking-wider text-[#9c4c60] dark:text-rose-300/80">
+                          Pengusul Rencana
+                        </span>
+                        <div className="grid grid-cols-4 gap-1 text-[9.5px] font-extrabold">
+                          {[
+                            { id: 'all', label: 'Semua' },
+                            { id: 'Soffie', label: 'Soffie', img: '/characters/expressions/soffie/gemas-sayang.png' },
+                            { id: 'Savero', label: 'Savero', img: '/characters/expressions/savero/bahagia.png' },
+                            { id: 'Berdua', label: 'Berdua' }
+                          ].map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => {
+                                soundManager.playTap();
+                                setFilterCreator(item.id as any);
+                              }}
+                              className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 px-1 transition active:scale-95 ${
+                                filterCreator === item.id
+                                  ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-2xs'
+                                  : 'bg-rose-50/80 text-[#7a3444] hover:bg-rose-100/70 dark:bg-white/5 dark:text-rose-200'
+                              }`}
+                            >
+                              {item.id === 'all' && <span className="text-sm">👥</span>}
+                              {item.id === 'Soffie' && (
+                                <img
+                                  src="/characters/expressions/soffie/gemas-sayang.png"
+                                  alt="Soffie"
+                                  className="h-5 w-5 rounded-full object-cover object-top scale-125"
+                                />
+                              )}
+                              {item.id === 'Savero' && (
+                                <img
+                                  src="/characters/expressions/savero/bahagia.png"
+                                  alt="Savero"
+                                  className="h-5 w-5 rounded-full object-cover object-top scale-125"
+                                />
+                              )}
+                              {item.id === 'Berdua' && (
+                                <div className="flex items-center -space-x-1.5">
+                                  <img
+                                    src="/characters/expressions/savero/bahagia.png"
+                                    alt=""
+                                    className="h-5 w-5 rounded-full object-cover object-top scale-125"
+                                  />
+                                  <img
+                                    src="/characters/expressions/soffie/gemas-sayang.png"
+                                    alt=""
+                                    className="h-5 w-5 rounded-full object-cover object-top scale-125"
+                                  />
+                                </div>
+                              )}
+                              <span>{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 4. Kategori */}
+                      <div>
+                        <span className="mb-1 block text-[9.5px] font-black uppercase tracking-wider text-[#9c4c60] dark:text-rose-300/80">
+                          Kategori
+                        </span>
+                        <div className="flex flex-wrap gap-1 text-[9.5px] font-extrabold">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              soundManager.playTap();
+                              setFilterCategory('all');
+                            }}
+                            className={`rounded-lg py-1 px-2 transition active:scale-95 ${
+                              filterCategory === 'all'
+                                ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-2xs'
+                                : 'bg-rose-50/80 text-[#7a3444] hover:bg-rose-100/70 dark:bg-white/5 dark:text-rose-200'
+                            }`}
+                          >
+                            Semua
+                          </button>
+                          {availableCategories.map((cat) => {
+                            const meta = getCategoryMeta(cat);
+                            return (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => {
+                                  soundManager.playTap();
+                                  setFilterCategory(filterCategory === cat ? 'all' : cat);
+                                }}
+                                className={`inline-flex items-center gap-1 rounded-lg py-1 px-2 transition active:scale-95 ${
+                                  filterCategory === cat
+                                    ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-2xs'
+                                    : 'bg-rose-50/80 text-[#7a3444] hover:bg-rose-100/70 dark:bg-white/5 dark:text-rose-200'
+                                }`}
+                              >
+                                <span>{meta.icon}</span>
+                                <span>{meta.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Selesai Button */}
                       <button
                         type="button"
                         onClick={() => {
                           soundManager.playPop();
-                          onMarkPlaceVisited(place);
+                          setIsFilterOpen(false);
                         }}
-                        className={`flex items-center gap-1 rounded-full px-3 py-1 text-[10.5px] font-extrabold transition active:scale-95 ${
-                          place.isVisited
-                            ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
-                            : 'clay-subcard-3d text-[#8c2840] dark:text-rose-100'
-                        }`}
+                        className="w-full rounded-xl bg-gradient-to-r from-[#FF5C77] to-[#d9386a] py-2 text-center text-xs font-black text-white shadow-xs transition active:scale-95"
                       >
-                        <CheckCircle className="h-3 w-3" />
-                        <span>{place.isVisited ? 'Sudah Dikunjungi' : 'Tandai Sudah'}</span>
+                        Terapkan Filter
                       </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {filteredPlaces.length === 0 ? (
+              <div className="clay-card-3d rounded-2xl px-5 py-8 text-center">
+                <Sparkles className="mx-auto mb-2 h-6 w-6 text-rose-400" />
+                <h3 className="text-xs font-black text-[#57202c] dark:text-rose-50">
+                  {places.length === 0 ? 'Wishlist masih kosong' : 'Tidak ada tempat yang cocok'}
+                </h3>
+                <p className="mt-0.5 text-[11px] text-[#8c4f60] dark:text-rose-200/75">
+                  {places.length === 0
+                    ? 'Simpan kafe, penginapan, atau tempat yang ingin kalian kunjungi bersama.'
+                    : 'Coba ubah filter atau kata kunci pencarian Anda.'}
+                </p>
+                {places.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      soundManager.playTap();
+                      setFilterStatus('all');
+                      setFilterCreator('all');
+                      setFilterCategory('all');
+                      setFilterSearch('');
+                    }}
+                    className="mt-3 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#FF5C77] to-[#d9386a] px-3.5 py-1 text-[10.5px] font-extrabold text-white shadow-2xs"
+                  >
+                    Reset Filter
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredPlaces.map((place) => {
+                  const catMeta = getCategoryMeta(place.category);
+
+                  return (
+                    <div
+                      key={place.id}
+                      className={`group relative flex flex-col justify-between rounded-2xl border border-rose-200/50 bg-white/90 p-3 shadow-2xs transition-all hover:-translate-y-0.5 hover:shadow-sm dark:border-white/10 dark:bg-[#200508]/90 ${
+                        place.isVisited ? 'opacity-65' : ''
+                      }`}
+                    >
+                      <div>
+                        {/* Top Meta & Actions Bar */}
+                        <div className="mb-1.5 flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-[#9c2848] dark:bg-rose-400/15 dark:text-rose-200">
+                              <span>{catMeta.icon}</span>
+                              <span>{catMeta.label}</span>
+                            </span>
+
+                            {/* Priority Glowing Lamp */}
+                            {renderPriorityLamp(place.priority)}
+                          </div>
+
+                          <div className="flex items-center gap-0.5">
+                            {place.mapUrl && (
+                              <a
+                                href={place.mapUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex h-6 w-6 items-center justify-center rounded-lg text-rose-400 hover:bg-rose-100/60 hover:text-rose-600 active:scale-90 dark:text-rose-300 dark:hover:bg-white/10 transition"
+                                title="Buka Google Maps"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => openPlaceEditor(place)}
+                              className="flex h-6 w-6 items-center justify-center rounded-lg text-[#7a3444] hover:bg-rose-100/60 hover:text-[#4a1623] active:scale-90 dark:text-rose-200 dark:hover:bg-white/10 transition"
+                              title="Ubah detail"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                            {onDeletePlace && (
+                              <button
+                                type="button"
+                                onClick={() => setPlaceToDelete(place)}
+                                className="flex h-6 w-6 items-center justify-center rounded-lg text-rose-400 hover:bg-rose-100/60 hover:text-rose-600 active:scale-90 dark:text-rose-300 dark:hover:bg-white/10 transition"
+                                title="Hapus"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Place Name & Location */}
+                        <h4 className="text-[13.5px] sm:text-sm font-black tracking-tight text-[#43252d] dark:text-rose-50 line-clamp-1">
+                          {place.name}
+                        </h4>
+                        <div className="mt-0.5 flex items-center gap-1.5 text-[10.5px] font-semibold text-[#8c4f60] dark:text-rose-200/80">
+                          <MapPin className="h-2.5 w-2.5 shrink-0 text-rose-500 dark:text-rose-400" />
+                          <span className="truncate">{place.area}</span>
+                          <span className="text-rose-300 dark:text-rose-700 font-bold">•</span>
+                          <span
+                            className="font-mono font-black tracking-wider text-emerald-600 dark:text-emerald-400 text-[11px]"
+                            title={
+                              place.budgetEstimate === 'murah'
+                                ? 'Budget Rendah ($)'
+                                : place.budgetEstimate === 'mewah'
+                                ? 'Budget Tinggi ($$$)'
+                                : 'Budget Sedang ($$)'
+                            }
+                          >
+                            {getBudgetSymbol(place.budgetEstimate)}
+                          </span>
+                        </div>
+
+                        {/* Cute Compact Notes Quote */}
+                        {place.notes && (
+                          <div className="mt-1.5 flex items-start gap-1 rounded-xl border border-rose-200/35 bg-rose-50/70 px-2 py-1 text-[10.5px] leading-snug text-[#5c2432] dark:border-white/5 dark:bg-white/[0.04] dark:text-rose-100/90">
+                            <span className="shrink-0 text-[11px] leading-none select-none">💬</span>
+                            <p className="line-clamp-2 italic font-medium">{place.notes}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Footer Row */}
+                      <div className="mt-2.5 flex items-center justify-between border-t border-rose-200/30 pt-1.5 dark:border-white/5">
+                        {/* Penanda Pengusul: Chibi Avatar */}
+                        <div className="flex items-center">
+                          {place.requestedBy === 'Berdua' ? (
+                            <div className="flex items-center -space-x-1.5" title="Diinginkan Berdua (Savero & Soffie)">
+                              <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-amber-50 shadow-xs dark:border-[#200508] dark:bg-amber-950/40">
+                                <img
+                                  src="/characters/expressions/savero/bahagia.png"
+                                  alt="Savero"
+                                  className="h-full w-full object-cover object-top scale-125"
+                                />
+                              </div>
+                              <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-rose-50 shadow-xs dark:border-[#200508] dark:bg-rose-950/40">
+                                <img
+                                  src="/characters/expressions/soffie/gemas-sayang.png"
+                                  alt="Soffie"
+                                  className="h-full w-full object-cover object-top scale-125"
+                                />
+                              </div>
+                            </div>
+                          ) : place.requestedBy === 'Savero' ? (
+                            <div className="flex items-center" title="Diinginkan Savero">
+                              <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-emerald-50 shadow-xs dark:border-[#200508] dark:bg-emerald-950/40">
+                                <img
+                                  src="/characters/expressions/savero/bahagia.png"
+                                  alt="Savero"
+                                  className="h-full w-full object-cover object-top scale-125"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center" title="Diinginkan Soffie">
+                              <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-rose-50 shadow-xs dark:border-[#200508] dark:bg-rose-950/40">
+                                <img
+                                  src="/characters/expressions/soffie/gemas-sayang.png"
+                                  alt="Soffie"
+                                  className="h-full w-full object-cover object-top scale-125"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            soundManager.playPop();
+                            onMarkPlaceVisited(place);
+                          }}
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-extrabold transition active:scale-95 ${
+                            place.isVisited
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25'
+                              : 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-2xs hover:shadow-xs'
+                          }`}
+                        >
+                          <CheckCircle className="h-2.5 w-2.5" />
+                          <span>{place.isVisited ? 'Sudah Dikunjungi' : 'Tandai Sudah'}</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -685,10 +1173,10 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                   onChange={(e) => setRouletteBudget(e.target.value)}
                   className="w-full rounded-2xl border border-rose-200/70 bg-white px-3 py-2 font-bold text-[#4a1623] dark:border-rose-200/15 dark:bg-[#1f070f] dark:text-rose-100"
                 >
-                  <option value="all">Semua</option>
-                  <option value="murah">Murah</option>
-                  <option value="sedang">Sedang</option>
-                  <option value="mewah">Mewah</option>
+                  <option value="all">Semua Budget</option>
+                  <option value="murah">$ Rendah</option>
+                  <option value="sedang">$$ Sedang</option>
+                  <option value="mewah">$$$ Tinggi</option>
                 </select>
               </div>
             </div>
@@ -801,9 +1289,9 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                         onChange={(e) => setPlaceForm({ ...placeForm, budgetEstimate: e.target.value as any })}
                         className="w-full rounded-xl border border-rose-200/80 bg-white px-2.5 py-2 font-bold dark:border-rose-200/15 dark:bg-[#1f070f]"
                       >
-                        <option value="murah">Murah</option>
-                        <option value="sedang">Sedang</option>
-                        <option value="mewah">Mewah</option>
+                        <option value="murah">$ Rendah</option>
+                        <option value="sedang">$$ Sedang</option>
+                        <option value="mewah">$$$ Tinggi</option>
                       </select>
                     </div>
 
@@ -814,9 +1302,9 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                         onChange={(e) => setPlaceForm({ ...placeForm, priority: e.target.value as any })}
                         className="w-full rounded-xl border border-rose-200/80 bg-white px-2.5 py-2 font-bold dark:border-rose-200/15 dark:bg-[#1f070f]"
                       >
-                        <option value="tinggi">Tinggi</option>
-                        <option value="sedang">Sedang</option>
-                        <option value="rendah">Rendah</option>
+                        <option value="tinggi">🔴 Tinggi</option>
+                        <option value="sedang">🟡 Sedang</option>
+                        <option value="rendah">🟢 Rendah</option>
                       </select>
                     </div>
 
@@ -827,9 +1315,9 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                         onChange={(e) => setPlaceForm({ ...placeForm, requestedBy: e.target.value as any })}
                         className="w-full rounded-xl border border-rose-200/80 bg-white px-2.5 py-2 font-bold dark:border-rose-200/15 dark:bg-[#1f070f]"
                       >
-                        <option value="Berdua">Berdua</option>
-                        <option value="Savero">Savero</option>
-                        <option value="Soffie">Soffie</option>
+                        <option value="Berdua">💕 Berdua</option>
+                        <option value="Soffie">🎀 Soffie</option>
+                        <option value="Savero">🌿 Savero</option>
                       </select>
                     </div>
                   </div>

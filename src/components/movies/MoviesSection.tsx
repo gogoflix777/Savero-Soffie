@@ -15,11 +15,13 @@ import {
   Layers,
   Clapperboard,
   ArrowUpDown,
+  ListFilter,
+  CheckCircle,
   X,
   Bookmark
 } from 'lucide-react';
 import { CloseButton } from '../common/CloseButton';
-import { MovieItem, ActorItem, MovieCollection, TvSeries, MemoryPin, AppSettings } from '../../types';
+import { MovieItem, MovieNightPlan, ActorItem, MovieCollection, TvSeries, MemoryPin, AppSettings } from '../../types';
 import { HeartRating } from '../common/AnimatedIcons';
 import { getTmdbApiKey } from '../../config/env';
 import {
@@ -46,6 +48,9 @@ interface MoviesSectionProps {
   pins: MemoryPin[];
   settings: AppSettings;
   activeProfile: 'Savero' | 'Soffie';
+  movieNightPlan?: MovieNightPlan | null;
+  onSaveMovieNightPlan?: (plan: MovieNightPlan | null) => void;
+  onNavigateToHome?: () => void;
   onAddMovie: (movie: MovieItem) => Promise<void>;
   onUpdateMovie: (movie: MovieItem) => Promise<void>;
   onRemoveMovie: (movie: MovieItem) => Promise<void>;
@@ -64,6 +69,9 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   catalogSyncError,
   collections,
   activeProfile,
+  movieNightPlan,
+  onSaveMovieNightPlan,
+  onNavigateToHome,
   onAddMovie,
   onRemoveMovie,
   onAddTvSeries,
@@ -300,12 +308,74 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
     }
   };
 
-  // Movie Night Planner State
-  const [plannedMovieId, setPlannedMovieId] = useState('');
-  const [plannedDate, setPlannedDate] = useState('2026-10-18T20:30');
-  const [plannedSnack, setPlannedSnack] = useState('Sate Taichan Pleburan + Popcorn Manis');
-  const [plannedDrink, setPlannedDrink] = useState('Iced Matcha Latte Soffie & Kopi V60 Savero');
+  // Dynamic default date (e.g. today at 20:00) without hardcoded dates
+  const getDynamicDefaultDate = () => {
+    const d = new Date();
+    d.setHours(20, 0, 0, 0);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T20:00`;
+  };
+
+  // Movie Night Planner State - Fully dynamic from Supabase / Props
+  const [plannedMovieId, setPlannedMovieId] = useState<string>(
+    movieNightPlan?.movieId || movies[0]?.id || ''
+  );
+  const [plannedDate, setPlannedDate] = useState<string>(
+    movieNightPlan?.scheduledAt || getDynamicDefaultDate()
+  );
+  const [plannedSnack, setPlannedSnack] = useState<string>(
+    movieNightPlan?.snacks || ''
+  );
+  const [plannedDrink, setPlannedDrink] = useState<string>(
+    movieNightPlan?.drinks || ''
+  );
+  const [plannedBy, setPlannedBy] = useState<'Savero' | 'Soffie' | 'Berdua'>(
+    movieNightPlan?.plannedBy || activeProfile || 'Berdua'
+  );
+  const [confirmNotice, setConfirmNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (movieNightPlan) {
+      if (movieNightPlan.movieId) setPlannedMovieId(movieNightPlan.movieId);
+      if (movieNightPlan.scheduledAt) setPlannedDate(movieNightPlan.scheduledAt);
+      if (movieNightPlan.snacks) setPlannedSnack(movieNightPlan.snacks);
+      if (movieNightPlan.drinks) setPlannedDrink(movieNightPlan.drinks);
+      if (movieNightPlan.plannedBy) setPlannedBy(movieNightPlan.plannedBy);
+    }
+  }, [movieNightPlan]);
+
   const plannedMovie = movies.find((movie) => movie.id === plannedMovieId) ?? movies[0];
+
+  const handleConfirmPlan = () => {
+    const targetMovie = movies.find((m) => m.id === plannedMovieId) ?? movies[0];
+    const newPlan: MovieNightPlan = {
+      id: movieNightPlan?.id || `mnp-${Date.now()}`,
+      movieId: targetMovie?.id || '',
+      movieTitle: targetMovie?.title || 'Film Kencan',
+      posterUrl: targetMovie?.posterUrl,
+      scheduledAt: plannedDate,
+      snacks: plannedSnack,
+      drinks: plannedDrink,
+      plannedBy: plannedBy,
+      confirmedBySavero: true,
+      confirmedBySoffie: true,
+      status: 'confirmed',
+      createdAt: movieNightPlan?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    soundManager.playSuccess();
+    onSaveMovieNightPlan?.(newPlan);
+    setConfirmNotice('🎉 Jadwal kencan nonton berhasil dikonfirmasi! Hasilnya sekarang terlihat di Beranda.');
+    setTimeout(() => setConfirmNotice(null), 7000);
+  };
+
+  const handleCancelPlan = () => {
+    soundManager.playPop();
+    onSaveMovieNightPlan?.(null);
+    setConfirmNotice('Jadwal kencan nonton telah dibatalkan.');
+    setTimeout(() => setConfirmNotice(null), 3500);
+  };
 
   const filteredMovies = useMemo(() => {
     return movies
@@ -349,24 +419,37 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
   return (
     <section id="film-aktor" className="min-h-[70vh] bg-[#fffaf0] px-3.5 py-5 transition-colors dark:bg-[#21151a] sm:px-5 sm:py-9">
       <div className="mx-auto max-w-5xl">
-        {/* COMPACT HEADER & 3D CLAY TABS */}
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="mb-0.5 flex items-center gap-1.5 text-[10px] font-black tracking-[0.18em] uppercase text-[#b84661] dark:text-rose-300">
-              <Film className="h-3 w-3" />
-              <span>SINEMA & FILMOGRAFI</span>
+        {/* COMPACT HEADER WITH CHIBI & 3D CLAY TABS */}
+        <div className="mb-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3 text-left">
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-rose-200/80 bg-rose-50/80 px-2.5 py-0.5 text-[9.5px] font-bold tracking-[0.16em] uppercase text-[#b84661] shadow-2xs backdrop-blur-xs dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
+                <Film className="h-3 w-3" />
+                <span>SINEMA & FILMOGRAFI</span>
+              </div>
+              <h2 className="text-xl font-black tracking-tight text-[#4a1623] dark:text-rose-50 sm:text-3xl">
+                Film & Movie Night
+              </h2>
+              <p className="text-xs text-[#8c5a67] dark:text-rose-300/80 sm:text-sm">
+                Koleksi film, serial favorit, dan rencana kencan nonton kita berdua 🎬🍿
+              </p>
             </div>
-            <h2 className="text-xl font-black tracking-tight text-[#4a1623] dark:text-rose-50 sm:text-3xl">
-              Film & Movie Night
-            </h2>
+            <div className="shrink-0">
+              <img
+                src="/characters/berdua/Cozy Chibi Cinema Date.png"
+                alt="Cozy Chibi Cinema Date"
+                className="h-28 w-28 sm:h-36 sm:w-36 md:h-44 md:w-44 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+              />
+            </div>
           </div>
 
-          <div className="clay-pill-dock-3d grid grid-cols-5 gap-1 rounded-full p-1">
+          <div className="clay-pill-dock-3d grid grid-cols-5 gap-0.5 sm:gap-1 rounded-full p-1 w-full max-w-md">
             {[
               { id: 'film', label: 'Film', count: movies.length },
               { id: 'serial', label: 'Serial', count: tvSeries.length },
               { id: 'aktor', label: 'Aktor', count: actors.length },
-              { id: 'koleksi', label: 'Franchise', count: collections.length },
+              { id: 'koleksi', label: 'Koleksi', count: collections.length },
               { id: 'planner', label: 'Nonton' }
             ].map((tab) => {
               const active = activeTab === tab.id;
@@ -378,14 +461,14 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                     soundManager.playTap();
                     setActiveTab(tab.id as any);
                   }}
-                  className={`flex items-center justify-center gap-0.5 rounded-full py-1.5 px-2 text-[10.5px] font-extrabold transition-all ${
+                  className={`flex items-center justify-center gap-0.5 rounded-full py-1 sm:py-1.5 px-1 sm:px-2 text-[9.5px] sm:text-[10.5px] font-extrabold transition-all ${
                     active
-                      ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-sm'
+                      ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-xs'
                       : 'text-[#753546] hover:text-[#4a1623] dark:text-rose-200/80'
                   }`}
                 >
                   <span className="truncate">{tab.label}</span>
-                  {tab.count !== undefined && <span className="text-[9px] opacity-80">({tab.count})</span>}
+                  {tab.count !== undefined && <span className="text-[8.5px] opacity-80">({tab.count})</span>}
                 </button>
               );
             })}
@@ -393,65 +476,63 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
         </div>
 
         {metadataSyncState === 'missing-key' && (
-          <p className="mb-3 rounded-2xl bg-amber-100/70 px-3.5 py-2.5 text-[11px] font-bold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          <p className="mb-3 rounded-2xl bg-amber-100/70 px-3.5 py-2 text-[10.5px] font-bold text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
             TMDB API key belum dikonfigurasi. Tambahkan <code>VITE_TMDB_API_KEY</code> ke file <code>.env</code> agar poster & sinopsis aktif.
           </p>
         )}
         {catalogSyncError && (
-          <p className="mb-3 rounded-2xl bg-rose-100/70 px-3.5 py-2.5 text-[11px] font-bold text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
+          <p className="mb-3 rounded-2xl bg-rose-100/70 px-3.5 py-2 text-[10.5px] font-bold text-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
             Sinkronisasi katalog gagal: {catalogSyncError}
           </p>
         )}
 
-        {/* COMPACT TMDB SEARCH HUB */}
-        <div className="clay-card-3d mb-5 rounded-[2rem] p-3.5">
-          <div className="mb-2.5 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-xs">
-                <Clapperboard className="h-3.5 w-3.5" />
+        {/* COMPACT & CLEAN TMDB SEARCH HUB */}
+        <div className="clay-card-3d mb-3 rounded-2xl p-2.5 sm:p-3">
+          <div className="mb-2 flex items-center justify-between gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-2xs">
+                <Clapperboard className="h-3 w-3" />
               </span>
-              <div className="min-w-0 text-left">
-                <h3 className="truncate text-xs font-black text-[#4a1623] dark:text-rose-50 sm:text-sm">
-                  Cari Film, Serial & Aktor (TMDB)
-                </h3>
-              </div>
+              <h3 className="text-xs font-black text-[#4a1623] dark:text-rose-50">
+                Cari TMDB
+              </h3>
+              <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-black text-emerald-700 dark:text-emerald-300">
+                <span className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+                {catalogLoading ? 'Mencari...' : 'Aktif'}
+              </span>
             </div>
-            <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[8.5px] font-black text-emerald-700 dark:text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              {catalogLoading ? 'Mencari...' : 'Aktif'}
-            </span>
-          </div>
 
-          <div className="mb-2 flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
-            {[
-              { id: 'movie', label: 'Film', icon: Film },
-              { id: 'tv', label: 'Serial TV', icon: Tv },
-              { id: 'person', label: 'Aktor', icon: Users }
-            ].map((type) => {
-              const active = catalogType === type.id;
-              const Icon = type.icon;
-              return (
-                <button
-                  key={type.id}
-                  type="button"
-                  onClick={() => {
-                    soundManager.playTap();
-                    setCatalogType(type.id as any);
-                    setCatalogResults([]);
-                    setCatalogKind(null);
-                    setCatalogError('');
-                  }}
-                  className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[10px] font-extrabold transition-all active:scale-95 ${
-                    active
-                      ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-xs'
-                      : 'clay-subcard-3d text-[#6e2438] dark:text-rose-100'
-                  }`}
-                >
-                  <Icon className="h-3 w-3" />
-                  <span>{type.label}</span>
-                </button>
-              );
-            })}
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+              {[
+                { id: 'movie', label: 'Film', icon: Film },
+                { id: 'tv', label: 'Serial', icon: Tv },
+                { id: 'person', label: 'Aktor', icon: Users }
+              ].map((type) => {
+                const active = catalogType === type.id;
+                const Icon = type.icon;
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    onClick={() => {
+                      soundManager.playTap();
+                      setCatalogType(type.id as any);
+                      setCatalogResults([]);
+                      setCatalogKind(null);
+                      setCatalogError('');
+                    }}
+                    className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-[9.5px] font-extrabold transition-all active:scale-95 ${
+                      active
+                        ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-2xs'
+                        : 'clay-subcard-3d text-[#6e2438] dark:text-rose-100'
+                    }`}
+                  >
+                    <Icon className="h-2.5 w-2.5" />
+                    <span>{type.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <form
@@ -461,30 +542,30 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
               void handleCatalogSearch(catalogType);
             }}
           >
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-rose-400" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-rose-400" />
             <input
               type="text"
               value={catalogQuery}
               onChange={(e) => setCatalogQuery(e.target.value)}
               placeholder={`Cari judul ${catalogType === 'person' ? 'aktor' : catalogType === 'tv' ? 'serial' : 'film'}...`}
-              className="w-full rounded-full border border-rose-200/80 bg-white/90 py-2 pl-9 pr-8 text-[11px] font-bold text-[#4a1623] shadow-inner placeholder:text-[#8c4f60]/55 focus:border-rose-300 focus:outline-none dark:border-white/10 dark:bg-black/30 dark:text-rose-50 dark:placeholder:text-rose-200/40"
+              className="h-8 w-full rounded-full border border-rose-200/80 bg-white/90 py-1 pl-8 pr-7 text-[10.5px] font-bold text-[#4a1623] shadow-inner placeholder:text-[#8c4f60]/55 focus:border-rose-400 focus:outline-none dark:border-white/10 dark:bg-black/30 dark:text-rose-50 dark:placeholder:text-rose-200/40"
             />
             {catalogQuery && (
               <button
                 type="button"
                 onClick={() => setCatalogQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600 text-xs"
               >
                 ✕
               </button>
             )}
           </form>
 
-          {catalogError && <p className="mt-2 text-[11px] font-bold text-red-600 dark:text-red-300">{catalogError}</p>}
-          {wishlistActionError && <p className="mt-2 text-[11px] font-bold text-red-600 dark:text-red-300">{wishlistActionError}</p>}
+          {catalogError && <p className="mt-1.5 text-[10.5px] font-bold text-red-600 dark:text-red-300">{catalogError}</p>}
+          {wishlistActionError && <p className="mt-1.5 text-[10.5px] font-bold text-red-600 dark:text-red-300">{wishlistActionError}</p>}
 
           {catalogKind && catalogResults.length > 0 && (
-            <div className="mt-3.5 border-t border-rose-200/40 pt-3 dark:border-white/10">
+            <div className="mt-2.5 border-t border-rose-200/40 pt-2.5 dark:border-white/10">
               <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase text-[#8c4f60] dark:text-rose-300">
                 <span>Hasil TMDB ({catalogResults.length})</span>
                 <button type="button" onClick={() => setCatalogResults([])} className="hover:underline">Tutup</button>
@@ -608,11 +689,11 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
           )}
         </AnimatePresence>
 
-        {/* TAB 1: FILM LIST (Compact 2-Column Mobile Grid) */}
+        {/* TAB 1: FILM LIST (Compact Mobile Grid) */}
         {activeTab === 'film' && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Filter & Sort Bar */}
-            <div className="clay-card-3d flex flex-col gap-2.5 rounded-[1.8rem] p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="clay-subcard-3d flex items-center justify-between gap-1.5 rounded-full p-1.5 shadow-2xs">
               <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-none">
                 {[
                   { id: 'all', label: 'Semua' },
@@ -630,25 +711,54 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                         soundManager.playTap();
                         setMovieFilter(f.id as any);
                       }}
-                      className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-1 text-[10.5px] font-extrabold transition-all active:scale-95 ${
+                      className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold transition-all active:scale-95 ${
                         active
-                          ? 'bg-gradient-to-b from-[#ff6b98] to-[#d9386a] text-white shadow-xs'
-                          : 'clay-subcard-3d text-[#6e2438] dark:text-rose-100'
+                          ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-2xs'
+                          : 'bg-rose-500/10 text-[#6e2438] hover:bg-rose-500/15 dark:bg-white/5 dark:text-rose-100'
                       }`}
                     >
+                      {f.id === 'together' && (
+                        <div className="flex items-center -space-x-1.5">
+                          <img
+                            src="/characters/expressions/savero/bahagia.png"
+                            alt=""
+                            className="h-3.5 w-3.5 rounded-full object-cover object-top scale-125"
+                          />
+                          <img
+                            src="/characters/expressions/soffie/gemas-sayang.png"
+                            alt=""
+                            className="h-3.5 w-3.5 rounded-full object-cover object-top scale-125"
+                          />
+                        </div>
+                      )}
+                      {f.id === 'savero' && (
+                        <img
+                          src="/characters/expressions/savero/bahagia.png"
+                          alt="Savero"
+                          className="h-3.5 w-3.5 rounded-full object-cover object-top scale-125"
+                        />
+                      )}
+                      {f.id === 'soffie' && (
+                        <img
+                          src="/characters/expressions/soffie/gemas-sayang.png"
+                          alt="Soffie"
+                          className="h-3.5 w-3.5 rounded-full object-cover object-top scale-125"
+                        />
+                      )}
+                      {f.id === 'watchlist' && <Bookmark className="h-2.5 w-2.5 fill-current" />}
                       <span>{f.label}</span>
                     </button>
                   );
                 })}
               </div>
 
-              <div className="clay-subcard-3d flex items-center gap-1.5 rounded-full px-3 py-1 text-[10.5px] font-extrabold text-[#7a3444] dark:text-rose-200 self-end sm:self-auto">
-                <ArrowUpDown className="h-3 w-3 text-rose-500" />
-                <span>Urutkan:</span>
+              {/* Sort Pill with ListFilter icon */}
+              <div className="flex items-center gap-1 rounded-full bg-white/80 dark:bg-white/10 px-2 py-0.5 text-[9.5px] font-extrabold text-[#7a3444] dark:text-rose-200 shrink-0 shadow-2xs">
+                <ListFilter className="h-2.5 w-2.5 text-rose-500" />
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-transparent font-black text-[#4a1623] focus:outline-none dark:text-rose-50 cursor-pointer"
+                  className="bg-transparent font-extrabold text-[#4a1623] focus:outline-none dark:text-rose-50 cursor-pointer text-[9.5px]"
                 >
                   <option value="date" className="dark:bg-[#2b0c16]">Tanggal</option>
                   <option value="rating" className="dark:bg-[#2b0c16]">Rating</option>
@@ -671,9 +781,9 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                       soundManager.playTap();
                       setSelectedMovie(movie);
                     }}
-                    className="clay-card-3d group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-[1.6rem] p-2 transition-all duration-300 hover:-translate-y-1"
+                    className="clay-card-3d group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-[1.4rem] p-2 transition-all duration-300 hover:-translate-y-1 shadow-2xs hover:shadow-md"
                   >
-                    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[1.2rem] bg-black/10 shadow-inner">
+                    <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[1.1rem] bg-black/10 shadow-inner">
                       {movie.posterUrl ? (
                         <ManagedImage
                           src={movie.posterUrl}
@@ -685,49 +795,84 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                         <div className="flex h-full items-center justify-center p-2 text-center text-[10px] text-gray-400">No Poster</div>
                       )}
 
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-black/20" />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/25" />
 
-                      {/* Top Status badges */}
-                      <div className="absolute top-1.5 left-1.5 flex flex-wrap gap-1">
+                      {/* Top Status badges: Chibi Head / Avatars */}
+                      <div className="absolute top-1.5 left-1.5 flex items-center gap-1">
                         {isTogether && (
-                          <span className="flex h-5.5 items-center gap-0.5 rounded-full bg-black/60 px-2 text-[8.5px] font-black text-rose-300 backdrop-blur-md">
-                            <Heart className="h-2.5 w-2.5 fill-rose-500 text-rose-500" />
-                            <span>Berdua</span>
-                          </span>
+                          <div className="flex items-center -space-x-1.5 drop-shadow-md" title="Ditonton Berdua">
+                            <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-amber-50 shadow-xs dark:border-[#200508]">
+                              <img
+                                src="/characters/expressions/savero/bahagia.png"
+                                alt="Savero"
+                                className="h-full w-full object-cover object-top scale-125"
+                              />
+                            </div>
+                            <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-rose-50 shadow-xs dark:border-[#200508]">
+                              <img
+                                src="/characters/expressions/soffie/gemas-sayang.png"
+                                alt="Soffie"
+                                className="h-full w-full object-cover object-top scale-125"
+                              />
+                            </div>
+                          </div>
                         )}
                         {isSavero && (
-                          <span className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[#C9A58B] text-[#3B0A0F] font-black text-[9px] shadow-xs">
-                            S
-                          </span>
+                          <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-emerald-50 shadow-md dark:border-[#200508]" title="Ditonton Savero">
+                            <img
+                              src="/characters/expressions/savero/bahagia.png"
+                              alt="Savero"
+                              className="h-full w-full object-cover object-top scale-125"
+                            />
+                          </div>
                         )}
                         {isSoffie && (
-                          <span className="flex h-5.5 w-5.5 items-center justify-center rounded-full bg-[#BFD8B8] text-[#3B0A0F] font-black text-[9px] shadow-xs">
-                            F
-                          </span>
+                          <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-rose-50 shadow-md dark:border-[#200508]" title="Ditonton Soffie">
+                            <img
+                              src="/characters/expressions/soffie/gemas-sayang.png"
+                              alt="Soffie"
+                              className="h-full w-full object-cover object-top scale-125"
+                            />
+                          </div>
                         )}
                         {movie.status === 'watchlist' && (
-                          <span className="flex h-5.5 items-center gap-0.5 rounded-full bg-amber-500 px-2 text-[8px] font-black uppercase text-white shadow-xs">
-                            <Bookmark className="h-2.5 w-2.5 fill-current" />
+                          <span className="flex h-5 items-center gap-0.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 px-2 text-[7.5px] font-black uppercase text-white shadow-xs">
+                            <Bookmark className="h-2 w-2 fill-current" />
                             <span>Wishlist</span>
                           </span>
                         )}
                       </div>
 
                       {movie.tmdbRating && (
-                        <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[8.5px] font-black text-amber-300 backdrop-blur-md">
+                        <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-full bg-black/65 px-1.5 py-0.5 text-[8.5px] font-black text-amber-300 backdrop-blur-md shadow-xs">
                           <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400" />
-                          <span>{movie.tmdbRating}</span>
+                          <span>{movie.tmdbRating.toFixed(1)}</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="p-1 pt-2 text-left">
-                      <h4 className="line-clamp-1 text-xs font-black text-[#4a1623] group-hover:text-rose-600 dark:text-rose-50">
+                    <div className="p-1 pt-1.5 text-left">
+                      <h4 className="line-clamp-1 text-[11.5px] sm:text-xs font-black text-[#4a1623] group-hover:text-rose-600 dark:text-rose-50">
                         {movie.title}
                       </h4>
-                      <div className="mt-0.5 flex items-center justify-between text-[9.5px] font-bold text-[#8c4f60] dark:text-rose-200/75">
+                      <div className="mt-0.5 flex items-center justify-between text-[9px] font-bold text-[#8c4f60] dark:text-rose-200/75">
                         <span>{movie.year || 'Film'}</span>
-                        {movie.addedBy && <span>{movie.addedBy}</span>}
+                        {movie.addedBy && (
+                          <div className="flex items-center gap-1" title={`Ditambahkan oleh ${movie.addedBy}`}>
+                            <div className="h-4 w-4 overflow-hidden rounded-full border border-white/80 bg-rose-50 shadow-2xs">
+                              <img
+                                src={
+                                  movie.addedBy === 'Savero'
+                                    ? '/characters/expressions/savero/bahagia.png'
+                                    : '/characters/expressions/soffie/gemas-sayang.png'
+                                }
+                                alt={movie.addedBy}
+                                className="h-full w-full object-cover object-top scale-125"
+                              />
+                            </div>
+                            <span className="text-[8.5px] font-extrabold">{movie.addedBy}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -854,19 +999,41 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                     </div>
 
                     <div className="mt-3 flex items-center justify-between border-t border-rose-200/40 pt-2.5 dark:border-white/10">
-                      <span className="text-[9.5px] font-extrabold uppercase text-[#8c4f60] dark:text-rose-300">
-                        Suka: {actor.likedBy}
-                      </span>
-                      <div className="flex gap-1">
+                      <div className="flex items-center gap-1.5" title={`Disukai oleh ${actor.likedBy || 'Berdua'}`}>
+                        {actor.likedBy === 'Berdua' ? (
+                          <div className="flex items-center -space-x-1.5">
+                            <div className="h-5 w-5 overflow-hidden rounded-full border border-white bg-amber-50 shadow-2xs dark:border-[#200508]">
+                              <img src="/characters/expressions/savero/bahagia.png" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
+                            </div>
+                            <div className="h-5 w-5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs dark:border-[#200508]">
+                              <img src="/characters/expressions/soffie/gemas-sayang.png" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
+                            </div>
+                          </div>
+                        ) : actor.likedBy === 'Savero' ? (
+                          <div className="h-5 w-5 overflow-hidden rounded-full border border-white bg-emerald-50 shadow-2xs dark:border-[#200508]">
+                            <img src="/characters/expressions/savero/bahagia.png" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
+                          </div>
+                        ) : (
+                          <div className="h-5 w-5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs dark:border-[#200508]">
+                            <img src="/characters/expressions/soffie/gemas-sayang.png" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
+                          </div>
+                        )}
+                        <span className="text-[9.5px] font-black text-[#5c2432] dark:text-rose-100">{actor.likedBy || 'Berdua'}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => onToggleActorLike(actor.id, 'Berdua')}
-                          className={`flex h-6.5 w-6.5 items-center justify-center rounded-full shadow-2xs ${
-                            actor.likedBy === 'Berdua' ? 'bg-rose-500 text-white' : 'clay-subcard-3d text-rose-500'
-                          }`}
-                          title="Suka Berdua"
+                          onClick={() => {
+                            soundManager.playPop();
+                            const nextLikedBy = actor.likedBy === 'Berdua' ? 'Savero' : actor.likedBy === 'Savero' ? 'Soffie' : 'Berdua';
+                            void onToggleActorLike(actor.id, nextLikedBy);
+                          }}
+                          className="flex h-6 items-center gap-1 rounded-full px-2 clay-subcard-3d text-rose-500 shadow-2xs hover:scale-105 active:scale-95 transition"
+                          title="Klik untuk ganti siapa yang menyukai (Berdua / Savero / Soffie)"
                         >
-                          <Heart className="h-3 w-3 fill-current" />
+                          <Heart className="h-3 w-3 fill-rose-500 text-rose-500" />
+                          <span className="text-[8.5px] font-extrabold">Ganti</span>
                         </button>
                       </div>
                     </div>
@@ -945,41 +1112,210 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
               Atur jadwal, camilan, dan minuman untuk kencan nonton berdua.
             </p>
 
-            <div className="space-y-3 text-left text-xs">
+            {/* Active Plan Indicator Badge */}
+            {movieNightPlan && movieNightPlan.status === 'confirmed' && (
+              <div className="mb-4 flex items-center justify-between rounded-2xl border border-emerald-400/40 bg-emerald-50/70 p-2.5 text-left dark:border-emerald-500/20 dark:bg-emerald-950/30">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-2xs">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                  </span>
+                  <div>
+                    <span className="block text-[8.5px] font-black uppercase text-emerald-800 dark:text-emerald-300">
+                      JADWAL SAAT INI TERKONFIRMASI
+                    </span>
+                    <span className="block text-[11px] font-extrabold text-[#2a131b] dark:text-rose-100">
+                      {movieNightPlan.movieTitle}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleCancelPlan}
+                  className="rounded-full bg-red-500/10 px-2.5 py-1 text-[9.5px] font-black text-red-600 hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-300 transition"
+                >
+                  Batalkan
+                </button>
+              </div>
+            )}
+
+            <div className="space-y-3.5 text-left text-xs">
+              {/* Film Target */}
               <div>
-                <label className="mb-1 block font-extrabold">Film Target</label>
+                <label className="mb-1 block font-extrabold text-[#4a1623] dark:text-rose-100">Film Target</label>
                 <select
                   value={plannedMovie?.id ?? ''}
                   onChange={(e) => setPlannedMovieId(e.target.value)}
-                  className="w-full rounded-2xl border border-rose-200/80 bg-white px-3.5 py-2 font-bold text-[#4a1623] dark:border-white/15 dark:bg-[#1f070f] dark:text-rose-100"
+                  className="w-full rounded-2xl border border-rose-200/80 bg-white px-3.5 py-2 font-bold text-[#4a1623] dark:border-white/15 dark:bg-[#1f070f] dark:text-rose-100 focus:outline-none focus:border-rose-400"
                 >
                   {!movies.length && <option value="">Tambahkan film terlebih dahulu</option>}
                   {movies.map((m) => (
                     <option key={m.id} value={m.id}>{m.title}</option>
                   ))}
                 </select>
+
+                {/* Target Movie Live Preview */}
+                {plannedMovie && (
+                  <div className="mt-2 flex items-center gap-3 rounded-2xl border border-rose-200/50 bg-white/70 p-2 shadow-2xs dark:border-white/10 dark:bg-black/20">
+                    <div className="h-16 w-11 shrink-0 overflow-hidden rounded-xl bg-black/10 shadow-xs">
+                      {plannedMovie.posterUrl ? (
+                        <ManagedImage src={plannedMovie.posterUrl} alt={plannedMovie.title} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center text-[8px] text-gray-400">No Poster</div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-black text-[#4a1623] dark:text-rose-50">{plannedMovie.title}</p>
+                      <p className="text-[10px] font-bold text-[#8c4f60] dark:text-rose-200/75">
+                        {plannedMovie.year || 'Film'} {plannedMovie.tmdbRating ? `• ⭐ ${plannedMovie.tmdbRating.toFixed(1)}` : ''}
+                      </p>
+                      {plannedMovie.overview && (
+                        <p className="mt-0.5 line-clamp-2 text-[9.5px] text-[#6b3140] dark:text-rose-200/60 leading-tight">
+                          {plannedMovie.overview}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
+              {/* Jadwal Tanggal & Waktu */}
               <div>
-                <label className="mb-1 block font-extrabold">Jadwal Tanggal & Waktu</label>
+                <label className="mb-1 block font-extrabold text-[#4a1623] dark:text-rose-100">Jadwal Tanggal & Waktu</label>
                 <input
                   type="datetime-local"
                   value={plannedDate}
                   onChange={(e) => setPlannedDate(e.target.value)}
-                  className="w-full rounded-2xl border border-rose-200/80 bg-white px-3.5 py-2 font-bold text-[#4a1623] dark:border-white/15 dark:bg-[#1f070f] dark:text-rose-100"
+                  className="w-full rounded-2xl border border-rose-200/80 bg-white px-3.5 py-2 font-bold text-[#4a1623] dark:border-white/15 dark:bg-[#1f070f] dark:text-rose-100 focus:outline-none focus:border-rose-400"
                 />
+                {/* Formatted Readable Date Helper */}
+                {plannedDate && (
+                  <p className="mt-1 text-[9.5px] font-bold text-[#8c4f60] dark:text-rose-200/70">
+                    📅 {(() => {
+                      try {
+                        const d = new Date(plannedDate);
+                        if (isNaN(d.getTime())) return plannedDate;
+                        return new Intl.DateTimeFormat('id-ID', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }).format(d) + ' WIB';
+                      } catch {
+                        return plannedDate;
+                      }
+                    })()}
+                  </p>
+                )}
               </div>
 
+              {/* Camilan & Minuman */}
               <div>
-                <label className="mb-1 block font-extrabold">Camilan & Minuman</label>
+                <label className="mb-1 block font-extrabold text-[#4a1623] dark:text-rose-100">Camilan & Minuman</label>
                 <input
                   type="text"
                   value={plannedSnack}
                   onChange={(e) => setPlannedSnack(e.target.value)}
                   placeholder="Popcorn & Matcha Latte"
-                  className="w-full rounded-2xl border border-rose-200/80 bg-white px-3.5 py-2 font-bold text-[#4a1623] dark:border-rose-200/15 dark:bg-[#1f070f] dark:text-rose-100"
+                  className="w-full rounded-2xl border border-rose-200/80 bg-white px-3.5 py-2 font-bold text-[#4a1623] dark:border-rose-200/15 dark:bg-[#1f070f] dark:text-rose-100 focus:outline-none focus:border-rose-400"
                 />
               </div>
+
+              {/* Direncanakan Oleh (Chibi Selection) */}
+              <div>
+                <label className="mb-1.5 block font-extrabold text-[#4a1623] dark:text-rose-100">Direncanakan Oleh</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'Berdua', label: 'Berdua' },
+                    { id: 'Savero', label: 'Savero' },
+                    { id: 'Soffie', label: 'Soffie' }
+                  ].map((p) => {
+                    const active = plannedBy === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          soundManager.playTap();
+                          setPlannedBy(p.id as any);
+                        }}
+                        className={`flex items-center justify-center gap-1.5 rounded-xl p-2 font-extrabold text-[10.5px] transition-all active:scale-95 border ${
+                          active
+                            ? 'bg-rose-500/15 border-rose-400 text-rose-600 dark:bg-rose-500/25 dark:text-rose-300'
+                            : 'border-rose-200/50 bg-white/60 text-[#6e2438] hover:bg-rose-50 dark:border-white/10 dark:bg-white/5 dark:text-rose-200'
+                        }`}
+                      >
+                        {p.id === 'Berdua' && (
+                          <div className="flex items-center -space-x-1.5">
+                            <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-amber-50 shadow-2xs">
+                              <img src="/characters/expressions/savero/bahagia.png" alt="" className="h-full w-full object-cover object-top scale-125" />
+                            </div>
+                            <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs">
+                              <img src="/characters/expressions/soffie/gemas-sayang.png" alt="" className="h-full w-full object-cover object-top scale-125" />
+                            </div>
+                          </div>
+                        )}
+                        {p.id === 'Savero' && (
+                          <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-emerald-50 shadow-2xs">
+                            <img src="/characters/expressions/savero/bahagia.png" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
+                          </div>
+                        )}
+                        {p.id === 'Soffie' && (
+                          <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs">
+                            <img src="/characters/expressions/soffie/gemas-sayang.png" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
+                          </div>
+                        )}
+                        <span>{p.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* TOMBOL KONFIRMASI JADWAL */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleConfirmPlan}
+                  className="w-full flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF5C77] to-[#d9386a] py-3 text-xs font-black text-white shadow-md transition active:scale-95 hover:shadow-lg hover:from-[#ff4866] hover:to-[#c82759]"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  <span>
+                    {movieNightPlan && movieNightPlan.status === 'confirmed'
+                      ? 'Perbarui Konfirmasi Jadwal Kencan'
+                      : 'Konfirmasi Jadwal Kencan Nonton'}
+                  </span>
+                </button>
+              </div>
+
+              {/* Feedback Alert Notice with link to Home */}
+              {confirmNotice && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-3 flex flex-col items-center gap-2 rounded-2xl bg-emerald-500/15 p-3 text-center text-[11px] font-extrabold text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200 border border-emerald-500/30"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                    <span>{confirmNotice}</span>
+                  </div>
+                  {onNavigateToHome && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundManager.playTap();
+                        onNavigateToHome();
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-3.5 py-1 text-[10.5px] font-black text-white shadow-2xs hover:bg-emerald-700 transition active:scale-95"
+                    >
+                      <span>Lihat Hasil di Beranda</span>
+                      <span>→</span>
+                    </button>
+                  )}
+                </motion.div>
+              )}
             </div>
           </div>
         )}
@@ -1020,26 +1356,75 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
 
                 <div className="mt-4 space-y-3 text-xs border-t border-rose-200/50 pt-3 dark:border-white/10">
                   <div>
-                    <label className="mb-1 block font-extrabold">Status Nonton</label>
-                    <select
-                      value={selectedMovie.status}
-                      onChange={(e) => setSelectedMovie({ ...selectedMovie, status: e.target.value as any })}
-                      className="w-full rounded-xl border border-rose-200/80 bg-white px-3 py-2 font-bold text-[#4a1623] dark:border-white/15 dark:bg-[#1f070f] dark:text-rose-100"
-                    >
-                      <option value="together">Sudah Ditonton Berdua</option>
-                      <option value="savero">Sudah Ditonton Savero</option>
-                      <option value="soffie">Sudah Ditonton Soffie</option>
-                      <option value="watchlist">Watchlist Kencan</option>
-                    </select>
+                    <label className="mb-1.5 block font-extrabold text-[#4a1623] dark:text-rose-100">Status Nonton</label>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {[
+                        { id: 'together', label: 'Berdua', isTogether: true },
+                        { id: 'savero', label: 'Savero', isSavero: true },
+                        { id: 'soffie', label: 'Soffie', isSoffie: true },
+                        { id: 'watchlist', label: 'Wishlist', isWatchlist: true }
+                      ].map((st) => {
+                        const active = selectedMovie.status === st.id;
+                        return (
+                          <button
+                            key={st.id}
+                            type="button"
+                            onClick={() => {
+                              soundManager.playTap();
+                              setSelectedMovie({ ...selectedMovie, status: st.id as any });
+                            }}
+                            className={`flex items-center justify-center gap-1.5 rounded-xl p-2 font-extrabold text-[10.5px] transition-all active:scale-95 border ${
+                              active
+                                ? 'bg-gradient-to-r from-rose-500/20 to-pink-500/20 border-rose-400 text-rose-600 dark:bg-rose-500/30 dark:text-rose-200'
+                                : 'border-rose-200/50 bg-white/60 text-[#6e2438] hover:bg-rose-50 dark:border-white/10 dark:bg-white/5 dark:text-rose-200'
+                            }`}
+                          >
+                            {st.isTogether && (
+                              <div className="flex items-center -space-x-1.5">
+                                <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-amber-50 shadow-2xs">
+                                  <img src="/characters/expressions/savero/bahagia.png" alt="" className="h-full w-full object-cover object-top scale-125" />
+                                </div>
+                                <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs">
+                                  <img src="/characters/expressions/soffie/gemas-sayang.png" alt="" className="h-full w-full object-cover object-top scale-125" />
+                                </div>
+                              </div>
+                            )}
+                            {st.isSavero && (
+                              <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-emerald-50 shadow-2xs">
+                                <img src="/characters/expressions/savero/bahagia.png" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
+                              </div>
+                            )}
+                            {st.isSoffie && (
+                              <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs">
+                                <img src="/characters/expressions/soffie/gemas-sayang.png" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
+                              </div>
+                            )}
+                            {st.isWatchlist && <Bookmark className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />}
+                            <span>{st.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <span className="mb-1 block font-extrabold">Rating Savero</span>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="rounded-2xl border border-rose-200/50 bg-rose-50/50 p-2.5 dark:border-white/10 dark:bg-white/5">
+                      <div className="mb-1.5 flex items-center gap-1.5">
+                        <div className="h-5 w-5 overflow-hidden rounded-full border border-emerald-400 bg-emerald-50 shadow-2xs">
+                          <img src="/characters/expressions/savero/bahagia.png" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
+                        </div>
+                        <span className="text-[10.5px] font-black text-[#4a1623] dark:text-rose-100">Rating Savero</span>
+                      </div>
                       <HeartRating rating={selectedMovie.ratingSavero || 0} interactive size={16} onChange={(val) => setSelectedMovie({ ...selectedMovie, ratingSavero: val })} />
                     </div>
-                    <div>
-                      <span className="mb-1 block font-extrabold">Rating Soffie</span>
+
+                    <div className="rounded-2xl border border-rose-200/50 bg-rose-50/50 p-2.5 dark:border-white/10 dark:bg-white/5">
+                      <div className="mb-1.5 flex items-center gap-1.5">
+                        <div className="h-5 w-5 overflow-hidden rounded-full border border-rose-400 bg-rose-50 shadow-2xs">
+                          <img src="/characters/expressions/soffie/gemas-sayang.png" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
+                        </div>
+                        <span className="text-[10.5px] font-black text-[#4a1623] dark:text-rose-100">Rating Soffie</span>
+                      </div>
                       <HeartRating rating={selectedMovie.ratingSoffie || 0} interactive size={16} onChange={(val) => setSelectedMovie({ ...selectedMovie, ratingSoffie: val })} />
                     </div>
                   </div>

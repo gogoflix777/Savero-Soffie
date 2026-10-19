@@ -416,22 +416,32 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
         {/* Hidden Audio element for "Lagu Kita" */}
         <audio ref={audioRef} onEnded={() => setPlayingSongId(null)} />
 
-        {/* Section Header */}
-        <div className="mb-5 flex flex-col justify-between gap-3 sm:mb-7 md:flex-row md:items-end">
-          <div>
-            <div className="flex items-center space-x-2 text-[11px] font-sans-clean font-bold tracking-[0.25em] uppercase text-[#7A1018] dark:text-[#F4B6C2] mb-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>RUANG ROMANTIS & NOSTALGIA</span>
+        {/* Section Header with Chibi */}
+        <div className="mb-5 flex flex-col gap-4 sm:mb-7">
+          <div className="flex items-center justify-between gap-3 text-left">
+            <div className="min-w-0 flex-1">
+              <div className="mb-1 flex items-center space-x-2 text-[11px] font-sans-clean font-bold tracking-[0.25em] uppercase text-[#7A1018] dark:text-[#F4B6C2]">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>RUANG ROMANTIS & NOSTALGIA</span>
+              </div>
+              <h2 className="font-serif-title text-2xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA] sm:text-4xl">
+                Ruang Romantis
+              </h2>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#5c2432] dark:text-rose-200 sm:text-sm">
+                Surat, kenangan, foto, dan lagu kita—pilih yang ingin dibuka.
+              </p>
             </div>
-            <h2 className="font-serif-title text-2xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA] sm:text-4xl">
-              Ruang Romantis
-            </h2>
-            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#5c2432] dark:text-rose-200 sm:text-sm">
-              Surat, kenangan, foto, dan lagu kita—pilih yang ingin dibuka.
-            </p>
+            <div className="shrink-0">
+              <img
+                src="/characters/berdua/Chibi Couple Hug.png"
+                alt="Chibi Couple Hug"
+                className="h-28 w-28 sm:h-36 sm:w-36 md:h-44 md:w-44 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
+                loading="lazy"
+              />
+            </div>
           </div>
 
-          <nav aria-label="Bagian ruang romantis" className="romantic-tab-nav grid w-full grid-cols-2 gap-1.5 rounded-2xl border border-[#7A1018]/15 bg-white/55 p-1.5 text-[11px] font-sans-clean font-bold dark:bg-black/25 sm:flex sm:w-auto sm:flex-wrap sm:justify-end">
+          <nav aria-label="Bagian ruang romantis" className="romantic-tab-nav grid w-full grid-cols-2 gap-1.5 rounded-2xl border border-[#7A1018]/15 bg-white/55 p-1.5 text-[11px] font-sans-clean font-bold dark:bg-black/25 sm:flex sm:w-auto sm:flex-wrap sm:justify-start">
             <button
               type="button"
               aria-pressed={activeTab === 'surat'}

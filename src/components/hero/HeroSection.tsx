@@ -16,6 +16,7 @@ import { InteractiveHeart } from './InteractiveHeart';
 import { InstagramInstantModal } from './InstagramInstantModal';
 import { PhotoLightboxModal } from './PhotoLightboxModal';
 import { PhotoMemoriesModal } from './PhotoMemoriesModal';
+import { StreakInfoModal, StreakFlameSvg, getStreakTier } from './StreakInfoModal';
 import { CloudReplyBubble } from './CloudReplyBubble';
 import {
   getCurvedCaptionFontSize,
@@ -77,184 +78,50 @@ const particleIcons = {
   flower: Flower2
 };
 
-// Sistem Tingkatan Level Api Streak (Mengacu pada 3d, 10d, 30d, 100d, 200d+)
-interface StreakTierConfig {
-  level: number;
-  name: string;
-  outerStart: string;
-  outerEnd: string;
-  innerColor: string;
-  textColor: string;
-  glowColor: string;
-  speed: string;
-  hasSparks: boolean;
-}
-
-const getStreakTier = (days: number): StreakTierConfig => {
-  if (days >= 200) {
-    return {
-      level: 6,
-      name: 'Mythic Violet (200d+)',
-      outerStart: '#c084fc',
-      outerEnd: '#7e22ce',
-      innerColor: '#f3e8ff',
-      textColor: '#a855f7',
-      glowColor: 'rgba(168, 85, 247, 0.55)',
-      speed: '1.15s',
-      hasSparks: true
-    };
-  }
-  if (days >= 100) {
-    return {
-      level: 5,
-      name: 'Neon Magenta (100d+)',
-      outerStart: '#ff66cc',
-      outerEnd: '#db2777',
-      innerColor: '#ffd6f0',
-      textColor: '#ec4899',
-      glowColor: 'rgba(236, 72, 153, 0.52)',
-      speed: '1.3s',
-      hasSparks: true
-    };
-  }
-  if (days >= 30) {
-    return {
-      level: 4,
-      name: 'Ruby Crimson (30d+)',
-      outerStart: '#ff5c77',
-      outerEnd: '#e11d48',
-      innerColor: '#ffccd5',
-      textColor: '#f43f5e',
-      glowColor: 'rgba(244, 63, 94, 0.48)',
-      speed: '1.45s',
-      hasSparks: true
-    };
-  }
-  if (days >= 10) {
-    return {
-      level: 3,
-      name: 'Fiery Red-Orange (10d+)',
-      outerStart: '#ff7b29',
-      outerEnd: '#ea2a15',
-      innerColor: '#ffe082',
-      textColor: '#ff4d29',
-      glowColor: 'rgba(255, 77, 41, 0.45)',
-      speed: '1.65s',
-      hasSparks: false
-    };
-  }
-  if (days >= 3) {
-    return {
-      level: 2,
-      name: 'Blazing Orange (3d+)',
-      outerStart: '#ffaa1d',
-      outerEnd: '#f95700',
-      innerColor: '#fff099',
-      textColor: '#ff7700',
-      glowColor: 'rgba(255, 119, 0, 0.4)',
-      speed: '1.85s',
-      hasSparks: false
-    };
-  }
-  return {
-    level: 1,
-    name: 'Warm Spark',
-    outerStart: '#ffcf40',
-    outerEnd: '#f59e0b',
-    innerColor: '#fff8cc',
-    textColor: '#f59e0b',
-    glowColor: 'rgba(245, 158, 11, 0.35)',
-    speed: '2.1s',
-    hasSparks: false
-  };
-};
-
-// Komponen 3D Multi-Tier Flame + Angka Senada
-const StreakFlameBadge: React.FC<{ streak: number; isActiveToday: boolean }> = ({
+// Komponen 3D Multi-Tier Flame + Angka Senada (Mendukung Status Aktif & Mati)
+const StreakFlameBadge: React.FC<{
+  streak: number;
+  isActiveToday: boolean;
+  isDead: boolean;
+}> = ({
   streak,
-  isActiveToday
+  isActiveToday,
+  isDead
 }) => {
   const tier = getStreakTier(streak);
-  const gradId = `streak-flame-grad-${tier.level}`;
 
   return (
     <div
       className="streak-tier-item flex items-center gap-1.5 px-2.5 py-1 select-none"
-      title={`${streak} Hari Streak · ${tier.name}${isActiveToday ? ' (Aktif hari ini)' : ''}`}
+      title={
+        isDead
+          ? 'Streak Padam · Klik untuk lihat info & pulihkan'
+          : `${streak} Hari Streak · ${tier.name}${isActiveToday ? ' (Aktif hari ini)' : ''}`
+      }
       aria-label={`${streak} hari streak`}
     >
-      <div
-        className="relative flex h-4.5 w-4.5 items-center justify-center"
-        style={
-          {
-            '--flame-glow': tier.glowColor,
-            '--flame-speed': tier.speed
-          } as CSSProperties
-        }
-      >
-        <svg
-          viewBox="0 0 28 32"
-          className="streak-multi-flame-svg h-full w-full overflow-visible"
-          aria-hidden="true"
-        >
-          <defs>
-            <linearGradient id={gradId} x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={tier.outerStart} />
-              <stop offset="100%" stopColor={tier.outerEnd} />
-            </linearGradient>
-          </defs>
-
-          {/* Lidah Api Utama (Semakin tinggi level, bentuk semakin membara) */}
-          {tier.level >= 4 ? (
-            /* Siluet Api 3-Lidah Membara (Level 30d, 100d, 200d+) */
-            <path
-              d="M14 1.5 C14 1.5 20.5 7 19.5 12.5 C21.8 10.8 23 8.5 23 8.5 C25.8 13.5 25.5 21 21.2 26 C19.2 28.4 16.8 29.8 14 29.8 C11.2 29.8 8.8 28.4 6.8 26 C2.5 21 2.2 13.5 5 8.5 C5 8.5 6.2 10.8 8.5 12.5 C7.5 7 14 1.5 14 1.5 Z"
-              fill={`url(#${gradId})`}
-            />
-          ) : (
-            /* Siluet Api 2-Lidah Klasik (Level 1d - 29d) */
-            <path
-              d="M14.5 2 C14.5 2 21 8.2 20 14.2 C22 12.8 22.8 10.5 22.8 10.5 C25.2 15 24.5 22 20.5 26.5 C18.8 28.5 16.5 29.8 14 29.8 C11.2 29.8 8.8 28.2 7.2 26 C3.8 21.5 4.2 14.5 7.5 10 C7.5 10 8.2 12.2 10 13.2 C9.5 7.8 14.5 2 14.5 2 Z"
-              fill={`url(#${gradId})`}
-            />
-          )}
-
-          {/* Inti Api Dalam (Inner Core Flame) */}
-          <path
-            d="M14 14.5 C14 14.5 17.8 18.2 17.5 22.5 C17.3 25.5 15.8 27.5 14 27.5 C12.2 27.5 10.7 25.5 10.5 22.5 C10.2 18.2 14 14.5 14 14.5 Z"
-            fill={tier.innerColor}
-            opacity="0.92"
-          />
-
-          {/* Percikan Bara Api di Atas untuk Level Tinggi (30d, 100d, 200d+) */}
-          {tier.hasSparks && (
-            <>
-              <circle
-                cx="22.5"
-                cy="4.5"
-                r="1.6"
-                fill={tier.outerStart}
-                className="streak-ember-spark-1"
-              />
-              <circle
-                cx="6"
-                cy="5.5"
-                r="1.3"
-                fill={tier.innerColor}
-                className="streak-ember-spark-2"
-              />
-            </>
-          )}
-        </svg>
+      <div className="relative flex h-4.5 w-4.5 items-center justify-center">
+        <StreakFlameSvg
+          tier={tier}
+          isDead={isDead}
+          idPrefix="hero-dock-flame"
+        />
       </div>
 
-      {/* Angka Hitungan Hari dengan Warna Senada Api */}
+      {/* Angka Hitungan Hari dengan Warna Senada Api (atau abu-abu jika padam) */}
       <span
-        className="text-[13px] font-black leading-none tracking-tight tabular-nums"
-        style={{
-          color: tier.textColor,
-          textShadow: `0 1px 8px ${tier.glowColor}`
-        }}
+        className="text-[13px] font-black leading-none tracking-tight tabular-nums transition-colors"
+        style={
+          isDead
+            ? {
+                color: '#9ca3af',
+                textShadow: 'none'
+              }
+            : {
+                color: tier.textColor,
+                textShadow: `0 1px 8px ${tier.glowColor}`
+              }
+        }
       >
         {streak}
       </span>
@@ -301,6 +168,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const [heartParticles, setHeartParticles] = useState<HeartParticle[]>([]);
   const [isInstantModalOpen, setIsInstantModalOpen] = useState(false);
   const [isMemoriesModalOpen, setIsMemoriesModalOpen] = useState(false);
+  const [isStreakModalOpen, setIsStreakModalOpen] = useState(false);
   const [lightboxPhoto, setLightboxPhoto] = useState<{
     photoUrl: string;
     caption?: string | null;
@@ -366,8 +234,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const twoDaysAgo = dateOffset(today, -2);
   const restoreAvailable =
     !streakRestores.some((item) => item.missed_date === yesterday) &&
+    !isQualifiedDay(yesterday) &&
     isQualifiedDay(twoDaysAgo) &&
     (!streakRestores[0] || Date.now() - new Date(streakRestores[0].restored_at).getTime() >= 7 * 86400000);
+
+  const isTodayQualified = isQualifiedDay(today);
+  const isStreakDead = !isTodayQualified || streak === 0;
 
   const meetingToday = new Set(
     meetingConfirmations.filter((item) => item.meeting_date === today).map((item) => item.profile)
@@ -926,8 +798,22 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
           {/* UNIFIED 3D CLAY DOCK: [ 🔥 1  |  📅 Arsip ] */}
           <div className="hero-unified-clay-dock inline-flex items-center p-1">
-            {/* Sisi Kiri: Simbol Api Multi-Level & Angka Hari Senada */}
-            <StreakFlameBadge streak={streak} isActiveToday={isQualifiedDay(today)} />
+            {/* Sisi Kiri: Simbol Api Multi-Level & Angka Hari Senada (Klik untuk Buka Modal Streak) */}
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.playTap();
+                setIsStreakModalOpen(true);
+              }}
+              className="hero-dock-streak-btn flex items-center rounded-full transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              aria-label="Detail Streak"
+            >
+              <StreakFlameBadge
+                streak={streak}
+                isActiveToday={isQualifiedDay(today)}
+                isDead={isStreakDead}
+              />
+            </button>
 
             {/* Garis Pemisah 3D Halus */}
             <span className="mx-0.5 h-4 w-[1.5px] rounded-full bg-rose-300/50 dark:bg-rose-200/15" aria-hidden="true" />
@@ -967,16 +853,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               )}
             </div>
           ) : null}
-
-          {restoreAvailable && (
-            <button
-              type="button"
-              onClick={() => void handleRestore()}
-              className="streak-restore-link"
-            >
-              Pulihkan streak kemarin
-            </button>
-          )}
           {dailyActionError && (
             <p role="alert" className="max-w-[300px] text-center text-[9.5px] font-bold text-red-600 dark:text-red-300">
               {dailyActionError}
@@ -1083,6 +959,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           onClose={() => setIsMemoriesModalOpen(false)}
         />
       )}
+
+      {/* TikTok-Style Streak Modal */}
+      <StreakInfoModal
+        isOpen={isStreakModalOpen}
+        onClose={() => setIsStreakModalOpen(false)}
+        streak={streak}
+        isDead={isStreakDead}
+        isTodayQualified={isTodayQualified}
+        restoreAvailable={restoreAvailable}
+        onRestoreStreak={handleRestore}
+      />
     </section>
   );
 };

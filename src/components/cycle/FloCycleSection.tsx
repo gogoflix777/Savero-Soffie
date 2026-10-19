@@ -8,8 +8,8 @@ import {
   Plus,
   HelpCircle,
   Heart,
-  Settings as SettingsIcon,
   ChevronRight,
+  ChevronLeft,
   Info,
   Clock,
   MapPin,
@@ -125,17 +125,35 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
   // Today string
   const todayStr = formatDateKey(new Date());
 
-  // Months to render in vertical continuous scroll: August 2026 to December 2026 (or dynamic 6 months around today)
-  const monthsToRender = useMemo(() => {
-    const list = [];
-    const baseDate = new Date();
-    // 2 months past, current, 3 months future
-    for (let offset = -2; offset <= 3; offset++) {
-      const d = new Date(baseDate.getFullYear(), baseDate.getMonth() + offset, 1);
-      list.push(d);
-    }
-    return list;
-  }, []);
+  // Active month state for calendar view (always initializes to current month so user opens right on current month)
+  const [currentMonthDate, setCurrentMonthDate] = useState<Date>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+
+  const goToPreviousMonth = () => {
+    soundManager.playTap();
+    setCurrentMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    soundManager.playTap();
+    setCurrentMonthDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const goToCurrentMonth = () => {
+    soundManager.playTap();
+    const now = new Date();
+    setCurrentMonthDate(new Date(now.getFullYear(), now.getMonth(), 1));
+  };
+
+  const isViewingCurrentMonth = useMemo(() => {
+    const now = new Date();
+    return (
+      currentMonthDate.getFullYear() === now.getFullYear() &&
+      currentMonthDate.getMonth() === now.getMonth()
+    );
+  }, [currentMonthDate]);
 
   const openLogModalForDate = (dateStr: string) => {
     if (!canEdit) return;
@@ -228,181 +246,231 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
   };
 
   return (
-    <section id="siklus-intim" className="cycle-clay-section py-10 px-4 bg-[#fbf8f5] dark:bg-[#160305] border-b border-[#7A1018]/15 transition-colors sm:py-12">
+    <section id="siklus-intim" className="cycle-clay-section py-6 px-3 sm:py-8 sm:px-4 bg-[#fbf8f5] dark:bg-[#160305] border-b border-[#7A1018]/15 transition-colors">
       <div className="max-w-4xl mx-auto">
-        <header className="mb-6 text-center">
-          <span className="mx-auto mb-2 inline-flex items-center gap-2 rounded-full bg-[#f5e0e2] px-3 py-1 font-sans-clean text-[10px] font-bold uppercase tracking-[0.18em] text-[#a94761] shadow-sm dark:bg-[#49353d] dark:text-rose-200">
-            <CalendarIcon className="h-3.5 w-3.5" /> Kalender perawatan
-          </span>
-          <h1 className="font-sans-clean text-2xl font-extrabold text-[#43252d] dark:text-rose-50 sm:text-3xl">Siklus & Kasih</h1>
-          <p className="mx-auto mt-1 max-w-lg text-xs leading-relaxed text-[#5c2432] dark:text-rose-200 sm:text-sm">
-            Catat kalender, lihat ringkasan, dan kelola privasi dalam satu tempat.
-          </p>
-          {!canEdit && <div className="mx-auto mt-3 flex max-w-md items-center justify-center gap-2 rounded-2xl border border-[#e7c2c8] bg-white/75 px-3 py-2 text-xs text-[#704b54] shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-rose-100/75"><img src="/characters/expressions/soffie/gemas-sayang.png" alt="" className="h-10 w-7 object-contain" /><span>Mode lihat — pencatatan siklus hanya tersedia di profil Soffie.</span></div>}
+        <header className="mb-4 flex items-center justify-between gap-3 text-left">
+          <div className="min-w-0 flex-1">
+            <span className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-[#f5e0e2] px-2.5 py-0.5 font-sans-clean text-[10px] font-bold uppercase tracking-[0.16em] text-[#a94761] shadow-2xs dark:bg-[#49353d] dark:text-rose-200">
+              <CalendarIcon className="h-3 w-3" /> Kalender perawatan
+            </span>
+            <h1 className="font-sans-clean text-xl sm:text-2xl md:text-3xl font-extrabold text-[#43252d] dark:text-rose-50">
+              Siklus & Kasih
+            </h1>
+            <p className="mt-0.5 max-w-md text-[11px] sm:text-xs leading-relaxed text-[#5c2432] dark:text-rose-200">
+              Catat kalender, lihat ringkasan, dan kelola privasi dalam satu tempat.
+            </p>
+            {!canEdit && (
+              <div className="mt-2 inline-flex items-center gap-2 rounded-xl border border-[#e7c2c8] bg-white/75 px-2.5 py-1 text-[10.5px] text-[#704b54] shadow-2xs dark:border-white/10 dark:bg-white/5 dark:text-rose-100/75">
+                <img src="/characters/expressions/soffie/gemas-sayang.png" alt="" className="h-6 w-4.5 object-contain" />
+                <span>Mode lihat — pencatatan hanya di profil Soffie.</span>
+              </div>
+            )}
+          </div>
+
+          <div className="shrink-0">
+            <img
+              src="/characters/berdua/Chibi Comfort During Stomach Pain.png"
+              alt="Chibi Comfort During Stomach Pain"
+              className="h-28 w-28 sm:h-36 sm:w-36 md:h-44 md:w-44 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
+            />
+          </div>
         </header>
-        {/* Flo-styled Top Bar */}
-        <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-3xl p-4 sm:p-5 shadow-lg border border-[#7A1018]/15 mb-5">
-          <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-white/10">
-            {/* View Mode Toggle: Bulan | Tahun */}
-            <div className="inline-flex rounded-full bg-gray-100 dark:bg-black/30 p-1 text-xs font-sans-clean font-bold">
+
+        {/* Compact Clean Navigation Bar */}
+        <div className="cycle-clay-card mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#7A1018]/15 bg-white/90 p-1.5 shadow-xs backdrop-blur-xs dark:border-white/10 dark:bg-[#200508]/90 sm:p-2">
+          {/* Main Navigation Tabs */}
+          <div className="flex items-center gap-1 text-[11px] font-sans-clean font-bold">
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.playTap();
+                setActiveTab('kalender');
+              }}
+              className={`rounded-xl px-2.5 py-1 sm:px-3 sm:py-1.5 transition-all ${
+                activeTab === 'kalender'
+                  ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-xs font-extrabold'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100/70 dark:text-rose-200/70 dark:hover:bg-white/5 dark:hover:text-white'
+              }`}
+            >
+              Kalender
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.playTap();
+                setActiveTab('ringkasan');
+              }}
+              className={`rounded-xl px-2.5 py-1 sm:px-3 sm:py-1.5 transition-all ${
+                activeTab === 'ringkasan'
+                  ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-xs font-extrabold'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100/70 dark:text-rose-200/70 dark:hover:bg-white/5 dark:hover:text-white'
+              }`}
+            >
+              <span className="hidden sm:inline">Ringkasan & Statistik</span>
+              <span className="sm:hidden">Ringkasan</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                soundManager.playTap();
+                setActiveTab('edukasi');
+              }}
+              className={`relative rounded-xl px-2.5 py-1 sm:px-3 sm:py-1.5 transition-all ${
+                activeTab === 'edukasi'
+                  ? 'bg-gradient-to-r from-[#FF5C77] to-[#d9386a] text-white shadow-xs font-extrabold'
+                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100/70 dark:text-rose-200/70 dark:hover:bg-white/5 dark:hover:text-white'
+              }`}
+            >
+              <span className="hidden sm:inline">Edukasi & Medis</span>
+              <span className="sm:hidden">Edukasi</span>
+              {healthAlerts.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#FF5C77] ring-2 ring-white dark:ring-[#200508]" />
+              )}
+            </button>
+          </div>
+
+          {/* View Mode Toggle: Bulan | Tahun (Hanya saat di tab Kalender) */}
+          {activeTab === 'kalender' && (
+            <div className="inline-flex items-center rounded-xl bg-stone-100/80 p-0.5 text-[10.5px] font-sans-clean font-bold dark:bg-black/40">
               <button
-                onClick={() => setViewMode('month')}
-                className={`px-4 py-1.5 rounded-full transition ${
+                type="button"
+                onClick={() => {
+                  soundManager.playTap();
+                  setViewMode('month');
+                }}
+                className={`rounded-lg px-2.5 py-1 transition-all ${
                   viewMode === 'month'
-                    ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300'
+                    ? 'bg-white text-[#7A1018] shadow-xs dark:bg-[#7A1018] dark:text-[#EFE6DA]'
+                    : 'text-stone-500 hover:text-stone-900 dark:text-rose-300/70 dark:hover:text-white'
                 }`}
               >
                 Bulan
               </button>
               <button
-                onClick={() => setViewMode('year')}
-                className={`px-4 py-1.5 rounded-full transition ${
+                type="button"
+                onClick={() => {
+                  soundManager.playTap();
+                  setViewMode('year');
+                }}
+                className={`rounded-lg px-2.5 py-1 transition-all ${
                   viewMode === 'year'
-                    ? 'bg-[#7A1018] text-[#EFE6DA] shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300'
+                    ? 'bg-white text-[#7A1018] shadow-xs dark:bg-[#7A1018] dark:text-[#EFE6DA]'
+                    : 'text-stone-500 hover:text-stone-900 dark:text-rose-300/70 dark:hover:text-white'
                 }`}
               >
                 Tahun
               </button>
             </div>
-
-            {/* Title / Subheading */}
-            <div className="text-center hidden sm:block">
-              <div className="text-[10px] font-sans-clean font-bold tracking-[0.2em] text-[#7A1018] dark:text-[#F4B6C2] uppercase">
-                PELACAK SIKLUS & LOG INTIM
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                {settings.shareCycleWithPartner ? 'Dibagikan dengan Pasangan (Savero & Soffie)' : 'Privat Soffie'}
-              </div>
-            </div>
-
-            {/* Quick Actions (Settings, Close) */}
-            <div className="flex items-center space-x-2">
-              {canEdit && <button
-                onClick={onOpenSettings}
-                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition"
-                title="Pengaturan Siklus & Privasi"
-              >
-                <SettingsIcon className="w-4 h-4" />
-              </button>}
-            </div>
-          </div>
-
-          {/* Sub Navigation Tabs */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-[11px] sm:text-xs font-sans-clean">
-            <button
-              onClick={() => setActiveTab('kalender')}
-              className={`px-3 py-1 rounded-lg font-bold transition ${
-                activeTab === 'kalender'
-                  ? 'bg-[#F4B6C2]/30 text-[#7A1018] dark:text-[#F4B6C2] border border-[#F4B6C2]'
-                  : 'text-gray-500 hover:text-black dark:text-gray-400'
-              }`}
-            >
-              Kalender Vertikal
-            </button>
-            <button
-              onClick={() => setActiveTab('ringkasan')}
-              className={`px-3 py-1 rounded-lg font-bold transition ${
-                activeTab === 'ringkasan'
-                  ? 'bg-[#F4B6C2]/30 text-[#7A1018] dark:text-[#F4B6C2] border border-[#F4B6C2]'
-                  : 'text-gray-500 hover:text-black dark:text-gray-400'
-              }`}
-            >
-              Ringkasan & Statistik
-            </button>
-            <button
-              onClick={() => setActiveTab('edukasi')}
-              className={`px-3 py-1 rounded-lg font-bold transition relative ${
-                activeTab === 'edukasi'
-                  ? 'bg-[#F4B6C2]/30 text-[#7A1018] dark:text-[#F4B6C2] border border-[#F4B6C2]'
-                  : 'text-gray-500 hover:text-black dark:text-gray-400'
-              }`}
-            >
-              Informasi Medis & Kesehatan
-              {healthAlerts.length > 0 && (
-                <span className="w-2 h-2 rounded-full bg-[#7A1018] absolute -top-1 -right-1" />
-              )}
-            </button>
-          </div>
+          )}
         </div>
 
         {/* Tab 1: Kalender (Bulan & Tahun) */}
         {activeTab === 'kalender' && (
-          <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-3xl p-4 sm:p-6 shadow-md border border-[#7A1018]/15 relative">
-            {/* Legend / Shape Guide (Dibedakan bentuk, bukan hanya warna) */}
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-[11px] font-sans-clean font-medium pb-4 mb-6 border-b border-gray-100 dark:border-white/10">
-              <div className="flex items-center space-x-1.5">
-                <span className="w-4 h-4 rounded-full bg-[#F4B6C2] text-white flex items-center justify-center text-[9px] font-bold">
-                  ●
-                </span>
-                <span className="text-gray-600 dark:text-gray-300">Haid Tercatat</span>
+          <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-2xl p-3 sm:p-4 shadow-md border border-[#7A1018]/15 relative">
+            {/* Legend / Shape Guide - Sesuai Flo Asli */}
+            <div className="flex flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1.5 text-[10px] sm:text-[11px] font-sans-clean font-medium pb-2.5 mb-2.5 border-b border-gray-100 dark:border-white/10">
+              <div className="flex items-center space-x-1" title="Hari menstruasi (haid) tercatat">
+                <span className="w-3.5 h-3.5 rounded-full bg-[#FF5C77] text-white flex items-center justify-center text-[8px] font-bold shadow-2xs">●</span>
+                <span className="text-gray-700 dark:text-gray-300">Haid</span>
               </div>
-              <div className="flex items-center space-x-1.5">
-                <span className="w-4 h-4 rounded-full border-2 border-dashed border-[#F4B6C2] text-[#F4B6C2] flex items-center justify-center text-[9px]">
-                  ○
-                </span>
-                <span className="text-gray-600 dark:text-gray-300">Prediksi Haid</span>
+              <div className="flex items-center space-x-1" title="Prediksi tanggal haid berikutnya">
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-dotted border-[#FF5C77] text-[#FF5C77] flex items-center justify-center text-[8px] font-bold">○</span>
+                <span className="text-gray-700 dark:text-gray-300">Prediksi Haid</span>
               </div>
-              <div className="flex items-center space-x-1.5">
-                <span className="text-teal-600 dark:text-teal-400 font-bold">14</span>
-                <span className="text-gray-600 dark:text-gray-300">Masa Subur</span>
+              <div className="flex items-center space-x-1" title="Masa subur (fertile window)">
+                <span className="text-[#21B3C4] font-bold text-xs">14</span>
+                <span className="text-gray-700 dark:text-gray-300">Masa Subur</span>
               </div>
-              <div className="flex items-center space-x-1.5">
-                <span className="w-4 h-4 rounded-full border-2 border-dashed border-teal-500 flex items-center justify-center text-[9px] text-teal-600">
-                  ○
-                </span>
-                <span className="text-gray-600 dark:text-gray-300">Prediksi Ovulasi</span>
+              <div className="flex items-center space-x-1" title="Prediksi hari ovulasi (puncak masa subur)">
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-dotted border-[#21B3C4] text-[#21B3C4] flex items-center justify-center text-[8px] font-bold">○</span>
+                <span className="text-gray-700 dark:text-gray-300">Ovulasi</span>
               </div>
-              <div className="flex items-center space-x-1.5">
-                <Heart className="w-3.5 h-3.5 text-[#7A1018] fill-[#7A1018]" />
-                <span className="text-gray-600 dark:text-gray-300">Hubungan Intim</span>
+              <div className="flex items-center space-x-1" title="Hari biasa di luar masa subur dan haid">
+                <span className="w-3.5 h-3.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center text-[8px] font-bold">10</span>
+                <span className="text-gray-700 dark:text-gray-300">Biasa</span>
+              </div>
+              <div className="flex items-center space-x-1" title="Keterlambatan menstruasi dari estimasi jadwal">
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-dotted border-gray-400 text-gray-400 flex items-center justify-center text-[8px] font-bold">○</span>
+                <span className="text-gray-700 dark:text-gray-300">Delay</span>
+              </div>
+              <div className="flex items-center space-x-1" title="Aktivitas seksual / keintiman tercatat">
+                <Heart className="w-3.5 h-3.5 text-[#FF3B5C] fill-[#FF3B5C]" />
+                <span className="text-gray-700 dark:text-gray-300">Catatan Intim</span>
               </div>
             </div>
 
-            {/* Continuous Vertical Scroll of Months */}
+            {/* Active Month View */}
             {viewMode === 'month' ? (
-              <div className="cycle-month-stack space-y-10 max-h-[600px] overflow-y-auto pr-2 scrollbar-none">
-                {monthsToRender.map((monthDate, mIdx) => {
-                  const monthName = monthDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-                  const year = monthDate.getFullYear();
-                  const month = monthDate.getMonth();
-
-                  // Days in month
-                  const daysCount = new Date(year, month + 1, 0).getDate();
-                  // Day of week for 1st of month: 0=Sun, 1=Mon, ..., 6=Sat
-                  // Flo style starts on Monday (S, S, R, K, J, S, M)
-                  const firstDay = new Date(year, month, 1).getDay();
-                  const leadingBlanks = (firstDay + 6) % 7; // Monday index 0
-
+              <div>
+                {/* Month Navigator: Prev Button, Month Name, Next Button, and "Bulan Ini" Button */}
+                {(() => {
+                  const activeYear = currentMonthDate.getFullYear();
+                  const activeMonth = currentMonthDate.getMonth();
+                  const daysCount = new Date(activeYear, activeMonth + 1, 0).getDate();
+                  // Sesuai Flo Indonesia: Hari pertama adalah Minggu (M)
+                  const firstDay = new Date(activeYear, activeMonth, 1).getDay(); // 0 = Minggu
+                  const leadingBlanks = firstDay;
                   const days = Array.from({ length: daysCount }, (_, i) => i + 1);
+                  const monthName = currentMonthDate.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
 
                   return (
-                    <div key={mIdx} className="border-b border-gray-100 dark:border-white/5 pb-8 last:border-none">
-                      {/* Month Separator Header */}
-                      <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2] mb-4 text-center">
-                        {monthName}
-                      </h3>
+                    <div>
+                      {/* Month Navigation Bar */}
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <div className="flex items-center space-x-1 sm:space-x-2">
+                          <button
+                            type="button"
+                            onClick={goToPreviousMonth}
+                            className="p-1 sm:p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition"
+                            title="Bulan Sebelumnya"
+                            aria-label="Bulan Sebelumnya"
+                          >
+                            <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </button>
+                          <h3 className="font-serif-title text-base sm:text-lg font-bold text-[#7A1018] dark:text-[#F4B6C2] min-w-[130px] sm:min-w-[160px] text-center">
+                            {monthName}
+                          </h3>
+                          <button
+                            type="button"
+                            onClick={goToNextMonth}
+                            className="p-1 sm:p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-700 dark:text-gray-300 transition"
+                            title="Bulan Berikutnya"
+                            aria-label="Bulan Berikutnya"
+                          >
+                            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                          </button>
+                        </div>
 
-                      {/* Day of Week Header: Single letters as Flo */}
-                      <div className="grid grid-cols-7 gap-1 text-center font-sans-clean font-bold text-xs text-gray-400 mb-2">
+                        {!isViewingCurrentMonth && (
+                          <button
+                            type="button"
+                            onClick={goToCurrentMonth}
+                            className="text-[10px] sm:text-[11px] font-sans-clean font-bold px-2.5 py-1 rounded-full bg-[#7A1018]/10 text-[#7A1018] dark:bg-[#F4B6C2]/20 dark:text-[#F4B6C2] hover:bg-[#7A1018]/20 transition shadow-2xs"
+                          >
+                            Bulan Ini
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Day of Week Header: M S S R K J S (Minggu - Sabtu sesuai Flo Indonesia) */}
+                      <div className="grid grid-cols-7 gap-1 text-center font-sans-clean font-bold text-xs text-gray-400 mb-1.5">
+                        <span>M</span>
                         <span>S</span>
                         <span>S</span>
                         <span>R</span>
                         <span>K</span>
                         <span>J</span>
                         <span>S</span>
-                        <span>M</span>
                       </div>
 
                       {/* Days Grid */}
-                      <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                      <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
                         {Array.from({ length: leadingBlanks }).map((_, bIdx) => (
-                          <div key={`blank-${bIdx}`} className="h-14 sm:h-16" />
+                          <div key={`blank-${bIdx}`} className="h-12 sm:h-14" />
                         ))}
 
                         {days.map((dayNum) => {
-                          const dateObj = new Date(year, month, dayNum);
+                          const dateObj = new Date(activeYear, activeMonth, dayNum);
                           const dateStr = formatDateKey(dateObj);
                           const isToday = dateStr === todayStr;
                           const status = getDayStatus(dateObj, cycles, intimateLogs, stats);
@@ -412,84 +480,52 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                               key={dayNum}
                               type="button"
                               onClick={() => openDayActions(dateStr)}
-                              className={`relative h-14 sm:h-16 rounded-xl flex flex-col items-center justify-between p-1 transition border ${
+                              className={`relative min-h-[52px] sm:min-h-[58px] rounded-xl flex flex-col items-center justify-between py-1 px-0.5 transition border ${
                                 isToday
-                                  ? 'border-[#7A1018] bg-[#7A1018]/5 dark:bg-white/5 font-bold shadow-xs'
+                                  ? 'border-gray-900/30 dark:border-white/30 bg-gray-50/80 dark:bg-white/5 font-bold shadow-xs'
                                   : 'border-transparent hover:border-gray-200 dark:hover:border-white/10'
                               }`}
                             >
-                              {/* Label "HARI INI" on today */}
-                              {isToday && (
-                                <span className="text-[7px] font-sans-clean font-black tracking-tighter text-[#7A1018] dark:text-[#F4B6C2] uppercase">
-                                  HARI INI
-                                </span>
-                              )}
+                              {/* HARI INI text placed ABOVE the date number */}
+                              <div className="h-2.5 flex items-center justify-center">
+                                {isToday ? (
+                                  <span className="text-[6.5px] sm:text-[7px] font-black tracking-tight text-gray-900 dark:text-white uppercase leading-none">
+                                    HARI INI
+                                  </span>
+                                ) : null}
+                              </div>
 
                               {/* Date Number with Flo Visual Codings */}
                               <div
-                                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold transition-transform ${
                                   status.isRecordedPeriod
-                                    ? 'bg-[#F4B6C2] text-white shadow-sm' // Haid tercatat: lingkaran penuh pink, angka putih
+                                    ? 'bg-[#FF5C77] text-white shadow-2xs' // 🔴 Haid tercatat: Lingkaran penuh merah/pink, teks putih
                                     : status.isPredictedPeriod
-                                    ? 'border-2 border-dashed border-[#F4B6C2] text-[#F4B6C2]' // Haid prediksi: lingkaran putus pink, angka pink
+                                    ? 'border-2 border-dotted border-[#FF5C77] text-[#FF5C77] bg-transparent' // 🔴 Prediksi haid: Lingkaran putus-putus merah
                                     : status.isOvulation
-                                    ? 'border-2 border-dashed border-teal-500 text-teal-700 dark:text-teal-300' // Ovulasi prediksi: lingkaran putus teal
+                                    ? 'border-2 border-dotted border-[#21B3C4] text-[#21B3C4] bg-transparent' // ⭕ Prediksi ovulasi: Lingkaran putus-putus teal
                                     : status.isFertile
-                                    ? 'text-teal-600 dark:text-teal-300 font-bold' // Masa subur: angka teal tanpa lingkaran
-                                    : 'text-gray-700 dark:text-gray-300'
+                                    ? 'text-[#21B3C4] font-extrabold' // 🔵 Masa subur: Teks angka teal tanpa lingkaran
+                                    : status.isDelayed
+                                    ? 'border-2 border-dotted border-gray-400 dark:border-gray-500 text-gray-400 bg-gray-50/50 dark:bg-white/5' // ⚪ Delay: Lingkaran abu-abu putus-putus
+                                    : 'text-gray-800 dark:text-gray-200 font-medium' // ⚫ Hari biasa: Teks hitam / abu-abu biasa
                                 }`}
                               >
                                 {dayNum}
                               </div>
 
-                              {/* Hubungan Intim Badge Under Date */}
-                              <div className="h-4 flex items-center justify-center space-x-0.5">
-                                {status.intimateLogs.map((log) => {
-                                  // Distinct badges as required
-                                  if (log.protection === 'kondom') {
-                                    return (
-                                      <span
-                                        key={log.id}
-                                        className="relative inline-flex items-center text-[#7A1018]"
-                                        title={log.protectionIssue ? 'Kondom bermasalah' : 'Pakai Kondom (Aman)'}
-                                      >
-                                        <Heart className="w-3.5 h-3.5 fill-[#7A1018] text-[#7A1018]" />
-                                        <Shield className="w-2 h-2 text-white absolute inset-0 m-auto" />
+                              {/* Hubungan Intim Badge Under Date (Heart) */}
+                              <div className="h-3 flex items-center justify-center space-x-0.5">
+                                {status.intimateLogs.length > 0 && (
+                                  <span className="relative inline-flex items-center text-[#FF3B5C]">
+                                    <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-[#FF3B5C] text-[#FF3B5C]" />
+                                    {status.intimateLogs.some(l => l.protection === 'tanpa_pengaman' || l.protectionIssue) && (
+                                      <span className="text-[6px] text-white font-black absolute inset-0 flex items-center justify-center leading-none">
+                                        !
                                       </span>
-                                    );
-                                  }
-                                  if (log.protection === 'tanpa_pengaman') {
-                                    return (
-                                      <span
-                                        key={log.id}
-                                        className="relative inline-flex items-center text-red-600 animate-pulse"
-                                        title="Tanpa Pengaman"
-                                      >
-                                        <Heart className="w-3.5 h-3.5 fill-red-600 text-red-700 ring-1 ring-red-400 rounded-full" />
-                                        <span className="text-[7px] text-white font-black absolute inset-0 flex items-center justify-center">
-                                          !
-                                        </span>
-                                      </span>
-                                    );
-                                  }
-                                  if (log.protection === 'metode_lain') {
-                                    return (
-                                      <span
-                                        key={log.id}
-                                        className="relative inline-flex items-center text-blue-600"
-                                        title={`Metode Lain: ${log.otherMethodDetails || 'KB'}`}
-                                      >
-                                        <Heart className="w-3.5 h-3.5 fill-blue-500 text-blue-600" />
-                                        <Plus className="w-2 h-2 text-white absolute inset-0 m-auto" />
-                                      </span>
-                                    );
-                                  }
-                                  return (
-                                    <span key={log.id} className="text-gray-400" title="Tidak Ingat">
-                                      <Heart className="w-3.5 h-3.5 fill-gray-400 text-gray-400" />
-                                    </span>
-                                  );
-                                })}
+                                    )}
+                                  </span>
+                                )}
                               </div>
                             </button>
                           );
@@ -497,149 +533,170 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                       </div>
                     </div>
                   );
-                })}
+                })()}
               </div>
             ) : (
               /* Year View: 12 Mini Month Grids */
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 py-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 py-2">
                 {Array.from({ length: 12 }).map((_, mIdx) => {
-                  const currentYear = new Date().getFullYear();
+                  const currentYear = currentMonthDate.getFullYear();
                   const mDate = new Date(currentYear, mIdx, 1);
                   const mName = mDate.toLocaleDateString('id-ID', { month: 'short' });
                   const daysInM = new Date(currentYear, mIdx + 1, 0).getDate();
+                  const isThisMonth = currentYear === new Date().getFullYear() && mIdx === new Date().getMonth();
 
                   return (
-                    <div
+                    <button
                       key={mIdx}
-                      className="p-3 rounded-xl bg-gray-50 dark:bg-black/30 border border-gray-100 dark:border-white/5"
+                      type="button"
+                      onClick={() => {
+                        soundManager.playTap();
+                        setCurrentMonthDate(new Date(currentYear, mIdx, 1));
+                        setViewMode('month');
+                      }}
+                      className={`p-2.5 rounded-xl text-left transition border ${
+                        isThisMonth
+                          ? 'bg-rose-50/50 dark:bg-rose-950/20 border-[#7A1018]/30 shadow-2xs'
+                          : 'bg-gray-50 dark:bg-black/30 border-gray-100 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/20'
+                      }`}
                     >
-                      <h4 className="text-xs font-bold text-[#7A1018] dark:text-[#F4B6C2] mb-2 font-serif-title">
-                        {mName}
-                      </h4>
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="text-xs font-bold text-[#7A1018] dark:text-[#F4B6C2] font-serif-title">
+                          {mName}
+                        </h4>
+                        {isThisMonth && (
+                          <span className="text-[7px] font-bold uppercase tracking-wider text-[#7A1018] dark:text-[#F4B6C2]">
+                            Bulan ini
+                          </span>
+                        )}
+                      </div>
                       <div className="grid grid-cols-7 gap-0.5 text-[8px]">
                         {Array.from({ length: daysInM }).map((_, dIdx) => {
                           const dateObj = new Date(currentYear, mIdx, dIdx + 1);
                           const status = getDayStatus(dateObj, cycles, intimateLogs, stats);
 
                           let dotColor = 'bg-gray-200 dark:bg-gray-700';
-                          if (status.isRecordedPeriod) dotColor = 'bg-[#F4B6C2]';
-                          else if (status.isPredictedPeriod) dotColor = 'bg-[#F4B6C2]/60 ring-1 ring-[#F4B6C2]';
-                          else if (status.isOvulation) dotColor = 'bg-teal-500';
-                          else if (status.isFertile) dotColor = 'bg-teal-300';
+                          if (status.isRecordedPeriod) dotColor = 'bg-[#FF5C77]';
+                          else if (status.isPredictedPeriod) dotColor = 'bg-[#FF5C77]/40 ring-1 ring-[#FF5C77]';
+                          else if (status.isOvulation) dotColor = 'bg-[#21B3C4] ring-1 ring-[#21B3C4]';
+                          else if (status.isFertile) dotColor = 'bg-[#21B3C4]/50';
+                          else if (status.isDelayed) dotColor = 'bg-gray-400';
 
                           return (
                             <div
                               key={dIdx}
-                              className={`w-2.5 h-2.5 rounded-full mx-auto ${dotColor}`}
+                              className={`w-2 h-2 rounded-full mx-auto ${dotColor}`}
                               title={`${dIdx + 1} ${mName}`}
                             />
                           );
                         })}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
             )}
 
-            {/* Floating Action Button at Bottom: "Edit tanggal periode haid" */}
-            {canEdit && <div className="sticky bottom-2 mt-6 flex flex-wrap items-center justify-between gap-3 bg-white/95 dark:bg-[#200508]/95 p-3 rounded-2xl border border-[#7A1018]/20 shadow-xl backdrop-blur-md">
-              <button
-                type="button"
-                onClick={() => { setSelectedDate(todayStr); openPeriodEditorForDate(todayStr); }}
-                className="px-4 py-2.5 rounded-xl bg-[#F4B6C2] hover:bg-[#e99ba9] text-[#7A1018] font-bold text-xs font-sans-clean transition shadow-sm flex items-center space-x-2"
-              >
-                <CalendarIcon className="w-4 h-4" />
-                <span>Catat / ubah haid & masa subur</span>
-              </button>
+            {/* Sticky Action Buttons at Bottom - Flo Style */}
+            {canEdit && (
+              <div className="sticky bottom-2 mt-4 flex items-center justify-center gap-2.5 bg-white/95 dark:bg-[#200508]/95 p-2 sm:p-2.5 rounded-2xl border border-[#7A1018]/15 shadow-xl backdrop-blur-md">
+                <button
+                  type="button"
+                  onClick={() => { setSelectedDate(todayStr); openPeriodEditorForDate(todayStr); }}
+                  className="px-5 py-2.5 rounded-full bg-[#FF5C77] hover:bg-[#eb4b66] text-white font-bold text-xs sm:text-sm font-sans-clean transition shadow-md flex items-center space-x-1.5"
+                >
+                  <CalendarIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>Edit tanggal periode haid</span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => openLogModalForDate(todayStr)}
-                className="px-4 py-2.5 rounded-xl bg-[#7A1018] hover:bg-[#5e0a11] text-[#EFE6DA] font-bold text-xs font-sans-clean transition shadow-sm flex items-center space-x-2"
-              >
-                <Heart className="w-4 h-4 fill-current" />
-                <span>Catat Hubungan Hari Ini</span>
-              </button>
-            </div>}
+                <button
+                  type="button"
+                  onClick={() => openLogModalForDate(todayStr)}
+                  className="px-4 py-2.5 rounded-full bg-[#7A1018] hover:bg-[#5e0a11] text-[#EFE6DA] font-bold text-xs font-sans-clean transition shadow-sm flex items-center space-x-1.5"
+                >
+                  <Heart className="w-3.5 h-3.5 fill-current flex-shrink-0 text-[#FF3B5C]" />
+                  <span>Catat Hubungan</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
         {/* Tab 2: Ringkasan & Statistik Privat */}
         {activeTab === 'ringkasan' && (
-          <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-3xl p-4 sm:p-6 shadow-md border border-[#7A1018]/15 space-y-6">
+          <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-2xl p-3 sm:p-4 shadow-md border border-[#7A1018]/15 space-y-4">
             <div>
-              <h3 className="font-serif-title text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2]">
+              <h3 className="font-serif-title text-base sm:text-lg font-bold text-[#7A1018] dark:text-[#F4B6C2]">
                 Ringkasan Siklus & Log Intim
               </h3>
-              <p className="text-xs text-gray-500 font-sans-clean mt-1">
+              <p className="text-[11px] text-gray-500 font-sans-clean mt-0.5">
                 Data privat per siklus dan per bulan untuk pemahaman kesehatan bersama tanpa peringkat.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-4 rounded-2xl bg-[#EFE6DA]/40 dark:bg-black/30 border border-[#7A1018]/10 text-center">
-                <span className="text-[10px] uppercase font-bold text-gray-500 block font-sans-clean">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-[#EFE6DA]/40 dark:bg-black/30 border border-[#7A1018]/10 text-center">
+                <span className="text-[9px] uppercase font-bold text-gray-500 block font-sans-clean">
                   Rata-rata Siklus
                 </span>
-                <span className="text-2xl font-bold text-[#7A1018] dark:text-[#F4B6C2] font-serif-title">
+                <span className="text-lg sm:text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2] font-serif-title">
                   {stats.averageCycleLength} Hari
                 </span>
               </div>
-              <div className="p-4 rounded-2xl bg-[#EFE6DA]/40 dark:bg-black/30 border border-[#7A1018]/10 text-center">
-                <span className="text-[10px] uppercase font-bold text-gray-500 block font-sans-clean">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-[#EFE6DA]/40 dark:bg-black/30 border border-[#7A1018]/10 text-center">
+                <span className="text-[9px] uppercase font-bold text-gray-500 block font-sans-clean">
                   Durasi Haid
                 </span>
-                <span className="text-2xl font-bold text-[#7A1018] dark:text-[#F4B6C2] font-serif-title">
+                <span className="text-lg sm:text-xl font-bold text-[#7A1018] dark:text-[#F4B6C2] font-serif-title">
                   {stats.averagePeriodLength} Hari
                 </span>
               </div>
-              <div className="p-4 rounded-2xl bg-[#EFE6DA]/40 dark:bg-black/30 border border-[#7A1018]/10 text-center">
-                <span className="text-[10px] uppercase font-bold text-gray-500 block font-sans-clean">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-[#EFE6DA]/40 dark:bg-black/30 border border-[#7A1018]/10 text-center">
+                <span className="text-[9px] uppercase font-bold text-gray-500 block font-sans-clean">
                   Tingkat Pengaman
                 </span>
-                <span className="text-2xl font-bold text-teal-600 dark:text-teal-400 font-serif-title">
+                <span className="text-lg sm:text-xl font-bold text-teal-600 dark:text-teal-400 font-serif-title">
                   {intimateStats.protectedRate}%
                 </span>
               </div>
-              <div className="p-4 rounded-2xl bg-[#EFE6DA]/40 dark:bg-black/30 border border-[#7A1018]/10 text-center">
-                <span className="text-[10px] uppercase font-bold text-gray-500 block font-sans-clean">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-[#EFE6DA]/40 dark:bg-black/30 border border-[#7A1018]/10 text-center">
+                <span className="text-[9px] uppercase font-bold text-gray-500 block font-sans-clean">
                   Total Log Intim
                 </span>
-                <span className="text-2xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA] font-serif-title">
+                <span className="text-lg sm:text-xl font-bold text-[#3B0A0F] dark:text-[#EFE6DA] font-serif-title">
                   {intimateStats.total} Kali
                 </span>
               </div>
             </div>
 
             {/* List of Intimate Logs with Delete & Details */}
-            <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/10">
-              <h4 className="font-serif-title font-bold text-base text-[#3B0A0F] dark:text-[#EFE6DA] mb-3">
+            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-white/10">
+              <h4 className="font-serif-title font-bold text-sm text-[#3B0A0F] dark:text-[#EFE6DA] mb-2">
                 Riwayat Catatan Intim
               </h4>
 
               {intimateLogs.length === 0 ? (
-                <p className="text-xs text-gray-400 font-sans-clean italic">Belum ada catatan hubungan intim.</p>
+                <p className="text-[11px] text-gray-400 font-sans-clean italic">Belum ada catatan hubungan intim.</p>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
                   {intimateLogs.map((log) => {
                     const linkedPin = pins.find((p) => p.id === log.pinId);
                     return (
                       <div
                         key={log.id}
-                        className="p-3 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-sans-clean"
+                        className="p-2 sm:p-2.5 rounded-xl bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-white/5 flex items-center justify-between text-xs font-sans-clean"
                       >
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-2.5">
                           <MoodBadge moodKey={log.mood || 'romantis'} />
                           <div>
-                            <div className="font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
+                            <div className="font-bold text-[#3B0A0F] dark:text-[#EFE6DA] text-xs">
                               {log.date} {log.time ? `• ${log.time}` : ''}
                             </div>
-                            <div className="text-[11px] text-gray-500 flex items-center flex-wrap gap-1 mt-0.5">
+                            <div className="text-[10px] text-gray-500 flex items-center flex-wrap gap-1 mt-0.5">
                               <span>Metode: <strong>{log.protection}</strong></span>
                               {log.protectionIssue && (
-                                <span className="inline-flex items-center text-red-600 font-bold bg-red-100 dark:bg-red-950/40 px-1.5 py-0.5 rounded text-[10px]">
-                                  <AlertTriangle className="w-3 h-3 mr-1" />
+                                <span className="inline-flex items-center text-red-600 font-bold bg-red-100 dark:bg-red-950/40 px-1.5 py-0.5 rounded text-[9px]">
+                                  <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
                                   Ada kendala/bocor
                                 </span>
                               )}
@@ -650,6 +707,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                         </div>
 
                         {canEdit && <button
+                          type="button"
                           onClick={() => {
                             if (confirm('Hapus log intim tanggal ' + log.date + '?')) {
                               onDeleteIntimateLog(log.id);
@@ -667,17 +725,18 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
             </div>
 
             {/* Privacy Wipe Button */}
-            {canEdit && <div className="pt-4 border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
-              <span className="text-xs text-gray-500">
+            {canEdit && <div className="pt-3 border-t border-gray-100 dark:border-white/10 flex items-center justify-between">
+              <span className="text-[11px] text-gray-500">
                 Penyimpanan lokal di perangkat ini terenkripsi.
               </span>
               <button
+                type="button"
                 onClick={() => {
                   if (confirm('PERINGATAN: Hapus permanen seluruh riwayat siklus & log intim?')) {
                     onWipeData();
                   }
                 }}
-                className="text-xs text-red-600 hover:underline font-bold"
+                className="text-[11px] text-red-600 hover:underline font-bold"
               >
                 Hapus Semua Data Siklus & Intim
               </button>
@@ -687,22 +746,22 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
 
         {/* Tab 3: Kartu Informasi Medis & Kesehatan Netral */}
         {activeTab === 'edukasi' && (
-          <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-3xl p-4 sm:p-6 shadow-md border border-[#7A1018]/15 space-y-5 font-sans-clean text-xs">
+          <div className="cycle-clay-card bg-white dark:bg-[#200508] rounded-2xl p-3 sm:p-4 shadow-md border border-[#7A1018]/15 space-y-3.5 font-sans-clean text-xs">
             <div className="flex items-center space-x-2 text-[#7A1018] dark:text-[#F4B6C2]">
-              <Info className="w-5 h-5 flex-shrink-0" />
-              <h3 className="font-serif-title text-xl font-bold">
+              <Info className="w-4 h-4 flex-shrink-0" />
+              <h3 className="font-serif-title text-base sm:text-lg font-bold">
                 Informasi Kesehatan & Panduan Netral
               </h3>
             </div>
 
             {/* If there are health risk alerts */}
             {healthAlerts.length > 0 && (
-              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 space-y-2">
-                <div className="flex items-center space-x-2 font-bold text-sm">
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 space-y-1.5">
+                <div className="flex items-center space-x-1.5 font-bold text-xs">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                   <span>Catatan Perhatian Khusus:</span>
                 </div>
-                <ul className="list-disc list-inside space-y-1">
+                <ul className="list-disc list-inside space-y-0.5 text-[11px]">
                   {healthAlerts.map((alert, idx) => (
                     <li key={idx}>
                       Tanggal {alert.log.date}: {alert.message}
@@ -712,35 +771,35 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-black/30 border border-gray-100 dark:border-white/5 space-y-2">
-                <h4 className="font-bold text-[#7A1018] dark:text-[#F4B6C2] text-sm flex items-center space-x-1.5">
-                  <Shield className="w-4 h-4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-black/30 border border-gray-100 dark:border-white/5 space-y-1.5">
+                <h4 className="font-bold text-[#7A1018] dark:text-[#F4B6C2] text-xs flex items-center space-x-1.5">
+                  <Shield className="w-3.5 h-3.5" />
                   <span>Kontrasepsi Darurat (Morning-After Pill)</span>
                 </h4>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">
                   Bila terjadi hubungan intim tanpa pengaman atau kondom robek di masa subur, kontrasepsi darurat (seperti Levonorgestrel) paling efektif diminum <strong>sedini mungkin</strong> (terbaik dalam 24 jam, maksimal 72-120 jam tergantung jenis). Konsultasikan dengan apoteker atau dokter terdekat.
                 </p>
               </div>
 
-              <div className="p-4 rounded-2xl bg-gray-50 dark:bg-black/30 border border-gray-100 dark:border-white/5 space-y-2">
-                <h4 className="font-bold text-[#7A1018] dark:text-[#F4B6C2] text-sm flex items-center space-x-1.5">
-                  <CalendarIcon className="w-4 h-4" />
+              <div className="p-3 rounded-xl bg-gray-50 dark:bg-black/30 border border-gray-100 dark:border-white/5 space-y-1.5">
+                <h4 className="font-bold text-[#7A1018] dark:text-[#F4B6C2] text-xs flex items-center space-x-1.5">
+                  <CalendarIcon className="w-3.5 h-3.5" />
                   <span>Waktu Tes Kehamilan yang Akurat</span>
                 </h4>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">
                   Tes kehamilan menggunakan testpack urine paling akurat dilakukan mulai dari <strong>hari pertama setelah terlambat haid</strong>, menggunakan urine pertama di pagi hari karena konsentrasi hormon hCG berada pada titik tertinggi.
                 </p>
               </div>
             </div>
 
             {/* Health Center Nearby Semarang Links */}
-            <div className="p-4 rounded-2xl bg-[#EFE6DA]/40 dark:bg-black/30 border border-[#7A1018]/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="p-3 rounded-xl bg-[#EFE6DA]/40 dark:bg-black/30 border border-[#7A1018]/10 flex flex-col sm:flex-row items-center justify-between gap-2.5">
               <div>
-                <h5 className="font-bold text-[#3B0A0F] dark:text-[#EFE6DA]">
+                <h5 className="font-bold text-[#3B0A0F] dark:text-[#EFE6DA] text-xs">
                   Layanan Kesehatan & Rumah Sakit Terdekat di Semarang
                 </h5>
-                <p className="text-gray-500 text-[11px]">
+                <p className="text-gray-500 text-[10px]">
                   RSND Undip Tembalang, RS Kariadi Semarang, atau Apotek K-24 / Kimia Farma terdekat.
                 </p>
               </div>
@@ -748,14 +807,14 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
                 href="https://www.google.com/maps/search/Apotek+dan+Rumah+Sakit+terdekat+Semarang"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 bg-[#7A1018] text-[#EFE6DA] rounded-xl font-bold text-xs whitespace-nowrap hover:bg-[#5e0a11] transition"
+                className="px-3 py-1.5 bg-[#7A1018] text-[#EFE6DA] rounded-lg font-bold text-[11px] whitespace-nowrap hover:bg-[#5e0a11] transition"
               >
                 Cari Layanan Kesehatan &rarr;
               </a>
             </div>
 
             {/* Permanent Medical Disclaimer as required */}
-            <div className="p-3 rounded-xl bg-gray-100 dark:bg-black/40 text-[10px] text-gray-500 leading-relaxed">
+            <div className="p-2.5 rounded-xl bg-gray-100 dark:bg-black/40 text-[9px] text-gray-500 leading-relaxed">
               <strong>DISCLAIMER MEDIS:</strong> Kalender ini dan perkiraan masa subur/ovulasi adalah perkiraan matematis berbasis kalender dan BUKAN alat kontrasepsi yang pasti atau pengganti diagnosis medis klinis. Siklus dapat dipengaruhi stres, kelelahan, dan hormon. Selalu gunakan perlindungan ganda untuk kesehatan bersama.
             </div>
           </div>

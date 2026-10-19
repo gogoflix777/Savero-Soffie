@@ -1472,6 +1472,288 @@ values
 on conflict (id) do nothing;
 
 -- ============================================================================
+-- 202610190015_cycle_and_intimate_records.sql
+-- ============================================================================
+create table if not exists public.cycle_records (
+  id text primary key,
+  payload jsonb not null check (jsonb_typeof(payload) = 'object'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by uuid default auth.uid() references auth.users(id),
+  check (payload->>'id' = id)
+);
+
+alter table public.cycle_records enable row level security;
+revoke all on public.cycle_records from public, anon;
+grant select, insert, update, delete on public.cycle_records to authenticated;
+
+drop policy if exists "Couple members read cycle records" on public.cycle_records;
+create policy "Couple members read cycle records"
+  on public.cycle_records for select to authenticated
+  using (public.is_couple_member());
+
+drop policy if exists "Couple members add cycle records" on public.cycle_records;
+create policy "Couple members add cycle records"
+  on public.cycle_records for insert to authenticated
+  with check (public.is_couple_member());
+
+drop policy if exists "Couple members update cycle records" on public.cycle_records;
+create policy "Couple members update cycle records"
+  on public.cycle_records for update to authenticated
+  using (public.is_couple_member())
+  with check (public.is_couple_member());
+
+drop policy if exists "Couple members remove cycle records" on public.cycle_records;
+create policy "Couple members remove cycle records"
+  on public.cycle_records for delete to authenticated
+  using (public.is_couple_member());
+
+create or replace function public.enforce_cycle_record_identity()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is not null and not public.is_couple_member() then
+    raise exception 'Akses akun pasangan diperlukan.';
+  end if;
+  if new.payload->>'id' is distinct from new.id then
+    raise exception 'ID siklus pada metadata tidak cocok.';
+  end if;
+  if tg_op = 'UPDATE' and new.id is distinct from old.id then
+    raise exception 'ID siklus tidak dapat diubah.';
+  end if;
+  new.updated_at := now();
+  if auth.uid() is not null then
+    new.updated_by := auth.uid();
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists cycle_record_identity_guard on public.cycle_records;
+create trigger cycle_record_identity_guard
+  before insert or update on public.cycle_records
+  for each row execute function public.enforce_cycle_record_identity();
+
+alter table public.cycle_records replica identity full;
+
+create table if not exists public.intimate_logs (
+  id text primary key,
+  payload jsonb not null check (jsonb_typeof(payload) = 'object'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by uuid default auth.uid() references auth.users(id),
+  check (payload->>'id' = id)
+);
+
+alter table public.intimate_logs enable row level security;
+revoke all on public.intimate_logs from public, anon;
+grant select, insert, update, delete on public.intimate_logs to authenticated;
+
+drop policy if exists "Couple members read intimate logs" on public.intimate_logs;
+create policy "Couple members read intimate logs"
+  on public.intimate_logs for select to authenticated
+  using (public.is_couple_member());
+
+drop policy if exists "Couple members add intimate logs" on public.intimate_logs;
+create policy "Couple members add intimate logs"
+  on public.intimate_logs for insert to authenticated
+  with check (public.is_couple_member());
+
+drop policy if exists "Couple members update intimate logs" on public.intimate_logs;
+create policy "Couple members update intimate logs"
+  on public.intimate_logs for update to authenticated
+  using (public.is_couple_member())
+  with check (public.is_couple_member());
+
+drop policy if exists "Couple members remove intimate logs" on public.intimate_logs;
+create policy "Couple members remove intimate logs"
+  on public.intimate_logs for delete to authenticated
+  using (public.is_couple_member());
+
+create or replace function public.enforce_intimate_log_identity()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is not null and not public.is_couple_member() then
+    raise exception 'Akses akun pasangan diperlukan.';
+  end if;
+  if new.payload->>'id' is distinct from new.id then
+    raise exception 'ID catatan intim pada metadata tidak cocok.';
+  end if;
+  if tg_op = 'UPDATE' and new.id is distinct from old.id then
+    raise exception 'ID catatan intim tidak dapat diubah.';
+  end if;
+  new.updated_at := now();
+  if auth.uid() is not null then
+    new.updated_by := auth.uid();
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists intimate_log_identity_guard on public.intimate_logs;
+create trigger intimate_log_identity_guard
+  before insert or update on public.intimate_logs
+  for each row execute function public.enforce_intimate_log_identity();
+
+alter table public.intimate_logs replica identity full;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'cycle_records'
+    ) then
+      alter publication supabase_realtime add table public.cycle_records;
+    end if;
+
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'intimate_logs'
+    ) then
+      alter publication supabase_realtime add table public.intimate_logs;
+    end if;
+  end if;
+end;
+$$;
+
+insert into public.cycle_records (id, payload)
+values
+  ('cycle-2026-09-17', $json${
+    "id": "cycle-2026-09-17",
+    "startDate": "2026-09-17",
+    "endDate": "2026-09-21",
+    "cycleLength": 26,
+    "periodLength": 5,
+    "flow": "sedang",
+    "pain": "ringan",
+    "mood": "tenang",
+    "notes": "Siklus menstruasi tercatat Flo (17-21 September 2026)."
+  }$json$::jsonb),
+  ('cycle-2026-10-13', $json${
+    "id": "cycle-2026-10-13",
+    "startDate": "2026-10-13",
+    "endDate": "2026-10-17",
+    "recordedPeriodEndDate": "2026-10-14",
+    "cycleLength": 26,
+    "periodLength": 5,
+    "flow": "sedang",
+    "pain": "ringan",
+    "mood": "hangat",
+    "notes": "Siklus menstruasi tercatat Flo (13-14 Oktober aktual, 15-17 Oktober prediksi sisa haid)."
+  }$json$::jsonb)
+on conflict (id) do nothing;
+
+insert into public.intimate_logs (id, payload)
+values
+  ('intimate-2026-09-06', $json${"id":"intimate-2026-09-06","date":"2026-09-06","time":"21:00","protection":"kondom","protectionIssue":false,"mood":"romantis","notes":"Aktivitas keintiman tercatat di Flo.","createdAt":"2026-09-06T21:00:00Z"}$json$::jsonb),
+  ('intimate-2026-09-13', $json${"id":"intimate-2026-09-13","date":"2026-09-13","time":"22:00","protection":"kondom","protectionIssue":false,"mood":"hangat","notes":"Aktivitas keintiman tercatat di Flo.","createdAt":"2026-09-13T22:00:00Z"}$json$::jsonb),
+  ('intimate-2026-09-22', $json${"id":"intimate-2026-09-22","date":"2026-09-22","time":"23:00","protection":"kondom","protectionIssue":false,"mood":"romantis","notes":"Aktivitas keintiman tercatat di Flo (masa subur).","createdAt":"2026-09-22T23:00:00Z"}$json$::jsonb),
+  ('intimate-2026-09-26', $json${"id":"intimate-2026-09-26","date":"2026-09-26","time":"22:30","protection":"kondom","protectionIssue":false,"mood":"romantis","notes":"Aktivitas keintiman tercatat di Flo (masa subur).","createdAt":"2026-09-26T22:30:00Z"}$json$::jsonb),
+  ('intimate-2026-09-28', $json${"id":"intimate-2026-09-28","date":"2026-09-28","time":"23:30","protection":"kondom","protectionIssue":false,"mood":"romantis","notes":"Aktivitas keintiman tercatat di Flo (perkiraan ovulasi).","createdAt":"2026-09-28T23:30:00Z"}$json$::jsonb),
+  ('intimate-2026-10-04', $json${"id":"intimate-2026-10-04","date":"2026-10-04","time":"21:30","protection":"kondom","protectionIssue":false,"mood":"hangat","notes":"Aktivitas keintiman tercatat di Flo.","createdAt":"2026-10-04T21:30:00Z"}$json$::jsonb),
+  ('intimate-2026-10-07', $json${"id":"intimate-2026-10-07","date":"2026-10-07","time":"22:00","protection":"kondom","protectionIssue":false,"mood":"romantis","notes":"Aktivitas keintiman tercatat di Flo.","createdAt":"2026-10-07T22:00:00Z"}$json$::jsonb),
+  ('intimate-2026-10-11', $json${"id":"intimate-2026-10-11","date":"2026-10-11","time":"23:00","protection":"kondom","protectionIssue":false,"mood":"hangat","notes":"Aktivitas keintiman tercatat di Flo.","createdAt":"2026-10-11T23:00:00Z"}$json$::jsonb)
+on conflict (id) do nothing;
+
+-- ============================================================================
+-- 202610190016_movie_night_plans.sql
+-- ============================================================================
+-- Movie Night Plans Realtime & Shared Persistence for Savero and Soffie
+create table if not exists public.movie_night_plans (
+  id text primary key,
+  movie_id text,
+  movie_title text not null,
+  poster_url text,
+  scheduled_at timestamptz not null,
+  snacks text,
+  drinks text,
+  planned_by text not null default 'Berdua' check (planned_by in ('Savero', 'Soffie', 'Berdua')),
+  confirmed_by_savero boolean not null default false,
+  confirmed_by_soffie boolean not null default false,
+  status text not null default 'confirmed' check (status in ('confirmed', 'pending', 'completed', 'cancelled')),
+  payload jsonb not null check (jsonb_typeof(payload) = 'object'),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by uuid default auth.uid() references auth.users(id),
+  check (payload->>'id' = id)
+);
+
+alter table public.movie_night_plans enable row level security;
+revoke all on public.movie_night_plans from public, anon;
+grant select, insert, update, delete on public.movie_night_plans to authenticated;
+
+drop policy if exists "Couple members read movie night plans" on public.movie_night_plans;
+create policy "Couple members read movie night plans"
+  on public.movie_night_plans for select to authenticated
+  using (public.is_couple_member());
+
+drop policy if exists "Couple members add movie night plans" on public.movie_night_plans;
+create policy "Couple members add movie night plans"
+  on public.movie_night_plans for insert to authenticated
+  with check (public.is_couple_member());
+
+drop policy if exists "Couple members update movie night plans" on public.movie_night_plans;
+create policy "Couple members update movie night plans"
+  on public.movie_night_plans for update to authenticated
+  using (public.is_couple_member())
+  with check (public.is_couple_member());
+
+drop policy if exists "Couple members remove movie night plans" on public.movie_night_plans;
+create policy "Couple members remove movie night plans"
+  on public.movie_night_plans for delete to authenticated
+  using (public.is_couple_member());
+
+create or replace function public.enforce_movie_night_plan_identity()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or not public.is_couple_member() then
+    raise exception 'Akses akun pasangan diperlukan.';
+  end if;
+  if new.payload->>'id' is distinct from new.id then
+    raise exception 'ID jadwal kencan pada metadata tidak cocok.';
+  end if;
+  if tg_op = 'UPDATE' and new.id is distinct from old.id then
+    raise exception 'ID jadwal kencan tidak dapat diubah.';
+  end if;
+  new.updated_at := now();
+  new.updated_by := auth.uid();
+  return new;
+end;
+$$;
+
+drop trigger if exists movie_night_plan_identity_guard on public.movie_night_plans;
+create trigger movie_night_plan_identity_guard
+  before insert or update on public.movie_night_plans
+  for each row execute function public.enforce_movie_night_plan_identity();
+
+alter table public.movie_night_plans replica identity full;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'movie_night_plans'
+    ) then
+      alter publication supabase_realtime add table public.movie_night_plans;
+    end if;
+  end if;
+end;
+$$;
+
+-- ============================================================================
 -- OPTIONAL PROJECT-SPECIFIC SQL (edit values and run separately when needed)
 -- ============================================================================
 -- Admin enrollment: create the admin Auth user first, replace the email, then
