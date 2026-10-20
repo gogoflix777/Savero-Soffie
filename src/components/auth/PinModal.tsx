@@ -58,14 +58,18 @@ export const PinModal: React.FC<PinModalProps> = ({ correctPin, onSuccess, onEnt
   }, [handleBackspace, handleDigit]);
 
   return (
-    <div className="pin-modal-backdrop fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
+    <motion.div
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.22, ease: 'easeInOut' } }}
+      className="pin-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#fffaf0] p-4 dark:bg-[#21151a]"
+    >
       <motion.div
         role="dialog"
         aria-modal="true"
         aria-labelledby="pin-modal-title"
         initial={{ opacity: 0, scale: 0.94, y: 14 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 8 }}
+        exit={{ opacity: 0, scale: 0.95, y: -10 }}
         transition={{ type: 'spring', stiffness: 360, damping: 30 }}
         className="pin-modal-card my-auto w-full max-w-[360px] rounded-[28px] px-5 pb-5 pt-6 text-center sm:px-7 sm:pb-6 sm:pt-7"
       >
@@ -121,6 +125,6 @@ export const PinModal: React.FC<PinModalProps> = ({ correctPin, onSuccess, onEnt
           </button>
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };

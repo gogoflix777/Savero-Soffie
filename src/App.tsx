@@ -56,7 +56,7 @@ const WishlistSection = lazy(() => import('./components/wishlist/WishlistSection
 const TrophyCabinetSection = lazy(() => import('./components/badges/TrophyCabinetSection').then(m => ({ default: m.TrophyCabinetSection })));
 const RomanticExtrasSection = lazy(() => import('./components/romantic/RomanticExtrasSection').then(m => ({ default: m.RomanticExtrasSection })));
 const SettingsModal = lazy(() => import('./components/settings/SettingsModal').then(m => ({ default: m.SettingsModal })));
-const PinModal = lazy(() => import('./components/auth/PinModal').then(m => ({ default: m.PinModal })));
+import { PinModal } from './components/auth/PinModal';
 
 const SectionLoadingFallback: React.FC = () => (
   <div className="flex min-h-[45vh] w-full flex-col items-center justify-center gap-3 p-6 select-none" aria-live="polite">
@@ -1661,7 +1661,22 @@ export default function App() {
     );
   }
   if (!authReady || !authenticated) {
-    return authReady ? <SupabaseLogin /> : <div className="fixed inset-0 grid place-items-center bg-[#fff7f1] dark:bg-[#21151a]">Memuat sesi…</div>;
+    return authReady ? (
+      <SupabaseLogin />
+    ) : (
+      <div className="fixed inset-0 grid place-items-center bg-[#fffaf0] dark:bg-[#21151a]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-rose-400 via-pink-300 to-amber-200 p-0.5 shadow-md animate-pulse">
+            <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white dark:bg-[#2b121c]">
+              <Heart className="h-6 w-6 fill-rose-500 text-rose-500 animate-bounce" />
+            </div>
+          </div>
+          <span className="text-xs font-bold tracking-wider uppercase text-rose-600/80 dark:text-rose-300/80">
+            Memuat Sesi…
+          </span>
+        </div>
+      </div>
+    );
   }
   if (isSupabaseConfigured && authenticated && profileLoadError) {
     return (
@@ -1685,7 +1700,20 @@ export default function App() {
     );
   }
   if (isSupabaseConfigured && authenticated && !profileReady) {
-    return <div className="fixed inset-0 grid place-items-center bg-[#fff7f1] dark:bg-[#21151a]">Memuat profil…</div>;
+    return (
+      <div className="fixed inset-0 grid place-items-center bg-[#fffaf0] dark:bg-[#21151a]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-rose-400 via-pink-300 to-amber-200 p-0.5 shadow-md animate-pulse">
+            <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white dark:bg-[#2b121c]">
+              <Heart className="h-6 w-6 fill-rose-500 text-rose-500 animate-bounce" />
+            </div>
+          </div>
+          <span className="text-xs font-bold tracking-wider uppercase text-rose-600/80 dark:text-rose-300/80">
+            Menyiapkan Profil…
+          </span>
+        </div>
+      </div>
+    );
   }
   if (isSupabaseConfigured && authenticated && profileReady && !accountProfile) {
     if (!isAdminAccount) {
@@ -1751,8 +1779,7 @@ export default function App() {
       {/* PIN Security Modal if locked */}
       <AnimatePresence>
         {isLocked && (
-          <Suspense fallback={null}>
-            <PinModal
+          <PinModal
             correctPin={settings.pin}
             onSuccess={() => setIsLocked(false)}
             onEnterGuestMode={() => {
@@ -1760,15 +1787,21 @@ export default function App() {
               setIsLocked(false);
             }}
           />
-          </Suspense>
         )}
       </AnimatePresence>
 
       {/* Realtime In-App Romantic Toasts */}
       <InAppToastContainer />
 
-      {/* Top Mobile App Bar (No Top Navigation Tabs) */}
-      <Header
+      {/* Protected Main App View (Hidden & Inert while locked to prevent flash of beranda) */}
+      <div
+        className={`flex-1 flex flex-col transition-opacity duration-300 ${
+          isLocked ? 'invisible pointer-events-none select-none opacity-0' : 'opacity-100'
+        }`}
+        aria-hidden={isLocked}
+      >
+        {/* Top Mobile App Bar (No Top Navigation Tabs) */}
+        <Header
         settings={settings}
         activeProfile={activeProfile}
         onSelectProfile={handleSelectProfile}
@@ -2053,6 +2086,7 @@ export default function App() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }

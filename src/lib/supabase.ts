@@ -3,12 +3,31 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
 export const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
+// Migrasikan sesi yang sebelumnya tersimpan di sessionStorage ke localStorage agar pengguna tidak logout otomatis saat tab/browser ditutup
+if (typeof window !== 'undefined') {
+  try {
+    for (let i = 0; i < window.sessionStorage.length; i++) {
+      const key = window.sessionStorage.key(i);
+      if (key && (key.startsWith('sb-') || key.includes('-auth-token'))) {
+        const val = window.sessionStorage.getItem(key);
+        if (val && !window.localStorage.getItem(key)) {
+          window.localStorage.setItem(key, val);
+        }
+      }
+    }
+  } catch {
+    // Ignore storage access errors (private mode / cookies blocked)
+  }
+}
+
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl!, supabaseAnonKey!, {
       auth: {
         persistSession: true,
-        storage: window.sessionStorage
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined
       }
     })
   : null;

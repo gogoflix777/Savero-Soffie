@@ -581,8 +581,10 @@
 }
 
 .pin-modal-backdrop {
-  background: color-mix(in srgb, var(--theme-bg) 88%, #2a0711);
-  backdrop-filter: blur(16px);
+  background: var(--theme-bg, #fffaf0);
+}
+.dark .pin-modal-backdrop {
+  background: #21151a;
 }
 .pin-modal-card {
   border: 1px solid var(--theme-border);
