@@ -84,8 +84,10 @@ import { InAppToastContainer } from './components/common/InAppToastContainer';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { triggerNotification } from './utils/notifications';
 import { InstantReply, MovieNightPlan } from './types';
+import { AppSplashScreen } from './components/common/AppSplashScreen';
 
 export default function App() {
+  const [isSplashDone, setIsSplashDone] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [profileReady, setProfileReady] = useState(false);
@@ -1660,69 +1662,50 @@ export default function App() {
       </div>
     );
   }
-  if (!authReady || !authenticated) {
-    return authReady ? (
-      <SupabaseLogin />
-    ) : (
-      <div className="fixed inset-0 grid place-items-center bg-[#fffaf0] dark:bg-[#21151a]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-rose-400 via-pink-300 to-amber-200 p-0.5 shadow-md animate-pulse">
-            <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white dark:bg-[#2b121c]">
-              <Heart className="h-6 w-6 fill-rose-500 text-rose-500 animate-bounce" />
-            </div>
-          </div>
-          <span className="text-xs font-bold tracking-wider uppercase text-rose-600/80 dark:text-rose-300/80">
-            Memuat Sesi…
-          </span>
-        </div>
-      </div>
-    );
-  }
-  if (isSupabaseConfigured && authenticated && profileLoadError) {
-    return (
-      <div className="fixed inset-0 grid place-items-center bg-[#fff7f1] px-5 text-[#57202c] dark:bg-[#21151a] dark:text-rose-50">
-        <div className="max-w-md text-center">
-          <p className="text-lg font-bold">Profil belum berhasil dimuat</p>
-          <p className="mt-2 text-sm text-[#80646a] dark:text-rose-100/70">{profileLoadError}</p>
-          <button
-            type="button"
-            onClick={() => {
-              setProfileLoadError(null);
-              setProfileReady(false);
-              setProfileLoadAttempt((attempt) => attempt + 1);
-            }}
-            className="mt-5 rounded-xl bg-[#7A1018] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#5e0a11]"
-          >
-            Coba muat ulang profil
-          </button>
-        </div>
-      </div>
-    );
-  }
-  if (isSupabaseConfigured && authenticated && !profileReady) {
-    return (
-      <div className="fixed inset-0 grid place-items-center bg-[#fffaf0] dark:bg-[#21151a]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-rose-400 via-pink-300 to-amber-200 p-0.5 shadow-md animate-pulse">
-            <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white dark:bg-[#2b121c]">
-              <Heart className="h-6 w-6 fill-rose-500 text-rose-500 animate-bounce" />
-            </div>
-          </div>
-          <span className="text-xs font-bold tracking-wider uppercase text-rose-600/80 dark:text-rose-300/80">
-            Menyiapkan Profil…
-          </span>
-        </div>
-      </div>
-    );
-  }
-  if (isSupabaseConfigured && authenticated && profileReady && !accountProfile) {
-    if (!isAdminAccount) {
-      return <CoupleProfileSetup onComplete={(profile) => { void handleProfileSetupComplete(profile); }} />;
+  const renderAppContent = () => {
+    // 1. Unauthenticated -> Login View
+    if (isSplashDone && (!authReady || !authenticated)) {
+      return <SupabaseLogin />;
     }
-  }
 
-  return (
-    <div className="app-clay-theme relative flex min-h-screen flex-col overflow-x-hidden bg-[#fffaf0] font-sans-clean text-[#57202c] selection:bg-[#f4b6c2] selection:text-[#7a1018] transition-colors duration-300 dark:bg-[#21151a] dark:text-rose-50">
+    // 2. Profile Load Error View
+    if (isSplashDone && isSupabaseConfigured && authenticated && profileLoadError) {
+      return (
+        <div className="fixed inset-0 grid place-items-center bg-[#fff7f1] px-5 text-[#57202c] dark:bg-[#21151a] dark:text-rose-50">
+          <div className="max-w-md text-center">
+            <p className="text-lg font-bold">Profil belum berhasil dimuat</p>
+            <p className="mt-2 text-sm text-[#80646a] dark:text-rose-100/70">{profileLoadError}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setProfileLoadError(null);
+                setProfileReady(false);
+                setProfileLoadAttempt((attempt) => attempt + 1);
+              }}
+              className="mt-5 rounded-xl bg-[#7A1018] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#5e0a11]"
+            >
+              Coba muat ulang profil
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 3. New User Profile Setup (if account profile not yet selected)
+    if (isSplashDone && isSupabaseConfigured && authenticated && profileReady && !accountProfile) {
+      if (!isAdminAccount) {
+        return <CoupleProfileSetup onComplete={(profile) => { void handleProfileSetupComplete(profile); }} />;
+      }
+    }
+
+    // 4. While splash is still running or profile is hydrating, return null (covered by AppSplashScreen)
+    if (!isSplashDone && (!authReady || (authenticated && !profileReady))) {
+      return null;
+    }
+
+    // 5. Main Application Tree (Mounted with PinModal security gate)
+    return (
+      <div className="app-clay-theme relative flex min-h-screen flex-col overflow-x-hidden bg-[#fffaf0] font-sans-clean text-[#57202c] selection:bg-[#f4b6c2] selection:text-[#7a1018] transition-colors duration-300 dark:bg-[#21151a] dark:text-rose-50">
       {/* Floating Ethereal Particles & Petals */}
       <FloatingHearts />
       <ChibiPageDecorations />
@@ -2088,5 +2071,23 @@ export default function App() {
       </footer>
       </div>
     </div>
+    );
+  };
+
+  return (
+    <>
+      <AnimatePresence>
+        {!isSplashDone && (
+          <AppSplashScreen
+            authReady={authReady}
+            authenticated={authenticated}
+            profileReady={profileReady}
+            profileError={profileLoadError}
+            onFinish={() => setIsSplashDone(true)}
+          />
+        )}
+      </AnimatePresence>
+      {renderAppContent()}
+    </>
   );
 }
