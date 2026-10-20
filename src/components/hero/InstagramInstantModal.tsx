@@ -18,6 +18,7 @@ import {
   SQUIRCLE_CURVE_PATH
 } from '../../utils/caption';
 import { moodOptions, moodImage } from '../../utils/mood';
+import { convertToWebP } from '../../utils/imageOptimizer';
 
 interface InstagramInstantModalProps {
   activeProfile: CoupleProfile;
@@ -176,19 +177,6 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
     setFacingMode((prev) => (prev === 'user' ? 'environment' : 'user'));
   };
 
-  const compressToBlob = (canvas: HTMLCanvasElement): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      canvas.toBlob(
-        (blob) => {
-          if (blob) resolve(blob);
-          else reject(new Error('Gagal mengompresi gambar.'));
-        },
-        'image/webp',
-        0.88
-      );
-    });
-  };
-
   const handleCapturePhoto = async () => {
     if (!videoRef.current) return;
     soundManager.playPop();
@@ -212,53 +200,43 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
 
     ctx.drawImage(video, sx, sy, size, size, 0, 0, canvas.width, canvas.height);
 
-    try {
-      const blob = await compressToBlob(canvas);
-      setCapturedBlob(blob);
-      setPreviewUrl(URL.createObjectURL(blob));
-      setIsReplacingPhoto(true);
-      stopCamera();
-    } catch (err) {
-      console.error('Failed to capture canvas:', err);
-    }
+    canvas.toBlob(
+      async (rawBlob) => {
+        if (!rawBlob) return;
+        try {
+          const webpBlob = await convertToWebP(rawBlob, { maxWidth: 1080, maxHeight: 1080, quality: 0.85, cropSquare: true });
+          setCapturedBlob(webpBlob);
+          setPreviewUrl(URL.createObjectURL(webpBlob));
+          setIsReplacingPhoto(true);
+          stopCamera();
+        } catch (err) {
+          console.error('Failed to optimize captured photo to WebP:', err);
+        }
+      },
+      'image/webp',
+      0.88
+    );
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     soundManager.playTap();
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-
-    img.onload = async () => {
-      const canvas = document.createElement('canvas');
-      const size = Math.min(img.width, img.height);
-      const targetSize = Math.min(1080, size);
-
-      canvas.width = targetSize;
-      canvas.height = targetSize;
-      const sx = (img.width - size) / 2;
-      const sy = (img.height - size) / 2;
-
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, sx, sy, size, size, 0, 0, targetSize, targetSize);
-        try {
-          const blob = await compressToBlob(canvas);
-          setCapturedBlob(blob);
-          setPreviewUrl(URL.createObjectURL(blob));
-          setIsReplacingPhoto(true);
-          stopCamera();
-        } catch {
-          setCapturedBlob(file);
-          setPreviewUrl(objectUrl);
-          setIsReplacingPhoto(true);
-          stopCamera();
-        }
-      }
-    };
-    img.src = objectUrl;
+    try {
+      // Otomatis mengonversi dan mengompresi foto galeri ke format WebP optimal
+      const webpBlob = await convertToWebP(file, { maxWidth: 1080, maxHeight: 1080, quality: 0.85, cropSquare: true });
+      setCapturedBlob(webpBlob);
+      setPreviewUrl(URL.createObjectURL(webpBlob));
+      setIsReplacingPhoto(true);
+      stopCamera();
+    } catch (err) {
+      console.warn('Gagal mengonversi file ke WebP, menggunakan file asli:', err);
+      setCapturedBlob(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setIsReplacingPhoto(true);
+      stopCamera();
+    }
   };
 
   const handleRetake = () => {

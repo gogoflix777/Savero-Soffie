@@ -70,7 +70,7 @@ export const PinModal: React.FC<PinModalProps> = ({ correctPin, onSuccess, onEnt
         className="pin-modal-card my-auto w-full max-w-[360px] rounded-[28px] px-5 pb-5 pt-6 text-center sm:px-7 sm:pb-6 sm:pt-7"
       >
         <div className="pin-modal-logo mx-auto mb-3 flex h-[78px] w-[78px] items-center justify-center rounded-full p-1.5">
-          <img src="/logo/logo%20couple%203d.png" alt="Logo Savero dan Soffie" className="h-full w-full object-contain" />
+          <img src="/logo/logo%20couple%203d.webp" alt="Logo Savero dan Soffie" loading="lazy" decoding="async" className="h-full w-full object-contain" />
         </div>
 
         <h2 id="pin-modal-title" className="font-sans-clean text-xl font-extrabold tracking-tight text-[var(--theme-ink)] sm:text-2xl">

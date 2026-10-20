@@ -17,5 +17,5 @@ export const moodOptions: MoodOption[] = [
 
 export const moodImage = (profile: CoupleProfile, mood: MoodExpression): string => {
   const asset = moodOptions.find((option) => option.id === mood)?.asset ?? 'bahagia';
-  return `/characters/expressions/${profile.toLowerCase()}/${asset}.png`;
+  return `/characters/expressions/${profile.toLowerCase()}/${asset}.webp`;
 };

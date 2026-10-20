@@ -2092,3 +2092,38 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
 .dark .wa-tab-icon-idle {
   color: rgba(255, 255, 255, 0.82) !important;
 }
+
+/* GPU-Accelerated Ethereal Ambient Floating Particles (Zero JS Timer Overhead) */
+@keyframes ambientParticleFloat {
+  0% {
+    transform: translate3d(0, 105vh, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(var(--drift-x, 15px), 50vh, 0) rotate(180deg);
+  }
+  100% {
+    transform: translate3d(calc(var(--drift-x, 15px) * -0.6), -10vh, 0) rotate(360deg);
+  }
+}
+
+.ambient-floating-particle {
+  position: absolute;
+  bottom: 0;
+  will-change: transform;
+  animation-name: ambientParticleFloat;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Offscreen Render Skipping (Skip layout & paint for offscreen elements until scrolled) */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 240px;
+}
+
+.content-auto-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 180px;
+}

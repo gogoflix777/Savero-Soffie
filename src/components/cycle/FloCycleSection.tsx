@@ -261,7 +261,7 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
             </p>
             {!canEdit && (
               <div className="mt-2 inline-flex items-center gap-2 rounded-xl border border-[#e7c2c8] bg-white/75 px-2.5 py-1 text-[10.5px] text-[#704b54] shadow-2xs dark:border-white/10 dark:bg-white/5 dark:text-rose-100/75">
-                <img src="/characters/expressions/soffie/gemas-sayang.png" alt="" className="h-6 w-4.5 object-contain" />
+                <img src="/characters/expressions/soffie/gemas-sayang.webp" alt="" loading="lazy" decoding="async" className="h-6 w-4.5 object-contain" />
                 <span>Mode lihat — pencatatan hanya di profil Soffie.</span>
               </div>
             )}
@@ -269,8 +269,10 @@ export const FloCycleSection: React.FC<FloCycleSectionProps> = ({
 
           <div className="shrink-0">
             <img
-              src="/characters/berdua/Chibi Comfort During Stomach Pain.png"
+              src="/characters/berdua/Chibi Comfort During Stomach Pain.webp"
               alt="Chibi Comfort During Stomach Pain"
+              loading="lazy"
+              decoding="async"
               className="h-28 w-28 sm:h-36 sm:w-36 md:h-44 md:w-44 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
             />
           </div>

@@ -158,6 +158,51 @@ const localDateKey = () => {
   }).format(new Date());
 };
 
+const RelationshipCounters: React.FC<{ anniversaryDate: string }> = React.memo(({ anniversaryDate }) => {
+  const [timeTogether, setTimeTogether] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  useEffect(() => {
+    const calculateTime = () => {
+      const anniversary = new Date(`${anniversaryDate}T00:00:00`);
+      const diff = Math.max(0, Date.now() - anniversary.getTime());
+      setTimeTogether({
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff / 3600000) % 24),
+        minutes: Math.floor((diff / 60000) % 60),
+        seconds: Math.floor((diff / 1000) % 60)
+      });
+    };
+    calculateTime();
+    const interval = window.setInterval(calculateTime, 1000);
+    return () => window.clearInterval(interval);
+  }, [anniversaryDate]);
+
+  const counters = [
+    { label: 'Hari', value: timeTogether.days },
+    { label: 'Jam', value: timeTogether.hours },
+    { label: 'Menit', value: timeTogether.minutes },
+    { label: 'Detik', value: timeTogether.seconds }
+  ];
+
+  return (
+    <div className="mb-4 flex items-center justify-center gap-2 sm:mb-5 sm:gap-2.5">
+      {counters.map(({ label, value }) => (
+        <div
+          key={label}
+          className="hero-count-card flex h-[70px] w-[clamp(54px,12vw,66px)] flex-col items-center justify-center rounded-[1.3rem] bg-[#f9dce1] sm:h-[74px] sm:w-[70px]"
+        >
+          <span className="font-sans-clean text-[25px] font-extrabold leading-none text-[#501522] dark:text-rose-100 sm:text-[28px]">
+            {value}
+          </span>
+          <span className="mt-1 font-sans-clean text-[11px] font-bold leading-none text-[#501522] dark:text-rose-100/80 sm:text-xs">
+            {label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+});
+
 export const HeroSection: React.FC<HeroSectionProps> = ({
   settings,
   activeProfile,
@@ -188,7 +233,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onUpdateDailyCheckin,
   onDeleteDailyCheckin
 }) => {
-  const [timeTogether, setTimeTogether] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [heartParticles, setHeartParticles] = useState<HeartParticle[]>([]);
   const [isInstantModalOpen, setIsInstantModalOpen] = useState(false);
   const [isMemoriesModalOpen, setIsMemoriesModalOpen] = useState(false);
@@ -338,22 +382,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     }
   };
 
-  useEffect(() => {
-    const calculateTime = () => {
-      const anniversary = new Date(`${settings.anniversaryDate}T00:00:00`);
-      const diff = Math.max(0, Date.now() - anniversary.getTime());
-      setTimeTogether({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff / 3600000) % 24),
-        minutes: Math.floor((diff / 60000) % 60),
-        seconds: Math.floor((diff / 1000) % 60)
-      });
-    };
-    calculateTime();
-    const interval = window.setInterval(calculateTime, 1000);
-    return () => window.clearInterval(interval);
-  }, [settings.anniversaryDate]);
-
   const handleHeartTap = ({ x, y }: { x: number; y: number }, profile?: CoupleProfile) => {
     const originX = x || window.innerWidth / 2;
     const originY = y || window.innerHeight * 0.44;
@@ -380,13 +408,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       setHeartParticles((current) => current.filter((particle) => !burst.some((item) => item.id === particle.id)));
     }, 1050);
   };
-
-  const counters = [
-    { label: 'Hari', value: timeTogether.days },
-    { label: 'Jam', value: timeTogether.hours },
-    { label: 'Menit', value: timeTogether.minutes },
-    { label: 'Detik', value: timeTogether.seconds }
-  ];
 
   return (
     <section className="relative bg-[#fffaf0] px-4 pb-7 pt-5 transition-colors dark:bg-[#21151a] sm:pb-10 sm:pt-7">
@@ -981,22 +1002,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           )}
         </div>
 
-        {/* Time Counters */}
-        <div className="mb-4 flex items-center justify-center gap-2 sm:mb-5 sm:gap-2.5">
-          {counters.map(({ label, value }) => (
-            <div
-              key={label}
-              className="hero-count-card flex h-[70px] w-[clamp(54px,12vw,66px)] flex-col items-center justify-center rounded-[1.3rem] bg-[#f9dce1] sm:h-[74px] sm:w-[70px]"
-            >
-              <span className="font-sans-clean text-[25px] font-extrabold leading-none text-[#501522] dark:text-rose-100 sm:text-[28px]">
-                {value}
-              </span>
-              <span className="mt-1 font-sans-clean text-[11px] font-bold leading-none text-[#501522] dark:text-rose-100/80 sm:text-xs">
-                {label}
-              </span>
-            </div>
-          ))}
-        </div>
+        {/* Time Counters (Isolated 1s ticker to prevent whole-section re-renders) */}
+        <RelationshipCounters anniversaryDate={settings.anniversaryDate} />
 
         {/* Action Buttons */}
         <div className="flex w-full max-w-[480px] flex-col items-center justify-center gap-2.5 sm:gap-3">

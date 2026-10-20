@@ -1,5 +1,6 @@
 import { MemoryPin } from '../types';
 import { supabase } from './supabase';
+import { convertToWebP } from '../utils/imageOptimizer';
 
 interface MemoryPinRow {
   payload: unknown;
@@ -61,14 +62,18 @@ export async function uploadMemoryPinPhoto(pinId: string, file: File, index: num
   }
   if (file.size > 10 * 1024 * 1024) throw new Error('Ukuran foto pin maksimal 10 MB.');
 
-  const extension = file.type === 'image/jpeg' ? 'jpg'
-    : file.type === 'image/png' ? 'png'
-      : file.type === 'image/webp' ? 'webp'
-        : 'gif';
-  const storagePath = `memory-pins/${pinId}/${crypto.randomUUID()}.${extension}`;
+
+
+
+
+  const optimizedFile = file.type === 'image/webp'
+    ? file
+    : await convertToWebP(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.85, cropSquare: false });
+
+  const storagePath = `memory-pins/${pinId}/${crypto.randomUUID()}.webp`;
   const photoKey = `pin-photo:${pinId}:${index}`;
-  const { error: uploadError } = await client.storage.from('app-photos').upload(storagePath, file, {
-    contentType: file.type,
+  const { error: uploadError } = await client.storage.from('app-photos').upload(storagePath, optimizedFile, {
+    contentType: 'image/webp',
     cacheControl: '3600',
     upsert: false
   });

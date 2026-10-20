@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ManagedImage } from '../common/ManagedImage';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   MapPin,

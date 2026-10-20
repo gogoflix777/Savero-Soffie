@@ -151,6 +151,7 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
               src={photoUrl}
               alt={caption || 'Foto kenangan'}
               className="h-full w-full object-cover"
+              decoding="async"
             />
 
             {caption && zoomLevel === 1 && (

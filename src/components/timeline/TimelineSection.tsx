@@ -62,7 +62,7 @@ export const TimelineSection: React.FC<TimelineSectionProps> = ({ pins, settings
         {visiblePins.length ? (
           <div className="timeline-track relative space-y-2.5 before:absolute before:bottom-3 before:left-[15px] before:top-3 before:w-[2.5px] before:rounded-full before:bg-gradient-to-b before:from-[#d87991] before:via-[#edb6c2] before:to-[#f7dfe4] before:content-[''] dark:before:from-[#dc8297] dark:before:via-[#754652] dark:before:to-[#49353d]">
             {displayedPins.map((pin, index) => (
-              <div key={pin.id} className="relative pl-9 sm:pl-11">
+              <div key={pin.id} className="relative pl-9 sm:pl-11 content-auto">
                 {/* Compact 3D Timeline Node */}
                 <div className="timeline-node-3d absolute left-[5px] top-3.5 z-10 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white text-white shadow-xs dark:border-[#2b2226]">
                   {index === 0 && sortOrder === 'asc' ? (

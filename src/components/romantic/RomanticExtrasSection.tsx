@@ -433,7 +433,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
             </div>
             <div className="shrink-0">
               <img
-                src="/characters/berdua/Chibi Couple Hug.png"
+                src="/characters/berdua/Chibi Couple Hug.webp"
                 alt="Chibi Couple Hug"
                 className="h-28 w-28 sm:h-36 sm:w-36 md:h-44 md:w-44 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
                 loading="lazy"
@@ -540,7 +540,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
                 return (
                   <article
                     key={letter.id}
-                    className="romantic-surface flex flex-col rounded-3xl border border-[#7A1018]/20 bg-white/70 p-4 shadow-sm transition-all duration-300 hover:shadow-xl dark:bg-black/30 sm:p-5"
+                    className="romantic-surface content-auto-card flex flex-col rounded-3xl border border-[#7A1018]/20 bg-white/70 p-4 shadow-sm transition-all duration-300 hover:shadow-xl dark:bg-black/30 sm:p-5"
                   >
                     <button
                       type="button"
@@ -873,7 +873,7 @@ export const RomanticExtrasSection: React.FC<RomanticExtrasProps> = ({
               return (
                 <article
                   key={song.id}
-                  className="romantic-surface flex min-w-0 items-center gap-3 rounded-2xl border border-[#7A1018]/15 bg-white/70 p-3 shadow-sm dark:bg-black/30 sm:gap-4 sm:p-4"
+                  className="romantic-surface content-auto-card flex min-w-0 items-center gap-3 rounded-2xl border border-[#7A1018]/15 bg-white/70 p-3 shadow-sm dark:bg-black/30 sm:gap-4 sm:p-4"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
                     {song.albumArt ? (

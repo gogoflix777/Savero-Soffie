@@ -98,15 +98,19 @@ export const MovieNightCard: React.FC<MovieNightCardProps> = ({
             <div className="flex items-center -space-x-1.5 drop-shadow-xs" title="Kencan Berdua">
               <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-amber-50 dark:border-[#200508]">
                 <img
-                  src="/characters/expressions/savero/bahagia.png"
+                  src="/characters/expressions/savero/bahagia.webp"
                   alt="Savero"
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover object-top scale-125"
                 />
               </div>
               <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-rose-50 dark:border-[#200508]">
                 <img
-                  src="/characters/expressions/soffie/gemas-sayang.png"
+                  src="/characters/expressions/soffie/gemas-sayang.webp"
                   alt="Soffie"
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover object-top scale-125"
                 />
               </div>

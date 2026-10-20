@@ -412,7 +412,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
 
             <div className="shrink-0">
               <img
-                src="/characters/berdua/Rushed Travel Prep Chaos.png"
+                src="/characters/berdua/Rushed Travel Prep Chaos.webp" loading="lazy" decoding="async"
                 alt="Rushed Travel Prep Chaos"
                 className="h-28 w-28 sm:h-36 sm:w-36 md:h-44 md:w-44 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
               />
@@ -678,8 +678,8 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                         <div className="grid grid-cols-4 gap-1 text-[9.5px] font-extrabold">
                           {[
                             { id: 'all', label: 'Semua' },
-                            { id: 'Soffie', label: 'Soffie', img: '/characters/expressions/soffie/gemas-sayang.png' },
-                            { id: 'Savero', label: 'Savero', img: '/characters/expressions/savero/bahagia.png' },
+                            { id: 'Soffie', label: 'Soffie', img: '/characters/expressions/soffie/gemas-sayang.webp' },
+                            { id: 'Savero', label: 'Savero', img: '/characters/expressions/savero/bahagia.webp' },
                             { id: 'Berdua', label: 'Berdua' }
                           ].map((item) => (
                             <button
@@ -698,14 +698,14 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                               {item.id === 'all' && <span className="text-sm">👥</span>}
                               {item.id === 'Soffie' && (
                                 <img
-                                  src="/characters/expressions/soffie/gemas-sayang.png"
+                                  src="/characters/expressions/soffie/gemas-sayang.webp"
                                   alt="Soffie"
                                   className="h-5 w-5 rounded-full object-cover object-top scale-125"
                                 />
                               )}
                               {item.id === 'Savero' && (
                                 <img
-                                  src="/characters/expressions/savero/bahagia.png"
+                                  src="/characters/expressions/savero/bahagia.webp"
                                   alt="Savero"
                                   className="h-5 w-5 rounded-full object-cover object-top scale-125"
                                 />
@@ -713,12 +713,12 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                               {item.id === 'Berdua' && (
                                 <div className="flex items-center -space-x-1.5">
                                   <img
-                                    src="/characters/expressions/savero/bahagia.png"
+                                    src="/characters/expressions/savero/bahagia.webp"
                                     alt=""
                                     className="h-5 w-5 rounded-full object-cover object-top scale-125"
                                   />
                                   <img
-                                    src="/characters/expressions/soffie/gemas-sayang.png"
+                                    src="/characters/expressions/soffie/gemas-sayang.webp"
                                     alt=""
                                     className="h-5 w-5 rounded-full object-cover object-top scale-125"
                                   />
@@ -826,7 +826,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                   return (
                     <div
                       key={place.id}
-                      className={`group relative flex flex-col justify-between rounded-2xl border border-rose-200/50 bg-white/90 p-3 shadow-2xs transition-all hover:-translate-y-0.5 hover:shadow-sm dark:border-white/10 dark:bg-[#200508]/90 ${
+                      className={`group content-auto-card relative flex flex-col justify-between rounded-2xl border border-rose-200/50 bg-white/90 p-3 shadow-2xs transition-all hover:-translate-y-0.5 hover:shadow-sm dark:border-white/10 dark:bg-[#200508]/90 ${
                         place.isVisited ? 'opacity-65' : ''
                       }`}
                     >
@@ -915,14 +915,14 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                             <div className="flex items-center -space-x-1.5" title="Diinginkan Berdua (Savero & Soffie)">
                               <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-amber-50 shadow-xs dark:border-[#200508] dark:bg-amber-950/40">
                                 <img
-                                  src="/characters/expressions/savero/bahagia.png"
+                                  src="/characters/expressions/savero/bahagia.webp"
                                   alt="Savero"
                                   className="h-full w-full object-cover object-top scale-125"
                                 />
                               </div>
                               <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-rose-50 shadow-xs dark:border-[#200508] dark:bg-rose-950/40">
                                 <img
-                                  src="/characters/expressions/soffie/gemas-sayang.png"
+                                  src="/characters/expressions/soffie/gemas-sayang.webp"
                                   alt="Soffie"
                                   className="h-full w-full object-cover object-top scale-125"
                                 />
@@ -932,7 +932,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                             <div className="flex items-center" title="Diinginkan Savero">
                               <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-emerald-50 shadow-xs dark:border-[#200508] dark:bg-emerald-950/40">
                                 <img
-                                  src="/characters/expressions/savero/bahagia.png"
+                                  src="/characters/expressions/savero/bahagia.webp"
                                   alt="Savero"
                                   className="h-full w-full object-cover object-top scale-125"
                                 />
@@ -942,7 +942,7 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({
                             <div className="flex items-center" title="Diinginkan Soffie">
                               <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-rose-50 shadow-xs dark:border-[#200508] dark:bg-rose-950/40">
                                 <img
-                                  src="/characters/expressions/soffie/gemas-sayang.png"
+                                  src="/characters/expressions/soffie/gemas-sayang.webp"
                                   alt="Soffie"
                                   className="h-full w-full object-cover object-top scale-125"
                                 />

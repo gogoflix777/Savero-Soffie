@@ -58,8 +58,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileImage =
     activeProfile === 'Savero'
-      ? '/characters/expressions/savero/bahagia.png'
-      : '/characters/expressions/soffie/gemas-sayang.png';
+      ? '/characters/expressions/savero/bahagia.webp'
+      : '/characters/expressions/soffie/gemas-sayang.webp';
 
   const handleAction = (callback?: () => void) => {
     soundManager.playTap();
@@ -77,8 +77,10 @@ export const Header: React.FC<HeaderProps> = ({
           aria-label="Savero dan Soffie, ke beranda"
         >
           <motion.img
-            src="/logo/logo%20couple%203d.png"
+            src="/logo/logo%20couple%203d.webp"
             alt="Logo Savero dan Soffie"
+            loading="eager"
+            decoding="async"
             className="h-9 w-9 shrink-0 object-contain drop-shadow-[0_2px_5px_rgba(140,30,60,0.18)] sm:h-10 sm:w-10"
             whileHover={{ rotate: 4, scale: 1.05 }}
             transition={{ type: 'spring', stiffness: 320 }}
@@ -151,10 +153,12 @@ export const Header: React.FC<HeaderProps> = ({
                       <img
                         src={
                           profile === 'Savero'
-                            ? '/characters/expressions/savero/bahagia.png'
-                            : '/characters/expressions/soffie/gemas-sayang.png'
+                            ? '/characters/expressions/savero/bahagia.webp'
+                            : '/characters/expressions/soffie/gemas-sayang.webp'
                         }
                         alt=""
+                        loading="lazy"
+                        decoding="async"
                         className="h-full w-full object-cover object-top"
                       />
                     </span>

@@ -364,15 +364,19 @@ export const StreakInfoModal: React.FC<StreakInfoModalProps> = ({
           <div className="flex justify-center -space-x-3 pt-3 pb-3">
             <div className="relative h-15 w-15 overflow-hidden rounded-full border-2 border-white bg-amber-100 shadow-md ring-2 ring-rose-200/60 dark:border-[#1e0a13] dark:ring-white/10">
               <img
-                src="/characters/expressions/savero/bahagia.png"
+                src="/characters/expressions/savero/bahagia.webp"
                 alt="Savero"
+                loading="lazy"
+                decoding="async"
                 className="h-full w-full object-cover object-top"
               />
             </div>
             <div className="relative h-15 w-15 overflow-hidden rounded-full border-2 border-white bg-pink-100 shadow-md ring-2 ring-rose-200/60 dark:border-[#1e0a13] dark:ring-white/10">
               <img
-                src="/characters/expressions/soffie/bahagia.png"
+                src="/characters/expressions/soffie/bahagia.webp"
                 alt="Soffie"
+                loading="lazy"
+                decoding="async"
                 className="h-full w-full object-cover object-top"
               />
             </div>

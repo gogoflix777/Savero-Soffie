@@ -25,5 +25,5 @@ export const ManagedImage: React.FC<ManagedImageProps> = ({ src, photoKey, ...pr
       window.removeEventListener('managed-photo-updated', refreshManagedPhoto);
     };
   }, [fallback, key]);
-  return <img {...props} src={resolved} />;
+  return <img loading="lazy" decoding="async" {...props} src={resolved} />;
 };

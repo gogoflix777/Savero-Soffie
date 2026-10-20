@@ -64,7 +64,7 @@ export const SupabaseLogin: React.FC = () => {
       >
         <div className="pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full bg-white/40 blur-2xl dark:bg-rose-200/5" />
         <motion.div className="relative mx-auto mb-3 grid h-24 w-24 place-items-center rounded-[2rem] bg-[#fff8f2] shadow-[5px_7px_12px_rgba(111,65,70,.16),inset_2px_3px_6px_white,inset_-2px_-3px_6px_rgba(205,154,150,.2)] dark:bg-[#432d35] dark:shadow-[5px_7px_12px_rgba(0,0,0,.25),inset_2px_3px_6px_rgba(255,220,229,.08),inset_-2px_-3px_6px_rgba(0,0,0,.2)]" animate={{ y: [0, -4, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}>
-          <img src="/logo/logo%20couple%203d.png" alt="Savero dan Soffie" className="h-20 w-20 object-contain drop-shadow-md" />
+          <img src="/logo/logo%20couple%203d.webp" alt="Savero dan Soffie" loading="lazy" decoding="async" className="h-20 w-20 object-contain drop-shadow-md" />
         </motion.div>
         <Heart className="mx-auto mb-2 h-5 w-5 fill-rose-400 text-rose-400" />
         <h1 className="text-center font-script text-3xl text-[#a64e68] drop-shadow-sm dark:text-[#f0a8b7]">Masuk ke ruang kita</h1>

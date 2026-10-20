@@ -1,5 +1,6 @@
 import { CoupleProfile, DailyCheckin, DailyHeartProgress, InstantReply, MeetingConfirmation, StreakRestore } from '../types';
 import { supabase } from './supabase';
+import { convertToWebP } from '../utils/imageOptimizer';
 
 export const getJakartaDate = (date = new Date()) => new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit'
@@ -217,11 +218,11 @@ export async function saveDailyCheckin(input: {
 
   let photoPath = previous?.photo_path ?? null;
   if (input.photo) {
-    const extensionByMime: Record<string, string> = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg' };
-    const extension = extensionByMime[input.photo.type];
-    if (!extension) throw new Error(`Format foto ${input.photo.type || 'tidak diketahui'} tidak didukung.`);
-    photoPath = `${user.id}/${logDate}/${crypto.randomUUID()}.${extension}`;
-    const { error: uploadError } = await supabase.storage.from('daily-diary').upload(photoPath, input.photo, { contentType: input.photo.type, cacheControl: '3600', upsert: false });
+    const optimizedPhoto = input.photo.type === 'image/webp'
+      ? input.photo
+      : await convertToWebP(input.photo, { maxWidth: 1080, maxHeight: 1080, quality: 0.85, cropSquare: true });
+    photoPath = `${user.id}/${logDate}/${crypto.randomUUID()}.webp`;
+    const { error: uploadError } = await supabase.storage.from('daily-diary').upload(photoPath, optimizedPhoto, { contentType: 'image/webp', cacheControl: '3600', upsert: false });
     if (uploadError) throw uploadError;
   }
 
@@ -278,19 +279,15 @@ export async function updateDailyCheckin(input: {
   let photoPath = previous.photo_path;
 
   if (input.photo) {
-    const extensionByMime: Record<string, string> = {
-      'image/webp': 'webp',
-      'image/png': 'png',
-      'image/jpeg': 'jpg'
-    };
-    const extension = extensionByMime[input.photo.type];
-    if (!extension) throw new Error(`Format foto ${input.photo.type || 'tidak diketahui'} tidak didukung.`);
+    const optimizedPhoto = input.photo.type === 'image/webp'
+      ? input.photo
+      : await convertToWebP(input.photo, { maxWidth: 1080, maxHeight: 1080, quality: 0.85, cropSquare: true });
 
-    photoPath = `${previous.user_id}/${input.logDate}/${crypto.randomUUID()}.${extension}`;
+    photoPath = `${previous.user_id}/${input.logDate}/${crypto.randomUUID()}.webp`;
     const { error: uploadError } = await supabase.storage
       .from('daily-diary')
-      .upload(photoPath, input.photo, {
-        contentType: input.photo.type,
+      .upload(photoPath, optimizedPhoto, {
+        contentType: 'image/webp',
         cacheControl: '3600',
         upsert: false
       });

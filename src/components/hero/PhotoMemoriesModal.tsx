@@ -245,6 +245,7 @@ export const PhotoMemoriesModal: React.FC<PhotoMemoriesModalProps> = ({
                   src={activeRewindPhotos[rewindIndex].photo_url!}
                   alt="Rewind"
                   className="h-full w-full object-cover"
+                  decoding="async"
                 />
                 <div className="absolute bottom-3 inset-x-3 flex items-center justify-between rounded-full bg-black/60 px-3 py-1.5 text-[10px] font-bold text-white backdrop-blur-md">
                   <span>{activeRewindPhotos[rewindIndex].profile}</span>
@@ -403,6 +404,7 @@ export const PhotoMemoriesModal: React.FC<PhotoMemoriesModalProps> = ({
                                 alt={primaryEntry.diary_text || `Tanggal ${cell.day}`}
                                 className="h-full w-full object-cover transition duration-300 group-hover:scale-110"
                                 loading="lazy"
+                                decoding="async"
                               />
 
                               {/* Nomor Tanggal Kecil di Sudut Kanan Bawah */}

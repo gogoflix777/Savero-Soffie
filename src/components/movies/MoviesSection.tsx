@@ -436,7 +436,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
             </div>
             <div className="shrink-0">
               <img
-                src="/characters/berdua/Cozy Chibi Cinema Date.png"
+                src="/characters/berdua/Cozy Chibi Cinema Date.webp"
                 alt="Cozy Chibi Cinema Date"
                 className="h-28 w-28 sm:h-36 sm:w-36 md:h-44 md:w-44 object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
                 loading="lazy"
@@ -720,12 +720,12 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                       {f.id === 'together' && (
                         <div className="flex items-center -space-x-1.5">
                           <img
-                            src="/characters/expressions/savero/bahagia.png"
+                            src="/characters/expressions/savero/bahagia.webp"
                             alt=""
                             className="h-3.5 w-3.5 rounded-full object-cover object-top scale-125"
                           />
                           <img
-                            src="/characters/expressions/soffie/gemas-sayang.png"
+                            src="/characters/expressions/soffie/gemas-sayang.webp"
                             alt=""
                             className="h-3.5 w-3.5 rounded-full object-cover object-top scale-125"
                           />
@@ -733,14 +733,14 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                       )}
                       {f.id === 'savero' && (
                         <img
-                          src="/characters/expressions/savero/bahagia.png"
+                          src="/characters/expressions/savero/bahagia.webp"
                           alt="Savero"
                           className="h-3.5 w-3.5 rounded-full object-cover object-top scale-125"
                         />
                       )}
                       {f.id === 'soffie' && (
                         <img
-                          src="/characters/expressions/soffie/gemas-sayang.png"
+                          src="/characters/expressions/soffie/gemas-sayang.webp"
                           alt="Soffie"
                           className="h-3.5 w-3.5 rounded-full object-cover object-top scale-125"
                         />
@@ -781,7 +781,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                       soundManager.playTap();
                       setSelectedMovie(movie);
                     }}
-                    className="clay-card-3d group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-[1.4rem] p-2 transition-all duration-300 hover:-translate-y-1 shadow-2xs hover:shadow-md"
+                    className="clay-card-3d content-auto-card group relative flex cursor-pointer flex-col justify-between overflow-hidden rounded-[1.4rem] p-2 transition-all duration-300 hover:-translate-y-1 shadow-2xs hover:shadow-md"
                   >
                     <div className="relative aspect-[2/3] w-full overflow-hidden rounded-[1.1rem] bg-black/10 shadow-inner">
                       {movie.posterUrl ? (
@@ -803,14 +803,14 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                           <div className="flex items-center -space-x-1.5 drop-shadow-md" title="Ditonton Berdua">
                             <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-amber-50 shadow-xs dark:border-[#200508]">
                               <img
-                                src="/characters/expressions/savero/bahagia.png"
+                                src="/characters/expressions/savero/bahagia.webp"
                                 alt="Savero"
                                 className="h-full w-full object-cover object-top scale-125"
                               />
                             </div>
                             <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-rose-50 shadow-xs dark:border-[#200508]">
                               <img
-                                src="/characters/expressions/soffie/gemas-sayang.png"
+                                src="/characters/expressions/soffie/gemas-sayang.webp"
                                 alt="Soffie"
                                 className="h-full w-full object-cover object-top scale-125"
                               />
@@ -820,7 +820,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                         {isSavero && (
                           <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-emerald-50 shadow-md dark:border-[#200508]" title="Ditonton Savero">
                             <img
-                              src="/characters/expressions/savero/bahagia.png"
+                              src="/characters/expressions/savero/bahagia.webp"
                               alt="Savero"
                               className="h-full w-full object-cover object-top scale-125"
                             />
@@ -829,7 +829,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                         {isSoffie && (
                           <div className="h-6 w-6 overflow-hidden rounded-full border-2 border-white bg-rose-50 shadow-md dark:border-[#200508]" title="Ditonton Soffie">
                             <img
-                              src="/characters/expressions/soffie/gemas-sayang.png"
+                              src="/characters/expressions/soffie/gemas-sayang.webp"
                               alt="Soffie"
                               className="h-full w-full object-cover object-top scale-125"
                             />
@@ -863,8 +863,8 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                               <img
                                 src={
                                   movie.addedBy === 'Savero'
-                                    ? '/characters/expressions/savero/bahagia.png'
-                                    : '/characters/expressions/soffie/gemas-sayang.png'
+                                    ? '/characters/expressions/savero/bahagia.webp'
+                                    : '/characters/expressions/soffie/gemas-sayang.webp'
                                 }
                                 alt={movie.addedBy}
                                 className="h-full w-full object-cover object-top scale-125"
@@ -1003,19 +1003,19 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                         {actor.likedBy === 'Berdua' ? (
                           <div className="flex items-center -space-x-1.5">
                             <div className="h-5 w-5 overflow-hidden rounded-full border border-white bg-amber-50 shadow-2xs dark:border-[#200508]">
-                              <img src="/characters/expressions/savero/bahagia.png" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
+                              <img src="/characters/expressions/savero/bahagia.webp" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
                             </div>
                             <div className="h-5 w-5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs dark:border-[#200508]">
-                              <img src="/characters/expressions/soffie/gemas-sayang.png" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
+                              <img src="/characters/expressions/soffie/gemas-sayang.webp" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
                             </div>
                           </div>
                         ) : actor.likedBy === 'Savero' ? (
                           <div className="h-5 w-5 overflow-hidden rounded-full border border-white bg-emerald-50 shadow-2xs dark:border-[#200508]">
-                            <img src="/characters/expressions/savero/bahagia.png" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
+                            <img src="/characters/expressions/savero/bahagia.webp" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
                           </div>
                         ) : (
                           <div className="h-5 w-5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs dark:border-[#200508]">
-                            <img src="/characters/expressions/soffie/gemas-sayang.png" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
+                            <img src="/characters/expressions/soffie/gemas-sayang.webp" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
                           </div>
                         )}
                         <span className="text-[9.5px] font-black text-[#5c2432] dark:text-rose-100">{actor.likedBy || 'Berdua'}</span>
@@ -1250,21 +1250,21 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                         {p.id === 'Berdua' && (
                           <div className="flex items-center -space-x-1.5">
                             <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-amber-50 shadow-2xs">
-                              <img src="/characters/expressions/savero/bahagia.png" alt="" className="h-full w-full object-cover object-top scale-125" />
+                              <img src="/characters/expressions/savero/bahagia.webp" alt="" className="h-full w-full object-cover object-top scale-125" />
                             </div>
                             <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs">
-                              <img src="/characters/expressions/soffie/gemas-sayang.png" alt="" className="h-full w-full object-cover object-top scale-125" />
+                              <img src="/characters/expressions/soffie/gemas-sayang.webp" alt="" className="h-full w-full object-cover object-top scale-125" />
                             </div>
                           </div>
                         )}
                         {p.id === 'Savero' && (
                           <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-emerald-50 shadow-2xs">
-                            <img src="/characters/expressions/savero/bahagia.png" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
+                            <img src="/characters/expressions/savero/bahagia.webp" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
                           </div>
                         )}
                         {p.id === 'Soffie' && (
                           <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs">
-                            <img src="/characters/expressions/soffie/gemas-sayang.png" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
+                            <img src="/characters/expressions/soffie/gemas-sayang.webp" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
                           </div>
                         )}
                         <span>{p.label}</span>
@@ -1382,21 +1382,21 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                             {st.isTogether && (
                               <div className="flex items-center -space-x-1.5">
                                 <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-amber-50 shadow-2xs">
-                                  <img src="/characters/expressions/savero/bahagia.png" alt="" className="h-full w-full object-cover object-top scale-125" />
+                                  <img src="/characters/expressions/savero/bahagia.webp" alt="" className="h-full w-full object-cover object-top scale-125" />
                                 </div>
                                 <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs">
-                                  <img src="/characters/expressions/soffie/gemas-sayang.png" alt="" className="h-full w-full object-cover object-top scale-125" />
+                                  <img src="/characters/expressions/soffie/gemas-sayang.webp" alt="" className="h-full w-full object-cover object-top scale-125" />
                                 </div>
                               </div>
                             )}
                             {st.isSavero && (
                               <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-emerald-50 shadow-2xs">
-                                <img src="/characters/expressions/savero/bahagia.png" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
+                                <img src="/characters/expressions/savero/bahagia.webp" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
                               </div>
                             )}
                             {st.isSoffie && (
                               <div className="h-4.5 w-4.5 overflow-hidden rounded-full border border-white bg-rose-50 shadow-2xs">
-                                <img src="/characters/expressions/soffie/gemas-sayang.png" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
+                                <img src="/characters/expressions/soffie/gemas-sayang.webp" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
                               </div>
                             )}
                             {st.isWatchlist && <Bookmark className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />}
@@ -1411,7 +1411,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                     <div className="rounded-2xl border border-rose-200/50 bg-rose-50/50 p-2.5 dark:border-white/10 dark:bg-white/5">
                       <div className="mb-1.5 flex items-center gap-1.5">
                         <div className="h-5 w-5 overflow-hidden rounded-full border border-emerald-400 bg-emerald-50 shadow-2xs">
-                          <img src="/characters/expressions/savero/bahagia.png" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
+                          <img src="/characters/expressions/savero/bahagia.webp" alt="Savero" className="h-full w-full object-cover object-top scale-125" />
                         </div>
                         <span className="text-[10.5px] font-black text-[#4a1623] dark:text-rose-100">Rating Savero</span>
                       </div>
@@ -1421,7 +1421,7 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                     <div className="rounded-2xl border border-rose-200/50 bg-rose-50/50 p-2.5 dark:border-white/10 dark:bg-white/5">
                       <div className="mb-1.5 flex items-center gap-1.5">
                         <div className="h-5 w-5 overflow-hidden rounded-full border border-rose-400 bg-rose-50 shadow-2xs">
-                          <img src="/characters/expressions/soffie/gemas-sayang.png" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
+                          <img src="/characters/expressions/soffie/gemas-sayang.webp" alt="Soffie" className="h-full w-full object-cover object-top scale-125" />
                         </div>
                         <span className="text-[10.5px] font-black text-[#4a1623] dark:text-rose-100">Rating Soffie</span>
                       </div>

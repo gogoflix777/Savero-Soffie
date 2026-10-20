@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Moon, Sun } from 'lucide-react';
 import {
@@ -27,10 +27,6 @@ import {
 } from './types';
 import { appStorage } from './utils/storage';
 import { soundManager } from './utils/audio';
-import { APIProvider } from '@vis.gl/react-google-maps';
-import { getGoogleMapsApiKey } from './config/env';
-
-const GOOGLE_MAPS_API_KEY = getGoogleMapsApiKey();
 
 const localDateKey = () => {
   const today = new Date();
@@ -46,21 +42,34 @@ import { Header } from './components/layout/Header';
 import { BottomNav } from './components/layout/BottomNav';
 import { MarqueeTicker } from './components/layout/MarqueeTicker';
 
-// Section Pages
+// Core Home Sections (Eagerly Loaded for Immediate First Paint)
 import { HeroSection } from './components/hero/HeroSection';
 import { IntroSection } from './components/hero/IntroSection';
 import { TimelineSection } from './components/timeline/TimelineSection';
-import { MemoryMapSection } from './components/map/MemoryMapSection';
-import { FloCycleSection } from './components/cycle/FloCycleSection';
-import { MoviesSection } from './components/movies/MoviesSection';
 import { MovieNightCard } from './components/home/MovieNightCard';
-import { WishlistSection } from './components/wishlist/WishlistSection';
-import { TrophyCabinetSection } from './components/badges/TrophyCabinetSection';
-import { RomanticExtrasSection } from './components/romantic/RomanticExtrasSection';
 
-// Modals
-import { PinModal } from './components/auth/PinModal';
-import { SettingsModal } from './components/settings/SettingsModal';
+// Code-split Lazy Loaded Sections & Modals (Loaded on demand for ultra-light bundle)
+const MemoryMapSection = lazy(() => import('./components/map/MemoryMapSection').then(m => ({ default: m.MemoryMapSection })));
+const FloCycleSection = lazy(() => import('./components/cycle/FloCycleSection').then(m => ({ default: m.FloCycleSection })));
+const MoviesSection = lazy(() => import('./components/movies/MoviesSection').then(m => ({ default: m.MoviesSection })));
+const WishlistSection = lazy(() => import('./components/wishlist/WishlistSection').then(m => ({ default: m.WishlistSection })));
+const TrophyCabinetSection = lazy(() => import('./components/badges/TrophyCabinetSection').then(m => ({ default: m.TrophyCabinetSection })));
+const RomanticExtrasSection = lazy(() => import('./components/romantic/RomanticExtrasSection').then(m => ({ default: m.RomanticExtrasSection })));
+const SettingsModal = lazy(() => import('./components/settings/SettingsModal').then(m => ({ default: m.SettingsModal })));
+const PinModal = lazy(() => import('./components/auth/PinModal').then(m => ({ default: m.PinModal })));
+
+const SectionLoadingFallback: React.FC = () => (
+  <div className="flex min-h-[45vh] w-full flex-col items-center justify-center gap-3 p-6 select-none" aria-live="polite">
+    <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-rose-400 via-pink-300 to-amber-200 p-0.5 shadow-md animate-pulse">
+      <div className="flex h-full w-full items-center justify-center rounded-[14px] bg-white dark:bg-[#2b121c]">
+        <Heart className="h-5 w-5 fill-rose-500 text-rose-500 animate-bounce" />
+      </div>
+    </div>
+    <span className="text-[11px] font-black tracking-wider uppercase text-rose-600/80 dark:text-rose-300/80">
+      Menyiapkan Ruang Cinta...
+    </span>
+  </div>
+);
 import { SupabaseLogin } from './components/auth/SupabaseLogin';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { deleteDailyCheckin, updateDailyCheckin, deleteInstantReply, cancelMeetingConfirmation, confirmMeeting, getAppAdminStatus, getBoundProfile, getJakartaDate, loadCoupleDaily, loadDailyHeartProgress, loadInstantReplies, loadMeetingFillProgress, loadProfileHeartProgress, restoreStreak, saveAdminHeartProgress, saveAdminMeetingFillProgress, saveDailyCheckin, saveInstantReply, saveMyHeartProgress, saveMyMeetingFillProgress } from './lib/coupleDaily';
@@ -720,10 +729,17 @@ export default function App() {
   };
 
   useEffect(() => {
-    const handleActivity = () => resetInactivityTimer();
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('keydown', handleActivity);
-    window.addEventListener('touchstart', handleActivity);
+    let lastReset = Date.now();
+    const handleActivity = () => {
+      const now = Date.now();
+      if (now - lastReset > 10_000) {
+        lastReset = now;
+        resetInactivityTimer();
+      }
+    };
+    window.addEventListener('mousemove', handleActivity, { passive: true });
+    window.addEventListener('keydown', handleActivity, { passive: true });
+    window.addEventListener('touchstart', handleActivity, { passive: true });
 
     // Section J Privacy requirement: "Layar di-blur saat pindah aplikasi"
     const handleWindowBlur = () => {
@@ -1659,8 +1675,7 @@ export default function App() {
   }
 
   return (
-    <APIProvider apiKey={GOOGLE_MAPS_API_KEY} libraries={['places', 'marker', 'geometry', 'core']}>
-      <div className="app-clay-theme relative flex min-h-screen flex-col overflow-x-hidden bg-[#fffaf0] font-sans-clean text-[#57202c] selection:bg-[#f4b6c2] selection:text-[#7a1018] transition-colors duration-300 dark:bg-[#21151a] dark:text-rose-50">
+    <div className="app-clay-theme relative flex min-h-screen flex-col overflow-x-hidden bg-[#fffaf0] font-sans-clean text-[#57202c] selection:bg-[#f4b6c2] selection:text-[#7a1018] transition-colors duration-300 dark:bg-[#21151a] dark:text-rose-50">
       {/* Floating Ethereal Particles & Petals */}
       <FloatingHearts />
       <ChibiPageDecorations />
@@ -1701,7 +1716,7 @@ export default function App() {
           >
             <div className="privacy-shield-card animate-heartbeat mx-5 flex w-full max-w-sm flex-col items-center rounded-[2rem] px-7 py-8 text-center">
               <div className="privacy-shield-logo mb-4 flex h-24 w-24 items-center justify-center rounded-full p-2.5">
-                <img src="/logo/logo%20couple%203d.png" alt="" className="h-full w-full object-contain" />
+                <img src="/logo/logo%20couple%203d.webp" alt="" loading="lazy" decoding="async" className="h-full w-full object-contain" />
               </div>
               <div className="font-sans-clean text-xl font-extrabold tracking-tight text-[var(--theme-ink)] sm:text-2xl">
                 Ruang Privat Terlindungi
@@ -1717,7 +1732,8 @@ export default function App() {
       {/* PIN Security Modal if locked */}
       <AnimatePresence>
         {isLocked && (
-          <PinModal
+          <Suspense fallback={null}>
+            <PinModal
             correctPin={settings.pin}
             onSuccess={() => setIsLocked(false)}
             onEnterGuestMode={() => {
@@ -1725,6 +1741,7 @@ export default function App() {
               setIsLocked(false);
             }}
           />
+          </Suspense>
         )}
       </AnimatePresence>
 
@@ -1814,7 +1831,8 @@ export default function App() {
               <IntroSection settings={settings} />
 
               {/* Peta Kenangan — langsung di Beranda */}
-              <MemoryMapSection
+              <Suspense fallback={<SectionLoadingFallback />}>
+                <MemoryMapSection
                 pins={pins}
                 syncError={memoryPinsError}
                 settings={settings}
@@ -1823,7 +1841,8 @@ export default function App() {
                 onUpdatePin={handleUpdatePin}
                 onDeletePin={handleDeletePin}
                 selectedPinId={selectedPinIdForMap}
-              />
+                />
+              </Suspense>
 
               {/* Timeline Cinta — langsung di Beranda */}
               <TimelineSection
@@ -1847,7 +1866,8 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.28, ease: 'easeOut' }}
             >
-              <FloCycleSection
+              <Suspense fallback={<SectionLoadingFallback />}>
+                <FloCycleSection
                 cycles={cycles}
                 intimateLogs={intimateLogs}
                 pins={pins}
@@ -1859,7 +1879,8 @@ export default function App() {
                 onDeleteIntimateLog={handleDeleteIntimateLog}
                 onOpenSettings={() => setIsSettingsOpen(true)}
                 onWipeData={handleWipeCycleData}
-              />
+                />
+              </Suspense>
             </motion.div>
           )}
 
@@ -1872,7 +1893,8 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.28, ease: 'easeOut' }}
             >
-              <MoviesSection
+              <Suspense fallback={<SectionLoadingFallback />}>
+                <MoviesSection
                 movies={movies}
                 tvSeries={tvSeries}
                 actors={actors}
@@ -1893,7 +1915,8 @@ export default function App() {
                 onUpdateActor={handleUpdateActor}
                 onAddActor={handleAddActor}
                 onToggleActorLike={handleToggleActorLike}
-              />
+                />
+              </Suspense>
             </motion.div>
           )}
 
@@ -1906,7 +1929,8 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.28, ease: 'easeOut' }}
             >
-              <WishlistSection
+              <Suspense fallback={<SectionLoadingFallback />}>
+                <WishlistSection
                 places={wishlistPlaces}
                 drinks={wishlistDrinks}
                 pins={pins}
@@ -1918,7 +1942,8 @@ export default function App() {
                 onMarkPlaceVisited={handleMarkPlaceVisited}
                 onAddDrink={handleAddWishlistDrink}
                 onUpdateDrink={handleUpdateWishlistDrink}
-              />
+                />
+              </Suspense>
             </motion.div>
           )}
 
@@ -1931,10 +1956,12 @@ export default function App() {
               exit={{ opacity: 0, scale: 0.96 }}
               transition={{ duration: 0.28, ease: 'easeOut' }}
             >
-              <TrophyCabinetSection
+              <Suspense fallback={<SectionLoadingFallback />}>
+                <TrophyCabinetSection
                 badges={badges}
                 settings={settings}
-              />
+                />
+              </Suspense>
             </motion.div>
           )}
 
@@ -1947,7 +1974,8 @@ export default function App() {
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.28, ease: 'easeOut' }}
             >
-              <RomanticExtrasSection
+              <Suspense fallback={<SectionLoadingFallback />}>
+                <RomanticExtrasSection
                 letters={letters}
                 songs={songs}
                 favoriteSingers={favoriteSingers}
@@ -1966,7 +1994,8 @@ export default function App() {
                 onSaveFavoriteSinger={handleSaveFavoriteSinger}
                 onDeleteFavoriteSinger={handleDeleteFavoriteSinger}
                 onOpenLetter={handleOpenLetter}
-              />
+                />
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1982,15 +2011,17 @@ export default function App() {
       {/* Settings Modal */}
       <AnimatePresence>
         {isSettingsOpen && (
-          <SettingsModal
-            settings={settings}
-            isAdminAccount={isAdminAccount}
-            adminMode={adminMode}
-            onSaveSettings={handleUpdateSettings}
-            onToggleAdminMode={handleToggleAdminMode}
-            onClose={() => setIsSettingsOpen(false)}
-            onWipeCycleData={handleWipeCycleData}
-          />
+          <Suspense fallback={null}>
+            <SettingsModal
+              settings={settings}
+              isAdminAccount={isAdminAccount}
+              adminMode={adminMode}
+              onSaveSettings={handleUpdateSettings}
+              onToggleAdminMode={handleToggleAdminMode}
+              onClose={() => setIsSettingsOpen(false)}
+              onWipeCycleData={handleWipeCycleData}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
 
@@ -2010,6 +2041,5 @@ export default function App() {
         </div>
       </footer>
     </div>
-    </APIProvider>
   );
 }

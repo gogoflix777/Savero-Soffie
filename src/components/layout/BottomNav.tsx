@@ -126,7 +126,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   useEffect(() => {
     const onResize = () => syncToSection(activeSection, true);
-    window.addEventListener('resize', onResize);
+    window.addEventListener('resize', onResize, { passive: true });
     return () => window.removeEventListener('resize', onResize);
   }, [activeSection, syncToSection]);
 

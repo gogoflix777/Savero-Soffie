@@ -97,8 +97,27 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(process.cwd(), '.'),
       },
+    },
+    build: {
+      chunkSizeWarningLimit: 900,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('three')) return 'vendor-three';
+              if (id.includes('leaflet')) return 'vendor-leaflet';
+              if (id.includes('motion')) return 'vendor-motion';
+              if (id.includes('@supabase')) return 'vendor-supabase';
+              if (id.includes('lucide-react')) return 'vendor-icons';
+              if (id.includes('@vis.gl') || id.includes('google')) return 'vendor-gmaps';
+              if (id.includes('canvas-confetti')) return 'vendor-confetti';
+              if (id.includes('react') || id.includes('react-dom')) return 'vendor-react';
+            }
+          }
+        }
+      }
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

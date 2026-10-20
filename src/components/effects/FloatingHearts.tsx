@@ -1,60 +1,36 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 
 type ParticleType = 'heart' | 'sparkle' | 'leaf' | 'petal';
 
-interface Particle {
+interface ParticleDef {
   id: number;
   x: number;
-  y: number;
   size: number;
-  speed: number;
+  duration: number;
+  delay: number;
   opacity: number;
   type: ParticleType;
   color: string;
-  rotation: number;
+  drift: number;
 }
 
-export const FloatingHearts: React.FC = () => {
-  const [particles, setParticles] = useState<Particle[]>([]);
+const TYPES: ParticleType[] = ['heart', 'sparkle', 'leaf', 'petal'];
+const COLORS = ['#F4B6C2', '#D9B26F', '#BFD8B8', '#E8C5C8', '#f87171'];
 
-  useEffect(() => {
-    const types: ParticleType[] = ['heart', 'sparkle', 'leaf', 'petal'];
-    const colors = ['#F4B6C2', '#D9B26F', '#BFD8B8', '#7A1018', '#E8C5C8'];
-
-    const initialParticles: Particle[] = Array.from({ length: 18 }).map((_, i) => ({
+export const FloatingHearts: React.FC = React.memo(() => {
+  // Pre-calculate fixed, deterministic particle parameters (zero continuous state updates)
+  const particles = useMemo<ParticleDef[]>(() => {
+    return Array.from({ length: 16 }).map((_, i) => ({
       id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 12 + 12,
-      speed: Math.random() * 0.35 + 0.15,
-      opacity: Math.random() * 0.4 + 0.18,
-      type: types[i % types.length],
-      color: colors[i % colors.length],
-      rotation: Math.random() * 360
+      x: (i * 6.25 + (Math.sin(i * 99) * 3)) % 96 + 2,
+      size: 13 + (i % 4) * 3.5,
+      duration: 14 + (i % 5) * 2.8,
+      delay: (i * 1.3) % 12,
+      opacity: 0.18 + (i % 3) * 0.1,
+      type: TYPES[i % TYPES.length],
+      color: COLORS[i % COLORS.length],
+      drift: (i % 2 === 0 ? 1 : -1) * (12 + (i % 3) * 6)
     }));
-
-    setParticles(initialParticles);
-
-    const interval = setInterval(() => {
-      setParticles((prev) =>
-        prev.map((p) => {
-          let newY = p.y - p.speed;
-          let newX = p.x + Math.sin(newY * 0.05) * 0.18;
-          if (newY < -5) {
-            newY = 105;
-            newX = Math.random() * 100;
-          }
-          return {
-            ...p,
-            y: newY,
-            x: newX,
-            rotation: (p.rotation + 0.4) % 360
-          };
-        })
-      );
-    }, 50);
-
-    return () => clearInterval(interval);
   }, []);
 
   const renderIcon = (type: ParticleType, size: number, color: string) => {
@@ -87,18 +63,18 @@ export const FloatingHearts: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none" aria-hidden="true">
       {particles.map((p) => (
         <div
           key={p.id}
+          className="ambient-floating-particle"
           style={{
-            position: 'absolute',
             left: `${p.x}%`,
-            top: `${p.y}%`,
             opacity: p.opacity,
-            transform: `rotate(${p.rotation}deg)`,
-            transition: 'top 50ms linear, left 50ms linear',
-            filter: 'drop-shadow(0 2px 6px rgba(122, 16, 24, 0.15))'
+            animationDuration: `${p.duration}s`,
+            animationDelay: `-${p.delay}s`,
+            ['--drift-x' as string]: `${p.drift}px`,
+            filter: 'drop-shadow(0 2px 4px rgba(122, 16, 24, 0.12))'
           }}
         >
           {renderIcon(p.type, p.size, p.color)}
@@ -106,4 +82,6 @@ export const FloatingHearts: React.FC = () => {
       ))}
     </div>
   );
-};
+});
+
+FloatingHearts.displayName = 'FloatingHearts';
