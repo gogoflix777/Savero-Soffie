@@ -17,12 +17,15 @@ interface PhotoMemoriesModalProps {
   checkins: DailyCheckin[];
   streak: number;
   onSelectPhoto: (photo: {
+    id?: string;
     photoUrl: string;
+    photoPath?: string | null;
     caption?: string | null;
     profile: CoupleProfile;
     date: string;
     expression: MoodExpression;
     rating?: number | null;
+    checkin?: DailyCheckin;
   }) => void;
   onClose: () => void;
 }
@@ -377,12 +380,15 @@ export const PhotoMemoriesModal: React.FC<PhotoMemoriesModalProps> = ({
                               onClick={() => {
                                 soundManager.playTap();
                                 onSelectPhoto({
+                                  id: primaryEntry.id,
                                   photoUrl: primaryEntry.photo_url!,
+                                  photoPath: primaryEntry.photo_path,
                                   caption: primaryEntry.diary_text,
                                   profile: primaryEntry.profile,
                                   date: primaryEntry.log_date,
                                   expression: primaryEntry.expression,
-                                  rating: primaryEntry.rating
+                                  rating: primaryEntry.rating,
+                                  checkin: primaryEntry
                                 });
                               }}
                               className={`group relative aspect-square overflow-hidden rounded-[26%] border-[1.5px] bg-rose-100 shadow-[0_3px_8px_rgba(140,30,60,0.16)] transition ${

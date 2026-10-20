@@ -63,7 +63,7 @@ import { PinModal } from './components/auth/PinModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { SupabaseLogin } from './components/auth/SupabaseLogin';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
-import { deleteInstantReply, cancelMeetingConfirmation, confirmMeeting, getAppAdminStatus, getBoundProfile, getJakartaDate, loadCoupleDaily, loadDailyHeartProgress, loadInstantReplies, loadMeetingFillProgress, loadProfileHeartProgress, restoreStreak, saveAdminHeartProgress, saveAdminMeetingFillProgress, saveDailyCheckin, saveInstantReply, saveMyHeartProgress, saveMyMeetingFillProgress } from './lib/coupleDaily';
+import { deleteDailyCheckin, updateDailyCheckin, deleteInstantReply, cancelMeetingConfirmation, confirmMeeting, getAppAdminStatus, getBoundProfile, getJakartaDate, loadCoupleDaily, loadDailyHeartProgress, loadInstantReplies, loadMeetingFillProgress, loadProfileHeartProgress, restoreStreak, saveAdminHeartProgress, saveAdminMeetingFillProgress, saveDailyCheckin, saveInstantReply, saveMyHeartProgress, saveMyMeetingFillProgress } from './lib/coupleDaily';
 import { loadSharedMediaCatalog, removeSharedMediaItem, saveSharedMediaItem, seedSharedMediaCatalog } from './lib/sharedMediaCatalog';
 import { deleteMemoryPin, loadMemoryPins, saveMemoryPin } from './lib/memoryPins';
 import { deleteWishlistPlace, loadWishlistPlaces, saveWishlistPlace, seedWishlistPlaces } from './lib/wishlistPlaces';

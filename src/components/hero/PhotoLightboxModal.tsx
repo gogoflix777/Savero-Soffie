@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ZoomIn, ZoomOut, Calendar, Heart } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, Calendar, Heart, Pencil, Trash2 } from 'lucide-react';
 import { CoupleProfile, MoodExpression } from '../../types';
 import {
   getCurvedCaptionFontSize,
@@ -10,12 +10,17 @@ import {
 import { moodImage, moodOptions } from '../../utils/mood';
 
 interface PhotoLightboxModalProps {
+  id?: string;
   photoUrl: string;
+  photoPath?: string | null;
   caption?: string | null;
   profile?: CoupleProfile;
   date?: string;
   expression?: MoodExpression;
   rating?: number | null;
+  canManage?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => Promise<void> | void;
   onClose: () => void;
 }
 
@@ -26,6 +31,9 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
   date,
   expression,
   rating,
+  canManage = false,
+  onEdit,
+  onDelete,
   onClose
 }) => {
   const [zoomLevel, setZoomLevel] = useState<number>(1);
@@ -91,6 +99,28 @@ export const PhotoLightboxModal: React.FC<PhotoLightboxModalProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5">
+              {canManage && onEdit && (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="flex h-7.5 w-7.5 items-center justify-center rounded-full border border-white/90 bg-white/90 text-[#6e2236] shadow-xs transition hover:bg-rose-500 hover:text-white hover:scale-105 active:scale-90 dark:border-white/15 dark:bg-white/10 dark:text-rose-100"
+                  title="Edit Instant"
+                  aria-label="Edit Instant"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {canManage && onDelete && (
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  className="flex h-7.5 w-7.5 items-center justify-center rounded-full border border-white/90 bg-white/90 text-rose-500 shadow-xs transition hover:bg-rose-600 hover:text-white hover:scale-105 active:scale-90 dark:border-white/15 dark:bg-white/10 dark:text-rose-300"
+                  title="Hapus Instant"
+                  aria-label="Hapus Instant"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={toggleZoom}

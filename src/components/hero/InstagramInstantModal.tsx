@@ -7,7 +7,8 @@ import {
   Image as ImageIcon,
   Heart,
   Check,
-  Sparkles
+  Sparkles,
+  Pencil
 } from 'lucide-react';
 import { CoupleProfile, MoodExpression } from '../../types';
 import { soundManager } from '../../utils/audio';
@@ -21,11 +22,24 @@ import { moodOptions, moodImage } from '../../utils/mood';
 interface InstagramInstantModalProps {
   activeProfile: CoupleProfile;
   initialExpression?: MoodExpression;
+  initialData?: {
+    id?: string;
+    profile?: CoupleProfile;
+    logDate?: string;
+    expression?: MoodExpression;
+    rating?: number;
+    diaryText?: string | null;
+    photoUrl?: string | null;
+    photoPath?: string | null;
+  } | null;
   onSaveInstant: (data: {
+    id?: string;
+    logDate?: string;
     expression: MoodExpression;
     rating: number;
     diaryText: string;
     photo?: Blob | null;
+    keepExistingPhoto?: boolean;
   }) => Promise<void>;
   onClose: () => void;
 }
@@ -41,17 +55,20 @@ const RATING_LABELS: Record<number, string> = {
 export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
   activeProfile,
   initialExpression = 'bahagia',
+  initialData,
   onSaveInstant,
   onClose
 }) => {
+  const isEditMode = Boolean(initialData?.id);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [caption, setCaption] = useState<string>('');
-  const [expression, setExpression] = useState<MoodExpression>(initialExpression);
-  const [rating, setRating] = useState<number>(5);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.photoUrl || null);
+  const [isReplacingPhoto, setIsReplacingPhoto] = useState<boolean>(false);
+  const [caption, setCaption] = useState<string>(initialData?.diaryText || '');
+  const [expression, setExpression] = useState<MoodExpression>(initialData?.expression || initialExpression);
+  const [rating, setRating] = useState<number>(initialData?.rating ?? 5);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -138,15 +155,15 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
     };
   }, []);
 
-  // Facing mode switch or initial camera start
+  // Facing mode switch or initial camera start (only start camera if no preview image exists)
   useEffect(() => {
-    if (!capturedBlob && isMountedRef.current) {
+    if (!capturedBlob && !previewUrl && isMountedRef.current) {
       void startCamera(facingMode);
     }
     return () => {
       stopCamera();
     };
-  }, [facingMode]);
+  }, [facingMode, capturedBlob, previewUrl]);
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -199,6 +216,7 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
       const blob = await compressToBlob(canvas);
       setCapturedBlob(blob);
       setPreviewUrl(URL.createObjectURL(blob));
+      setIsReplacingPhoto(true);
       stopCamera();
     } catch (err) {
       console.error('Failed to capture canvas:', err);
@@ -230,10 +248,12 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
           const blob = await compressToBlob(canvas);
           setCapturedBlob(blob);
           setPreviewUrl(URL.createObjectURL(blob));
+          setIsReplacingPhoto(true);
           stopCamera();
         } catch {
           setCapturedBlob(file);
           setPreviewUrl(objectUrl);
+          setIsReplacingPhoto(true);
           stopCamera();
         }
       }
@@ -244,10 +264,11 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
   const handleRetake = () => {
     soundManager.playTap();
     setCapturedBlob(null);
-    if (previewUrl) {
+    if (previewUrl && previewUrl !== initialData?.photoUrl) {
       URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
     }
+    setPreviewUrl(null);
+    setIsReplacingPhoto(true);
     void startCamera(facingMode);
   };
 
@@ -255,10 +276,13 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
     setIsSubmitting(true);
     try {
       await onSaveInstant({
+        id: initialData?.id,
+        logDate: initialData?.logDate,
         expression,
         rating,
         diaryText: caption.trim(),
-        photo: capturedBlob
+        photo: capturedBlob,
+        keepExistingPhoto: !capturedBlob && Boolean(initialData?.photoUrl && !isReplacingPhoto)
       });
       soundManager.playSuccess();
       stopCamera();
@@ -291,9 +315,13 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
         {/* Compact Top Header */}
         <div className="mb-2.5 flex w-full items-center justify-between px-1">
           <div className="flex items-center gap-1.5 rounded-full border border-white/90 bg-gradient-to-b from-rose-100 to-pink-100/90 px-3 py-1 shadow-[0_2px_6px_rgba(190,40,80,0.1),inset_0_1px_2px_#fff] dark:border-white/10 dark:from-rose-950/90 dark:to-rose-900/70">
-            <Camera className="h-3 w-3 text-rose-500 dark:text-rose-300" />
+            {isEditMode ? (
+              <Pencil className="h-3 w-3 text-rose-500 dark:text-rose-300" />
+            ) : (
+              <Camera className="h-3 w-3 text-rose-500 dark:text-rose-300" />
+            )}
             <span className="text-[10px] font-black tracking-wider uppercase text-[#8f2440] dark:text-rose-200">
-              Instant · {activeProfile}
+              {isEditMode ? `Edit Instant · ${initialData?.profile || activeProfile}` : `Instant · ${activeProfile}`}
             </span>
           </div>
 
@@ -393,7 +421,7 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
               className="absolute top-3 right-3 flex items-center gap-1 rounded-full border border-white/40 bg-black/55 px-2.5 py-1 text-[9.5px] font-extrabold text-white shadow-md backdrop-blur-md transition hover:bg-black/75 active:scale-95"
             >
               <RefreshCw className="h-2.5 w-2.5" />
-              <span>Foto Ulang</span>
+              <span>{isEditMode && previewUrl === initialData?.photoUrl ? 'Ganti Foto' : 'Foto Ulang'}</span>
             </button>
           )}
         </div>
@@ -472,7 +500,7 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
                   }`}
                 >
                   <img
-                    src={moodImage(activeProfile, opt.id)}
+                    src={moodImage(initialData?.profile || activeProfile, opt.id)}
                     alt={opt.label}
                     className="h-6 w-6 rounded-full object-cover object-top bg-rose-50 border border-white shadow-2xs"
                   />
@@ -528,7 +556,7 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
               ) : (
                 <>
                   <Check className="h-4 w-4 stroke-[3]" />
-                  <span>Simpan Instant</span>
+                  <span>{isEditMode ? 'Simpan Perubahan' : 'Simpan Instant'}</span>
                   <Sparkles className="h-3.5 w-3.5 fill-amber-200 text-amber-200" />
                 </>
               )}

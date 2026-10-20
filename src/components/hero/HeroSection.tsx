@@ -10,7 +10,9 @@ import {
   X,
   Calendar,
   MessageCircle,
-  Send
+  Send,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { InteractiveHeart } from './InteractiveHeart';
 import { InstagramInstantModal } from './InstagramInstantModal';
@@ -63,6 +65,24 @@ interface HeroSectionProps {
   onMeetingFillProgressChange: (percentage: number) => void;
   onExploreClick: () => void;
   onAddMemoryClick: () => void;
+  isAdminAccount?: boolean;
+  adminMode?: boolean;
+  onUpdateDailyCheckin?: (input: {
+    id: string;
+    profile: CoupleProfile;
+    logDate: string;
+    expression: MoodExpression;
+    rating: number;
+    diaryText: string;
+    photo?: Blob | null;
+    keepExistingPhoto?: boolean;
+  }) => Promise<void>;
+  onDeleteDailyCheckin?: (input: {
+    id: string;
+    profile: CoupleProfile;
+    logDate?: string;
+    photoPath?: string | null;
+  }) => Promise<void>;
 }
 
 interface HeartParticle {
@@ -162,20 +182,28 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onHeartProgressChange,
   onMeetingFillProgressChange,
   onExploreClick,
-  onAddMemoryClick
+  onAddMemoryClick,
+  isAdminAccount,
+  adminMode,
+  onUpdateDailyCheckin,
+  onDeleteDailyCheckin
 }) => {
   const [timeTogether, setTimeTogether] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [heartParticles, setHeartParticles] = useState<HeartParticle[]>([]);
   const [isInstantModalOpen, setIsInstantModalOpen] = useState(false);
   const [isMemoriesModalOpen, setIsMemoriesModalOpen] = useState(false);
   const [isStreakModalOpen, setIsStreakModalOpen] = useState(false);
+  const [editingCheckin, setEditingCheckin] = useState<DailyCheckin | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<{
+    id?: string;
     photoUrl: string;
+    photoPath?: string | null;
     caption?: string | null;
     profile: CoupleProfile;
     date: string;
     expression: MoodExpression;
     rating?: number | null;
+    checkin?: DailyCheckin;
   } | null>(null);
 
   const [wigglingProfile, setWigglingProfile] = useState<'Savero' | 'Soffie' | null>(null);
@@ -396,22 +424,28 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             const localDiaryHistory = moodDiary
               .filter((entry) => entry.profile === profile && !checkinDates.has(entry.date))
               .map((entry) => ({
+                id: entry.id,
                 date: entry.date,
                 content: entry.content,
                 expression: entry.expression,
-                photo_url: null,
-                rating: null,
-                created_at: entry.updatedAt || entry.createdAt
+                photo_url: null as string | null,
+                photo_path: null as string | null,
+                rating: null as number | null,
+                created_at: entry.updatedAt || entry.createdAt,
+                checkin: undefined as DailyCheckin | undefined
               }));
 
             const diaryHistory = [
               ...profileCheckins.map((entry) => ({
+                id: entry.id,
                 date: entry.log_date,
                 content: entry.diary_text,
                 expression: entry.expression,
                 photo_url: entry.photo_url,
+                photo_path: entry.photo_path,
                 rating: entry.rating,
-                created_at: entry.photo_uploaded_at || entry.updated_at || entry.created_at
+                created_at: entry.photo_uploaded_at || entry.updated_at || entry.created_at,
+                checkin: entry
               })),
               ...localDiaryHistory
             ].sort((left, right) => right.date.localeCompare(left.date));
@@ -437,6 +471,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             const currentMoodOption = moodOptions.find(
               (opt) => opt.id === (latestDiary?.expression ?? profileActiveExpression)
             );
+            const canManageCurrentEntry = (profile === activeProfile || Boolean(isAdminAccount)) && Boolean(latestDiary && latestDiary.checkin);
 
             return (
               <div
@@ -525,6 +560,48 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                             </button>
                           </div>
                         )}
+                        {canManageCurrentEntry && (
+                          <>
+                            <button
+                              type="button"
+                              title="Edit Instant"
+                              aria-label="Edit Instant"
+                              onClick={() => {
+                                setEditingCheckin(latestDiary.checkin!);
+                                setDiaryBubbleProfile(null);
+                                setIsInstantModalOpen(true);
+                              }}
+                              className="flex h-5 w-5 items-center justify-center rounded-full border border-rose-200/70 bg-white/90 text-[#8c4053] shadow-2xs transition hover:bg-rose-500 hover:text-white active:scale-90 dark:border-white/15 dark:bg-white/10 dark:text-rose-100"
+                            >
+                              <Pencil className="h-2.5 w-2.5 stroke-[2.2]" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Hapus Instant"
+                              aria-label="Hapus Instant"
+                              onClick={async () => {
+                                if (!window.confirm(`Hapus instant tanggal ${historyDateLabel} milik ${profile}? Foto dan catatan ini tidak dapat dipulihkan.`)) return;
+                                try {
+                                  if (onDeleteDailyCheckin && latestDiary.checkin) {
+                                    await onDeleteDailyCheckin({
+                                      id: latestDiary.checkin.id,
+                                      profile: latestDiary.checkin.profile,
+                                      logDate: latestDiary.checkin.log_date,
+                                      photoPath: latestDiary.checkin.photo_path
+                                    });
+                                  }
+                                  soundManager.playPop();
+                                  setDiaryBubbleProfile(null);
+                                } catch (err) {
+                                  alert(err instanceof Error ? err.message : 'Gagal menghapus instant.');
+                                }
+                              }}
+                              className="flex h-5 w-5 items-center justify-center rounded-full border border-rose-200/70 bg-white/90 text-rose-500 shadow-2xs transition hover:bg-rose-600 hover:text-white active:scale-90 dark:border-white/15 dark:bg-white/10 dark:text-rose-300"
+                            >
+                              <Trash2 className="h-2.5 w-2.5 stroke-[2.2]" />
+                            </button>
+                          </>
+                        )}
                         <button
                           type="button"
                           onClick={() => {
@@ -545,12 +622,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         className="instant-squircle-photo group"
                         onClick={() => {
                           setLightboxPhoto({
+                            id: latestDiary.id,
                             photoUrl: latestDiary.photo_url!,
+                            photoPath: latestDiary.photo_path,
                             caption: latestDiary.content,
                             profile,
                             date: latestDiary.date,
                             expression: latestDiary.expression,
-                            rating: latestDiary.rating
+                            rating: latestDiary.rating,
+                            checkin: latestDiary.checkin
                           });
                         }}
                       >
@@ -703,20 +783,56 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         </button>
                       </div>
                     ) : isActive ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDiaryBubbleProfile(null);
-                          setIsReplying(false);
-                          setIsInstantModalOpen(true);
-                        }}
-                        className="hero-diary-bubble-action w-full justify-center"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <Camera className="h-3 w-3" />
-                          <span>Ambil Instant Hari Ini</span>
-                        </span>
-                      </button>
+                      latestDiary?.checkin ? (
+                        <div className="flex items-center gap-1.5 w-full">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingCheckin(null);
+                              setDiaryBubbleProfile(null);
+                              setIsReplying(false);
+                              setIsInstantModalOpen(true);
+                            }}
+                            className="hero-diary-bubble-action flex-1 justify-center"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <Camera className="h-3 w-3" />
+                              <span>Ambil Baru</span>
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingCheckin(latestDiary.checkin!);
+                              setDiaryBubbleProfile(null);
+                              setIsReplying(false);
+                              setIsInstantModalOpen(true);
+                            }}
+                            className="hero-diary-bubble-action flex-1 justify-center"
+                          >
+                            <span className="flex items-center gap-1.5">
+                              <Pencil className="h-3 w-3" />
+                              <span>Edit Momen</span>
+                            </span>
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingCheckin(null);
+                            setDiaryBubbleProfile(null);
+                            setIsReplying(false);
+                            setIsInstantModalOpen(true);
+                          }}
+                          className="hero-diary-bubble-action w-full justify-center"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Camera className="h-3 w-3" />
+                            <span>Ambil Instant Hari Ini</span>
+                          </span>
+                        </button>
+                      )
                     ) : (
                       onSendReply && (
                         <button
@@ -920,29 +1036,84 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* Instagram Instant Camera Modal */}
       {isInstantModalOpen && (
         <InstagramInstantModal
-          activeProfile={activeProfile}
-          initialExpression={coupleMoodLog[activeProfile].expression}
+          activeProfile={editingCheckin?.profile || activeProfile}
+          initialExpression={editingCheckin?.expression || coupleMoodLog[activeProfile].expression}
+          initialData={editingCheckin ? {
+            id: editingCheckin.id,
+            profile: editingCheckin.profile,
+            logDate: editingCheckin.log_date,
+            expression: editingCheckin.expression,
+            rating: editingCheckin.rating,
+            diaryText: editingCheckin.diary_text,
+            photoUrl: editingCheckin.photo_url,
+            photoPath: editingCheckin.photo_path
+          } : null}
           onSaveInstant={async (data) => {
-            await onSaveDailyCheckin(data);
-            onMoodChange(activeProfile, data.expression);
-            onSaveMoodDiary(activeProfile, data.expression, data.diaryText);
-            setDiaryBubbleProfile(activeProfile);
-            setMoodChangedProfile(activeProfile);
+            if (data.id && onUpdateDailyCheckin) {
+              await onUpdateDailyCheckin({
+                id: data.id,
+                profile: editingCheckin?.profile || activeProfile,
+                logDate: data.logDate || localDateKey(),
+                expression: data.expression,
+                rating: data.rating,
+                diaryText: data.diaryText,
+                photo: data.photo,
+                keepExistingPhoto: data.keepExistingPhoto
+              });
+            } else {
+              await onSaveDailyCheckin(data);
+            }
+            onMoodChange(editingCheckin?.profile || activeProfile, data.expression);
+            onSaveMoodDiary(editingCheckin?.profile || activeProfile, data.expression, data.diaryText);
+            setDiaryBubbleProfile(editingCheckin?.profile || activeProfile);
+            setMoodChangedProfile(editingCheckin?.profile || activeProfile);
+            setEditingCheckin(null);
             window.setTimeout(() => setMoodChangedProfile((c) => (c === activeProfile ? null : c)), 700);
           }}
-          onClose={() => setIsInstantModalOpen(false)}
+          onClose={() => {
+            setIsInstantModalOpen(false);
+            setEditingCheckin(null);
+          }}
         />
       )}
 
       {/* Photo Lightbox Modal */}
       {lightboxPhoto && (
         <PhotoLightboxModal
+          id={lightboxPhoto.id}
           photoUrl={lightboxPhoto.photoUrl}
+          photoPath={lightboxPhoto.photoPath}
           caption={lightboxPhoto.caption}
           profile={lightboxPhoto.profile}
           date={lightboxPhoto.date}
           expression={lightboxPhoto.expression}
           rating={lightboxPhoto.rating}
+          canManage={lightboxPhoto.profile === activeProfile || Boolean(isAdminAccount)}
+          onEdit={() => {
+            const targetCheckin = lightboxPhoto.checkin || dailyCheckins.find(c => c.id === lightboxPhoto.id);
+            if (targetCheckin) {
+              setEditingCheckin(targetCheckin);
+              setLightboxPhoto(null);
+              setIsInstantModalOpen(true);
+            }
+          }}
+          onDelete={async () => {
+            if (!window.confirm(`Hapus instant tanggal ${lightboxPhoto.date} milik ${lightboxPhoto.profile}? Foto dan catatan ini tidak dapat dipulihkan.`)) return;
+            try {
+              if (onDeleteDailyCheckin && lightboxPhoto.id) {
+                await onDeleteDailyCheckin({
+                  id: lightboxPhoto.id,
+                  profile: lightboxPhoto.profile,
+                  logDate: lightboxPhoto.date,
+                  photoPath: lightboxPhoto.photoPath
+                });
+              }
+              soundManager.playPop();
+              setLightboxPhoto(null);
+            } catch (err) {
+              alert(err instanceof Error ? err.message : 'Gagal menghapus instant.');
+            }
+          }}
           onClose={() => setLightboxPhoto(null)}
         />
       )}

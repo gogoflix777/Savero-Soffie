@@ -252,6 +252,141 @@ export async function saveDailyCheckin(input: {
   return { ...(data as DailyCheckin), photo_url };
 }
 
+export async function updateDailyCheckin(input: {
+  id: string;
+  profile: CoupleProfile;
+  logDate: string;
+  expression: string;
+  rating: number;
+  diaryText: string;
+  photo?: Blob | null;
+  keepExistingPhoto?: boolean;
+  adminMode?: boolean;
+}): Promise<DailyCheckin> {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi.');
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!user) throw new Error('Masuk ke akun terlebih dahulu.');
+
+  const { data: previous, error: previousError } = await supabase
+    .from('daily_checkins')
+    .select('id, user_id, profile, photo_path, log_date')
+    .eq('id', input.id)
+    .single();
+  if (previousError) throw previousError;
+
+  let photoPath = previous.photo_path;
+
+  if (input.photo) {
+    const extensionByMime: Record<string, string> = {
+      'image/webp': 'webp',
+      'image/png': 'png',
+      'image/jpeg': 'jpg'
+    };
+    const extension = extensionByMime[input.photo.type];
+    if (!extension) throw new Error(`Format foto ${input.photo.type || 'tidak diketahui'} tidak didukung.`);
+
+    photoPath = `${previous.user_id}/${input.logDate}/${crypto.randomUUID()}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from('daily-diary')
+      .upload(photoPath, input.photo, {
+        contentType: input.photo.type,
+        cacheControl: '3600',
+        upsert: false
+      });
+    if (uploadError) throw uploadError;
+  } else if (!input.keepExistingPhoto && input.photo === null) {
+    photoPath = null;
+  }
+
+  const { data, error } = await supabase
+    .from('daily_checkins')
+    .update({
+      expression: input.expression,
+      rating: input.rating,
+      diary_text: input.diaryText.trim() || null,
+      photo_path: photoPath,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', input.id)
+    .select('*')
+    .single();
+
+  if (error) {
+    if (input.photo && photoPath && photoPath !== previous.photo_path) {
+      await supabase.storage.from('daily-diary').remove([photoPath]);
+    }
+    throw error;
+  }
+
+  if (previous.photo_path && photoPath !== previous.photo_path) {
+    try {
+      await supabase.storage.from('daily-diary').remove([previous.photo_path]);
+    } catch (removeErr) {
+      console.warn('Gagal menghapus foto lama:', removeErr);
+    }
+  }
+
+  let photo_url: string | null = null;
+  if (photoPath) {
+    const { data: signed, error: signedUrlError } = await supabase.storage
+      .from('daily-diary')
+      .createSignedUrl(photoPath, 60 * 60);
+    if (signedUrlError) throw signedUrlError;
+    photo_url = signed?.signedUrl ?? null;
+  }
+
+  return { ...(data as DailyCheckin), photo_url };
+}
+
+export async function deleteDailyCheckin(input: {
+  id: string;
+  profile: CoupleProfile;
+  photoPath?: string | null;
+  adminMode?: boolean;
+}): Promise<boolean> {
+  if (!supabase) throw new Error('Supabase belum dikonfigurasi.');
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!user) throw new Error('Masuk ke akun terlebih dahulu.');
+
+  let photoToDelete = input.photoPath;
+  if (photoToDelete === undefined) {
+    const { data: checkin } = await supabase
+      .from('daily_checkins')
+      .select('photo_path')
+      .eq('id', input.id)
+      .maybeSingle();
+    photoToDelete = checkin?.photo_path;
+  }
+
+  let deleted = false;
+  const { data: rpcSuccess, error: rpcError } = await supabase.rpc('delete_daily_checkin', {
+    checkin_id: input.id
+  });
+
+  if (!rpcError && rpcSuccess) {
+    deleted = true;
+  } else {
+    const { error: deleteError } = await supabase
+      .from('daily_checkins')
+      .delete()
+      .eq('id', input.id);
+    if (deleteError) throw deleteError;
+    deleted = true;
+  }
+
+  if (photoToDelete) {
+    try {
+      await supabase.storage.from('daily-diary').remove([photoToDelete]);
+    } catch (storageErr) {
+      console.warn('Gagal menghapus foto diary dari storage:', storageErr);
+    }
+  }
+
+  return deleted;
+}
+
 export async function restoreStreak() {
   if (!supabase) throw new Error('Supabase belum dikonfigurasi.');
   const { error } = await supabase.rpc('restore_couple_streak');

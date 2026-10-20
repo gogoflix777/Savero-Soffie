@@ -1,4 +1,4 @@
--- Savero & Soffie: Supabase SQL Editor setup
+﻿-- Savero & Soffie: Supabase SQL Editor setup
 -- Run once on a fresh Supabase project. Do not rerun after applying migrations individually.
 -- Edge Functions, Auth provider setup, admin assignment, and scheduled secrets are documented separately in SUPABASE_SETUP.md.
 
@@ -903,7 +903,7 @@ values
   ('pin-1', $json${"id":"pin-1","title":"Pertemuan Pertama: Mie Gacoan","date":"2026-03-24","time":"20:15","description":"Pertemuan awal cerita kita berdua. Suasana ramai Mie Gacoan Semarang dengan tawa dan obrolan pertama yang tidak terlupakan.","photos":["https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=800&q=80","https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80"],"rating":5,"tags":["Pertama Kali","Mie Gacoan","Awal Cerita","Semarang"],"category":"restoran","lat":-7.004128,"lng":110.419234,"mapUrl":"https://maps.app.goo.gl/YVWJqrZoqhJp6ZXs5?g_st=iw","status":"visited","addedBy":"Berdua","isSensitive":false}$json$::jsonb),
   ('pin-2', $json${"id":"pin-2","title":"Pindah Ngobrol: Kafe Dekat Unika","date":"2026-03-25","time":"01:30","description":"Melanjutkan obrolan sampai dini hari di kafe hangat dekat kampus Unika Soegijapranata Bendan Dhuwur. Kopi pertama dan percakapan mendalam.","photos":["https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&q=80"],"rating":5,"tags":["Kafe Unika","Dini Hari","Kopi","Ngobrol Santai"],"category":"kafe","lat":-7.018241,"lng":110.407632,"mapUrl":"https://maps.app.goo.gl/hUEKGe5DZ5jh51fz9?g_st=iw","status":"visited","addedBy":"Berdua","isSensitive":false}$json$::jsonb),
   ('pin-3', $json${"id":"pin-3","title":"Kencan Berdua Pertama: KONICIPICIP Taichan Pleburan","date":"2026-08-26","time":"23:23","description":"Pertama kali resmi keluar berdua! Menikmati sate taichan gurih pedas di Pleburan jam 23.23 malam. Titik tolak hari jadian kita yang penuh debar.","photos":["https://images.unsplash.com/photo-1544025162-d76694265947?w=800&q=80","https://images.unsplash.com/photo-1529543544282-ea669407fca3?w=800&q=80"],"rating":5,"tags":["Kencan Pertama","Hari Jadian","Taichan Pleburan","Malam Romantis"],"category":"restoran","lat":-6.9957834,"lng":110.423215,"mapUrl":"http://google.com/maps/place/KONICIPICIP+sate+taichan+semarang+PLEBURAN/@-6.9957834,110.423215,17z/data=!3m1!4b1!4m6!3m5!1s0x2e708b8a726ddc57:0x4111b05b0bbccff1!8m2!3d-6.9957834!4d110.423215!16s%2Fg%2F11jjpqjcpp","status":"visited","addedBy":"Berdua","isSensitive":false}$json$::jsonb),
-  ('pin-4', $json${"id":"pin-4","title":"Night Ride: Jalan Baru Jangli – Undip Sampai Subuh","date":"2026-08-27","time":"05:38","description":"Menyusuri jalanan malam Semarang dari Jangli sampai tembusan kampus Tembalang Undip. Angin dingin, jalan sepi, dan pemandangan sunrise fajar jam 05.38 pagi.","photos":["https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=800&q=80"],"rating":5,"tags":["Night Ride","Jangli-Undip","Subuh","Sunrise","Rute Spesial"],"category":"jalan","lat":-7.0375,"lng":110.4335,"mapUrl":"https://maps.google.com/?q=-7.0375,110.4335","status":"visited","addedBy":"Berdua","isSensitive":false,"isRoute":true,"routeCoords":[[-7.025,110.428],[-7.031,110.431],[-7.0375,110.4335],[-7.044,110.437],[-7.052,110.441]]}$json$::jsonb),
+  ('pin-4', $json${"id":"pin-4","title":"Night Ride: Jalan Baru Jangli â€“ Undip Sampai Subuh","date":"2026-08-27","time":"05:38","description":"Menyusuri jalanan malam Semarang dari Jangli sampai tembusan kampus Tembalang Undip. Angin dingin, jalan sepi, dan pemandangan sunrise fajar jam 05.38 pagi.","photos":["https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=800&q=80"],"rating":5,"tags":["Night Ride","Jangli-Undip","Subuh","Sunrise","Rute Spesial"],"category":"jalan","lat":-7.0375,"lng":110.4335,"mapUrl":"https://maps.google.com/?q=-7.0375,110.4335","status":"visited","addedBy":"Berdua","isSensitive":false,"isRoute":true,"routeCoords":[[-7.025,110.428],[-7.031,110.431],[-7.0375,110.4335],[-7.044,110.437],[-7.052,110.441]]}$json$::jsonb),
   ('pin-5', $json${"id":"pin-5","title":"Menginap Pertama: Alam Indah Hotel Gombel","date":"2026-09-06","time":"02:00","description":"Motel pertama kita di perbukitan Gombel, Jl. Setia Budi No. 12, Gombel, Ngesrep Banyumanik (~200m dari Gombel Golf Course). View bukit Semarang malam hari dan kehangatan privat berdua.","photos":["https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80"],"rating":5,"tags":["Menginap Pertama","Gombel","Privat","Malam Berdua"],"category":"motel","lat":-7.0289,"lng":110.4245,"mapUrl":"https://www.google.com/maps/search/?api=1&query=Alam+Indah+Hotel+Gombel+Semarang","status":"visited","addedBy":"Berdua","isSensitive":true}$json$::jsonb),
   ('pin-6', $json${"id":"pin-6","title":"Rumah Savero","date":"2026-04-10","time":"14:00","description":"Rumah Savero di Semarang. Ruang hangat keluarga dan tempat istirahat anak Hukum UNNES.","photos":["https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80"],"rating":5,"tags":["Rumah Savero","Keluarga","Semarang"],"category":"rumah","lat":-7.0012,"lng":110.395,"mapUrl":"https://share.google/z1owJXRhPZkB6OMHC","status":"visited","addedBy":"Savero","isSensitive":true}$json$::jsonb),
   ('pin-7', $json${"id":"pin-7","title":"Rumah Soffie","date":"2026-04-18","time":"16:00","description":"Rumah Soffie di Semarang. Tempat penuh kenyamanan bidadari Keperawatan UNDIP.","photos":["https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80"],"rating":5,"tags":["Rumah Soffie","Keluarga","Semarang"],"category":"rumah","lat":-6.988,"lng":110.435,"mapUrl":"https://maps.app.goo.gl/zEY72KjjhbJMTxPh8?g_st=iw","status":"visited","addedBy":"Soffie","isSensitive":true}$json$::jsonb),
@@ -1752,6 +1752,206 @@ begin
   end if;
 end;
 $$;
+
+-- ============================================================================
+-- 202610200017_edit_delete_daily_checkins.sql
+-- ============================================================================
+-- Migration 017: Allow edit and delete for daily checkins (Instant), storage deletion, and RPC helpers
+
+-- 1. Grant delete on daily_checkins to authenticated
+grant delete on public.daily_checkins to authenticated;
+
+-- 2. Update trigger enforce_daily_checkin_identity so updates to past checkins are allowed
+create or replace function public.enforce_daily_checkin_identity()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  bound_profile text;
+  profile_owner uuid;
+begin
+  if auth.uid() is null then raise exception 'Silakan masuk terlebih dahulu.'; end if;
+
+  if public.is_app_admin() then
+    if new.profile not in ('Savero', 'Soffie') then raise exception 'Profil tidak valid.'; end if;
+    select user_id into profile_owner from public.couple_profiles where profile_name = new.profile;
+    if profile_owner is null or new.user_id <> profile_owner then
+      raise exception 'Log admin harus disimpan untuk pemilik profil yang dipilih.';
+    end if;
+  else
+    if new.user_id <> auth.uid() then raise exception 'Log hanya dapat dibuat oleh akun sendiri.'; end if;
+    select profile_name into bound_profile from public.couple_profiles where user_id = auth.uid();
+    if bound_profile is null then raise exception 'Pilih profil akun terlebih dahulu.'; end if;
+    if new.profile <> bound_profile then raise exception 'Profil log tidak cocok dengan akun.'; end if;
+  end if;
+
+  -- Only check jakarta_today on INSERT; allow UPDATE for existing checkins
+  if tg_op = 'INSERT' and new.log_date <> public.jakarta_today() then
+    raise exception 'Log hanya dapat dicatat untuk tanggal hari ini.';
+  end if;
+
+  if tg_op = 'UPDATE' then
+    if old.user_id <> new.user_id or old.profile <> new.profile or old.log_date <> new.log_date then
+      raise exception 'Identitas dan tanggal log tidak dapat diubah.';
+    end if;
+    new.created_at := old.created_at;
+    if new.photo_path is distinct from old.photo_path then
+      new.photo_uploaded_at := case when new.photo_path is null then null else now() end;
+    else
+      new.photo_uploaded_at := old.photo_uploaded_at;
+    end if;
+  else
+    new.photo_uploaded_at := case when new.photo_path is null then null else now() end;
+  end if;
+
+  new.updated_at := now();
+  new.expires_at := now() + interval '100 years';
+  return new;
+end;
+$$;
+
+-- 3. RLS update and delete policies on public.daily_checkins
+drop policy if exists "Users edit their own checkin" on public.daily_checkins;
+create policy "Users edit their own checkin" on public.daily_checkins
+  for update to authenticated
+  using (
+    user_id = auth.uid()
+    or public.is_app_admin()
+    or exists (
+      select 1 from public.couple_profiles cp
+      where cp.user_id = auth.uid() and cp.profile_name = daily_checkins.profile
+    )
+  )
+  with check (
+    user_id = auth.uid()
+    or public.is_app_admin()
+    or exists (
+      select 1 from public.couple_profiles cp
+      where cp.user_id = auth.uid() and cp.profile_name = daily_checkins.profile
+    )
+  );
+
+drop policy if exists "Users delete their own checkin" on public.daily_checkins;
+create policy "Users delete their own checkin" on public.daily_checkins
+  for delete to authenticated
+  using (
+    user_id = auth.uid()
+    or public.is_app_admin()
+    or exists (
+      select 1 from public.couple_profiles cp
+      where cp.user_id = auth.uid() and cp.profile_name = daily_checkins.profile
+    )
+  );
+
+-- 4. Storage delete policy for daily-diary bucket
+drop policy if exists "Users delete own diary photos" on storage.objects;
+create policy "Users delete own diary photos" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'daily-diary' and (
+      (storage.foldername(name))[1] = auth.uid()::text
+      or public.is_app_admin()
+      or public.is_couple_member()
+    )
+  );
+
+-- 5. RPC function to safely delete daily checkin
+create or replace function public.delete_daily_checkin(checkin_id uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_user_id uuid;
+  v_profile text;
+  v_photo_path text;
+begin
+  if auth.uid() is null then
+    raise exception 'Silakan masuk terlebih dahulu.';
+  end if;
+
+  select user_id, profile, photo_path into v_user_id, v_profile, v_photo_path
+  from public.daily_checkins
+  where id = checkin_id;
+
+  if not found then
+    return false;
+  end if;
+
+  if not (
+    v_user_id = auth.uid()
+    or public.is_app_admin()
+    or exists (
+      select 1 from public.couple_profiles
+      where user_id = auth.uid() and profile_name = v_profile
+    )
+  ) then
+    raise exception 'Akses ditolak: Hanya pemilik instant atau admin yang dapat menghapus.';
+  end if;
+
+  delete from public.daily_checkins where id = checkin_id;
+  return true;
+end;
+$$;
+revoke all on function public.delete_daily_checkin(uuid) from public;
+grant execute on function public.delete_daily_checkin(uuid) to authenticated;
+
+-- 6. RPC function to safely update daily checkin
+create or replace function public.update_daily_checkin(
+  p_id uuid,
+  p_expression text,
+  p_rating smallint,
+  p_diary_text text default null,
+  p_photo_path text default null
+)
+returns public.daily_checkins
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_row public.daily_checkins;
+  v_user_id uuid;
+  v_profile text;
+begin
+  if auth.uid() is null then
+    raise exception 'Silakan masuk terlebih dahulu.';
+  end if;
+
+  select user_id, profile into v_user_id, v_profile
+  from public.daily_checkins
+  where id = p_id;
+
+  if not found then
+    raise exception 'Log instant tidak ditemukan.';
+  end if;
+
+  if not (
+    v_user_id = auth.uid()
+    or public.is_app_admin()
+    or exists (
+      select 1 from public.couple_profiles
+      where user_id = auth.uid() and profile_name = v_profile
+    )
+  ) then
+    raise exception 'Akses ditolak: Hanya pemilik instant atau admin yang dapat mengubah.';
+  end if;
+
+  update public.daily_checkins
+  set
+    expression = p_expression,
+    rating = p_rating,
+    diary_text = p_diary_text,
+    photo_path = coalesce(p_photo_path, photo_path),
+    updated_at = now()
+  where id = p_id
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+revoke all on function public.update_daily_checkin(uuid, text, smallint, text, text) from public;
+grant execute on function public.update_daily_checkin(uuid, text, smallint, text, text) to authenticated;
+
 
 -- ============================================================================
 -- OPTIONAL PROJECT-SPECIFIC SQL (edit values and run separately when needed)
