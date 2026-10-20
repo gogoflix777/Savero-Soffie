@@ -780,6 +780,19 @@ export default function App() {
     }
   }, [settings.isGuestMode, activeSection]);
 
+  // Background Preload: Load chunk halaman lain di background saat idle (800ms setelah FCP)
+  useEffect(() => {
+    const preloadTimer = window.setTimeout(() => {
+      void import('./components/map/MemoryMapSection');
+      void import('./components/cycle/FloCycleSection');
+      void import('./components/movies/MoviesSection');
+      void import('./components/wishlist/WishlistSection');
+      void import('./components/badges/TrophyCabinetSection');
+      void import('./components/romantic/RomanticExtrasSection');
+    }, 800);
+    return () => window.clearTimeout(preloadTimer);
+  }, []);
+
   // Handlers for state updates
   const handleUpdateSettings = (newSettings: AppSettings) => {
     if (settings.darkMode !== newSettings.darkMode) {
@@ -1623,8 +1636,14 @@ export default function App() {
 
   const handleSelectSection = (sectionId: string) => {
     soundManager.playTap();
-    setActiveSection(sectionId);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setActiveSection((prevSection) => {
+      if (prevSection === sectionId) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return prevSection;
+      }
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      return sectionId;
+    });
   };
   const authClient = supabase;
   const handleSignOut = authClient ? () => { void authClient.auth.signOut(); } : undefined;
@@ -1766,15 +1785,14 @@ export default function App() {
 
       {/* Page Content Viewport Container */}
       <main className="flex-1 pb-24 sm:pb-28">
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false}>
           {/* PAGE 1: BERANDA (HOME) */}
           {activeSection === 'beranda' && (
             <motion.div
               key="page-beranda"
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
               {/* Cinematic Marquee Ribbon */}
               <MarqueeTicker
@@ -1861,10 +1879,9 @@ export default function App() {
           {activeSection === 'siklus' && !settings.isGuestMode && (
             <motion.div
               key="page-siklus"
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
               <Suspense fallback={<SectionLoadingFallback />}>
                 <FloCycleSection
@@ -1888,10 +1905,9 @@ export default function App() {
           {activeSection === 'film' && (
             <motion.div
               key="page-film"
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
               <Suspense fallback={<SectionLoadingFallback />}>
                 <MoviesSection
@@ -1924,10 +1940,9 @@ export default function App() {
           {activeSection === 'wishlist' && (
             <motion.div
               key="page-wishlist"
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
               <Suspense fallback={<SectionLoadingFallback />}>
                 <WishlistSection
@@ -1951,10 +1966,9 @@ export default function App() {
           {activeSection === 'piala' && (
             <motion.div
               key="page-piala"
-              initial={{ opacity: 0, scale: 0.96 }}
+              initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
               <Suspense fallback={<SectionLoadingFallback />}>
                 <TrophyCabinetSection
@@ -1969,10 +1983,9 @@ export default function App() {
           {activeSection === 'romantis' && (
             <motion.div
               key="page-romantis"
-              initial={{ opacity: 0, y: 15 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.28, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
               <Suspense fallback={<SectionLoadingFallback />}>
                 <RomanticExtrasSection

@@ -1792,36 +1792,38 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
    ========================================================================== */
 
 .wa-liquid-glass-dock {
-  --lens-cx: 36px;
-  --lens-left: 4px;
+  --lens-cx: 34px;
+  --lens-left: 0px;
   --lens-width: 68px;
-  --inner-shift-x: -4px;
-  --track-width: 340px;
+  --inner-shift-x: 0px;
+  --track-width: 328px;
+  --lens-progress: 0;
+  --pill-scale-x: 1;
+  --pill-scale-y: 1;
 
-  touch-action: none;
+  touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
   overflow: visible !important;
   border-radius: 9999px;
 
   /* Mode Terang Default: Frosted Blush-Cream Glass */
-  background: color-mix(in srgb, var(--theme-card) 64%, rgba(255, 232, 240, 0.42));
+  background: color-mix(in srgb, var(--theme-card) 68%, rgba(255, 232, 240, 0.48));
   backdrop-filter: blur(22px) saturate(180%);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.82);
   box-shadow:
     0 12px 32px rgba(105, 24, 48, 0.16),
-    inset 0 1px 1.5px rgba(255, 255, 255, 0.92),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.94),
     inset 0 -1px 2px rgba(217, 91, 120, 0.14);
   transition:
-    background-color 220ms ease,
-    border-color 220ms ease,
-    box-shadow 220ms ease;
+    background-color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
 }
 
 .dark .wa-liquid-glass-dock {
-  /* Mode Gelap Default: Translucent Dark Glass (Persis Gambar 2) */
-  background: color-mix(in srgb, var(--theme-card) 38%, rgba(18, 18, 20, 0.68));
+  background: color-mix(in srgb, var(--theme-card) 40%, rgba(18, 18, 20, 0.72));
   border: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow:
     0 16px 38px rgba(0, 0, 0, 0.72),
@@ -1831,7 +1833,7 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
 
 /* EFEK PULSATING & SEDIKIT PUTIH SAAT DI-TAP / DI-SLIDE */
 .wa-liquid-glass-dock.is-pulsating {
-  background: color-mix(in srgb, #ffffff 82%, var(--theme-card-soft)) !important;
+  background: color-mix(in srgb, #ffffff 84%, var(--theme-card-soft)) !important;
   border-color: rgba(255, 255, 255, 0.98) !important;
   box-shadow:
     0 16px 38px rgba(140, 35, 65, 0.22),
@@ -1840,8 +1842,7 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
 }
 
 .dark .wa-liquid-glass-dock.is-pulsating {
-  /* Di Mode Gelap: Bar berubah sedikit lebih putih/terang transparan saat disentuh */
-  background: color-mix(in srgb, rgba(255, 255, 255, 0.22) 55%, rgba(36, 20, 28, 0.76)) !important;
+  background: color-mix(in srgb, rgba(255, 255, 255, 0.22) 55%, rgba(36, 20, 28, 0.78)) !important;
   border-color: rgba(255, 255, 255, 0.34) !important;
   box-shadow:
     0 18px 44px rgba(0, 0, 0, 0.8),
@@ -1849,16 +1850,16 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
     inset 0 1.5px 3px rgba(255, 255, 255, 0.38) !important;
 }
 
-/* Lubangi layer ikon dasar tepat di posisi gelembung lensa agar tidak berbayang ganda */
+/* Lubangi layer ikon dasar tepat di titik tengah lensa (--lens-cx) tanpa selisih offset */
 .wa-liquid-glass-dock.is-lens-open .wa-base-icons-track {
   -webkit-mask-image: radial-gradient(
-    ellipse calc(var(--lens-width) * 0.48) 34px at calc(var(--lens-cx) - 6px) 50%,
-    transparent 92%,
+    ellipse calc(var(--lens-width) * 0.47) 36px at var(--lens-cx) 50%,
+    transparent 90%,
     #000 100%
   );
   mask-image: radial-gradient(
-    ellipse calc(var(--lens-width) * 0.48) 34px at calc(var(--lens-cx) - 6px) 50%,
-    transparent 92%,
+    ellipse calc(var(--lens-width) * 0.47) 36px at var(--lens-cx) 50%,
+    transparent 90%,
     #000 100%
   );
 }
@@ -1871,6 +1872,7 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
   border-radius: 9999px;
   cursor: pointer;
   outline: none;
+  touch-action: manipulation;
 }
 
 .app-clay-theme .wa-glass-tab-btn:hover,
@@ -1881,13 +1883,14 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
 }
 
 /* ==========================================================================
-   STATE 1: KAPSUL IDLE (SAAT TIDAK DISENTUH — PERSIS GAMBAR 2)
+   STATE 1: KAPSUL IDLE & LIQUID STRETCH
    ========================================================================== */
 .wa-liquid-glass-pill {
   position: absolute;
   left: 0;
   width: var(--lens-width);
-  transform: translate3d(var(--lens-left), 0, 0);
+  transform: translate3d(var(--lens-left), 0, 0) scale(var(--pill-scale-x, 1), var(--pill-scale-y, 1));
+  transform-origin: center center;
   pointer-events: none;
   will-change: transform, width, top, bottom;
   transition:
@@ -1903,50 +1906,50 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
   bottom: 4px;
   z-index: 1;
   border-radius: 9999px;
-  background: color-mix(in srgb, var(--theme-brand) 16%, rgba(255, 255, 255, 0.78));
-  border: 1px solid rgba(255, 255, 255, 0.88);
+  background: color-mix(in srgb, var(--theme-brand) 16%, rgba(255, 255, 255, 0.82));
+  border: 1px solid rgba(255, 255, 255, 0.9);
   box-shadow:
-    0 2px 10px color-mix(in srgb, var(--theme-brand) 14%, transparent),
-    inset 0 1px 1.5px rgba(255, 255, 255, 0.95);
+    0 3px 12px color-mix(in srgb, var(--theme-brand) 16%, transparent),
+    inset 0 1px 2px rgba(255, 255, 255, 0.95);
 }
 
 .dark .wa-liquid-glass-pill.is-pill-idle {
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.22);
 }
 
 /* ==========================================================================
-   STATE 2: GELEMBUNG LENSA KACA OVERFLOW (SAAT DI-TAP / DI-SLIDE — PERSIS GAMBAR 1)
+   STATE 2: GELEMBUNG LENSA KACA OVERFLOW (SAAT DI-TAP / DI-SLIDE)
    ========================================================================== */
 .wa-liquid-glass-pill.is-lens-active {
-  /* OVERFLOW MELEBIHI ATAS & BAWAH NAVBAR */
-  top: -11px;
-  bottom: -11px;
+  top: -10px;
+  bottom: -10px;
   z-index: 30;
   border-radius: 34px;
-  /* Bening kristal di tengah, sedikit membias di pinggir */
   background: radial-gradient(
     ellipse at 50% 50%,
-    rgba(255, 255, 255, 0.04) 0%,
-    rgba(255, 255, 255, 0.08) 62%,
-    rgba(255, 255, 255, 0.24) 90%,
-    rgba(255, 255, 255, 0.48) 100%
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.12) 62%,
+    rgba(255, 255, 255, 0.28) 90%,
+    rgba(255, 255, 255, 0.52) 100%
   );
   backdrop-filter: brightness(1.08) contrast(1.08) saturate(140%);
   -webkit-backdrop-filter: brightness(1.08) contrast(1.08) saturate(140%);
   box-shadow:
-    0 14px 32px rgba(0, 0, 0, 0.35),
-    0 2px 8px rgba(0, 0, 0, 0.2);
+    0 14px 32px rgba(0, 0, 0, 0.32),
+    0 2px 8px rgba(0, 0, 0, 0.18);
 }
 
 .dark .wa-liquid-glass-pill.is-lens-active {
   background: radial-gradient(
     ellipse at 50% 50%,
-    rgba(10, 10, 14, 0.18) 0%,
-    rgba(18, 18, 24, 0.24) 64%,
-    rgba(255, 255, 255, 0.14) 91%,
-    rgba(255, 255, 255, 0.36) 100%
+    rgba(10, 10, 14, 0.2) 0%,
+    rgba(18, 18, 24, 0.26) 64%,
+    rgba(255, 255, 255, 0.15) 91%,
+    rgba(255, 255, 255, 0.38) 100%
   );
   backdrop-filter: brightness(1.12) contrast(1.12) saturate(150%);
   -webkit-backdrop-filter: brightness(1.12) contrast(1.12) saturate(150%);
@@ -1962,14 +1965,20 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
   height: 100%;
   border-radius: inherit;
   overflow: hidden;
+  opacity: 0;
+  transition: opacity 150ms ease;
 }
 
-/* Meniskus Kutub Atas & Bawah (Efek Pembiasan Tepi Bar seperti di Gambar 1) */
+.wa-liquid-glass-pill.is-lens-active .wa-lens-optical-viewport {
+  opacity: 1;
+}
+
+/* Meniskus Kutub Atas & Bawah */
 .wa-lens-pole-meniscus {
   position: absolute;
   left: 24%;
   right: 24%;
-  height: 7px;
+  height: 6px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.55);
   box-shadow: 0 0 6px rgba(0, 225, 255, 0.45);
@@ -1993,46 +2002,45 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
   bottom: 2px;
 }
 
-/* Track Sinkronisasi di Dalam Lensa (Membesar & Melengkung dari Titik Tengah Lensa) */
+/* Track Sinkronisasi di Dalam Lensa (Sejajar 100% dengan trackRef) */
 .wa-lens-refracted-track {
   position: absolute;
-  top: 11px;
-  bottom: 11px;
-  left: -6px;
+  top: 10px;
+  bottom: 10px;
+  left: 0;
   width: var(--track-width);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-inline: 6px;
   transform-origin: var(--lens-cx) 50%;
   pointer-events: none;
   will-change: transform;
 }
 
-/* 1. Channel Cyan/Biru: Magnifikasi 1.54x -> Menciptakan bias tepi luar biru/cyan saat ikon mendekati pinggir lensa */
+/* 1. Channel Cyan/Biru */
 .wa-chromatic-cyan-layer {
   z-index: 2;
   color: #00e5ff !important;
-  opacity: 0.88;
-  filter: blur(0.65px);
-  transform: translate3d(var(--inner-shift-x), 0, 0) scale(1.56, 1.44);
+  opacity: 0.82;
+  filter: blur(0.6px);
+  transform: translate3d(var(--inner-shift-x), 0, 0) scale(1.36, 1.28);
 }
 
-/* 2. Channel Oranye/Kuning: Magnifikasi 1.24x -> Menciptakan bias tepi dalam oranye/emas saat ikon mendekati pinggir lensa */
+/* 2. Channel Oranye/Kuning */
 .wa-chromatic-amber-layer {
   z-index: 3;
   color: #ff9d00 !important;
-  opacity: 0.9;
-  filter: blur(0.65px);
-  transform: translate3d(var(--inner-shift-x), 0, 0) scale(1.24, 1.3);
+  opacity: 0.85;
+  filter: blur(0.6px);
+  transform: translate3d(var(--inner-shift-x), 0, 0) scale(1.12, 1.15);
 }
 
-/* 3. Channel Inti Utama: Magnifikasi 1.40x + Filter Lengkung Lensa Cembung (Barrel Warp) */
+/* 3. Channel Inti Utama */
 .wa-chromatic-core-layer {
   z-index: 4;
   color: var(--theme-brand-strong) !important;
   filter: url(#wa-liquid-barrel-warp) drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
-  transform: translate3d(var(--inner-shift-x), 0, 0) scale(1.4, 1.38);
+  transform: translate3d(var(--inner-shift-x), 0, 0) scale(1.24, 1.22);
 }
 
 .dark .wa-chromatic-core-layer {
@@ -2048,13 +2056,13 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
   z-index: 7;
   pointer-events: none;
   box-shadow:
-    inset 3.5px 0 6px -1px rgba(0, 230, 255, 0.85),
-    inset -3.5px 0 6px -1px rgba(255, 175, 0, 0.85),
-    inset 0 3.5px 6px -1px rgba(255, 90, 160, 0.65),
-    inset 0 -3.5px 6px -1px rgba(0, 245, 212, 0.7);
+    inset 3px 0 5px -1px rgba(0, 230, 255, 0.8),
+    inset -3px 0 5px -1px rgba(255, 175, 0, 0.8),
+    inset 0 3px 5px -1px rgba(255, 90, 160, 0.6),
+    inset 0 -3px 5px -1px rgba(0, 245, 212, 0.65);
 }
 
-/* Cangkang Pantulan Kaca Luar (Crisp Specular Glass Rim) */
+/* Cangkang Pantulan Kaca Luar */
 .wa-lens-specular-shell {
   position: absolute;
   inset: 0;
@@ -2074,7 +2082,7 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
     inset 0 -1.5px 2px rgba(255, 255, 255, 0.65);
 }
 
-/* Warna Ikon Dasar */
+/* Warna Ikon & Label Dasar */
 .wa-tab-icon-active {
   color: var(--theme-brand-strong) !important;
   filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.65));
@@ -2090,7 +2098,7 @@ html:not(.dark) .app-clay-theme [class~="text-[#e99bad]"] { color: var(--theme-b
 }
 
 .dark .wa-tab-icon-idle {
-  color: rgba(255, 255, 255, 0.82) !important;
+  color: rgba(255, 255, 255, 0.78) !important;
 }
 
 /* GPU-Accelerated Ethereal Ambient Floating Particles (Zero JS Timer Overhead) */
