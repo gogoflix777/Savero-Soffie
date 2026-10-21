@@ -1,4 +1,4 @@
-﻿-- Savero & Soffie: Supabase SQL Editor setup
+-- Savero & Soffie: Supabase SQL Editor setup
 -- Run once on a fresh Supabase project. Do not rerun after applying migrations individually.
 -- Edge Functions, Auth provider setup, admin assignment, and scheduled secrets are documented separately in SUPABASE_SETUP.md.
 
@@ -559,6 +559,7 @@ begin
   on conflict (profile) do update
     set progress_date = today_date,
         percentage = case
+          when excluded.percentage <= 0 then 0
           when public.meeting_fill_progress.progress_date = today_date
             then greatest(public.meeting_fill_progress.percentage, excluded.percentage)
           else excluded.percentage
@@ -598,6 +599,7 @@ begin
   on conflict (profile) do update
     set progress_date = today_date,
         percentage = case
+          when excluded.percentage <= 0 then 0
           when public.meeting_fill_progress.progress_date = today_date
             then greatest(public.meeting_fill_progress.percentage, excluded.percentage)
           else excluded.percentage
@@ -665,14 +667,20 @@ begin
   insert into public.profile_daily_heart_progress(profile, progress_date, percentage, updated_at)
   values (bound_profile, today_date, requested_percentage, now())
   on conflict (profile, progress_date) do update
-    set percentage = greatest(public.profile_daily_heart_progress.percentage, excluded.percentage),
+    set percentage = case
+          when excluded.percentage <= 0 then 0
+          else greatest(public.profile_daily_heart_progress.percentage, excluded.percentage)
+        end,
         updated_at = now()
   returning percentage into saved_percentage;
 
   insert into public.profile_heart_progress(profile, percentage, updated_at)
   values (bound_profile, requested_percentage, now())
   on conflict (profile) do update
-    set percentage = greatest(public.profile_heart_progress.percentage, excluded.percentage),
+    set percentage = case
+          when excluded.percentage <= 0 then 0
+          else greatest(public.profile_heart_progress.percentage, excluded.percentage)
+        end,
         updated_at = now();
   return saved_percentage;
 end;
@@ -705,14 +713,20 @@ begin
   insert into public.profile_daily_heart_progress(profile, progress_date, percentage, updated_at)
   values (requested_profile, today_date, requested_percentage, now())
   on conflict (profile, progress_date) do update
-    set percentage = greatest(public.profile_daily_heart_progress.percentage, excluded.percentage),
+    set percentage = case
+          when excluded.percentage <= 0 then 0
+          else greatest(public.profile_daily_heart_progress.percentage, excluded.percentage)
+        end,
         updated_at = now()
   returning percentage into saved_percentage;
 
   insert into public.profile_heart_progress(profile, percentage, updated_at)
   values (requested_profile, requested_percentage, now())
   on conflict (profile) do update
-    set percentage = greatest(public.profile_heart_progress.percentage, excluded.percentage),
+    set percentage = case
+          when excluded.percentage <= 0 then 0
+          else greatest(public.profile_heart_progress.percentage, excluded.percentage)
+        end,
         updated_at = now();
   return saved_percentage;
 end;

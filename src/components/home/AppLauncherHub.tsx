@@ -10,6 +10,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { soundManager } from '../../utils/audio';
+import { scrollToTop } from '../../utils/smoothScroll';
 
 interface AppLauncherHubProps {
   onSelectSection: (sectionId: string) => void;
@@ -72,7 +73,7 @@ export const AppLauncherHub: React.FC<AppLauncherHubProps> = ({
   const handleLaunch = (id: string) => {
     soundManager.playTap();
     onSelectSection(id);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop(true);
   };
 
   return (

@@ -417,9 +417,11 @@ export const Medal3DCanvas: React.FC<Medal3DCanvasProps> = ({
     window.addEventListener('touchend', onPointerUp);
 
     let animationFrameId: number;
+    let isVisible = true;
     const clock = new THREE.Clock();
 
     const animate = () => {
+      if (!isVisible) return;
       animationFrameId = requestAnimationFrame(animate);
       const time = clock.getElapsedTime();
 
@@ -441,9 +443,29 @@ export const Medal3DCanvas: React.FC<Medal3DCanvasProps> = ({
       renderer.render(scene, camera);
     };
 
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            if (!isVisible) {
+              isVisible = true;
+              clock.start();
+              animate();
+            }
+          } else {
+            isVisible = false;
+            cancelAnimationFrame(animationFrameId);
+          }
+        });
+      },
+      { threshold: 0.05 }
+    );
+    observer.observe(container);
+
     animate();
 
     return () => {
+      observer.disconnect();
       cancelAnimationFrame(animationFrameId);
       container.removeEventListener('mousedown', onPointerDown);
       window.removeEventListener('mousemove', onPointerMove);

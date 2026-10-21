@@ -269,7 +269,7 @@ export const PhotoMemoriesModal: React.FC<PhotoMemoriesModalProps> = ({
         </AnimatePresence>
 
         {/* Scrollable Monthly Calendar Cards (Ala Locket Reference) */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-none">
+        <div data-lenis-prevent className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-none">
           {groupedByMonth.length === 0 ? (
             <div className="my-6 flex flex-col items-center justify-center rounded-[2rem] border border-white/80 bg-white/60 py-12 px-4 text-center shadow-inner dark:border-white/10 dark:bg-white/5">
               <div className="mb-2.5 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-400 dark:bg-rose-950/60">

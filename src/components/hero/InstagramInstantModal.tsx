@@ -277,6 +277,7 @@ export const InstagramInstantModal: React.FC<InstagramInstantModalProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      data-lenis-prevent
       className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto bg-black/65 p-3 backdrop-blur-md"
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();

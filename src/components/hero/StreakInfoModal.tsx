@@ -340,6 +340,7 @@ export const StreakInfoModal: React.FC<StreakInfoModalProps> = ({
                 onClose();
               }
             }}
+            data-lenis-prevent
             className="relative flex max-h-[92vh] w-full max-w-[430px] flex-col overflow-y-auto rounded-t-[32px] border-t border-rose-200/60 bg-white p-5 pb-7 text-[#3b121d] shadow-2xl dark:border-white/10 dark:bg-[#1e0a13] dark:text-rose-50 sm:rounded-[32px] sm:border touch-pan-y"
           >
             {/* Top Drag Indicator (Bar & Area Drag) */}

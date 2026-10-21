@@ -85,6 +85,8 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { triggerNotification } from './utils/notifications';
 import { InstantReply, MovieNightPlan } from './types';
 import { AppSplashScreen } from './components/common/AppSplashScreen';
+import { SmoothScrollProvider } from './components/common/SmoothScrollProvider';
+import { scrollToTop, scrollToElement } from './utils/smoothScroll';
 
 export default function App() {
   const [isSplashDone, setIsSplashDone] = useState(false);
@@ -1093,11 +1095,14 @@ export default function App() {
 
   const recordDailyHeartProgress = (profile: CoupleProfile, percentage: number) => {
     const progressDate = getJakartaDate();
+    const isReset = percentage <= 0;
     setDailyHeartProgress((current) => {
-      const existing = current.find((entry) => entry.profile === profile && entry.progress_date === progressDate);
-      const value = Math.max(existing?.percentage ?? 0, percentage);
+      const existing = current.find(
+        (entry) => entry.profile === profile && entry.progress_date === progressDate
+      );
+      const value = isReset ? 0 : Math.max(existing?.percentage ?? 0, percentage);
       const updated = existing
-        ? current.map((entry) => entry === existing ? { ...entry, percentage: value } : entry)
+        ? current.map((entry) => (entry === existing ? { ...entry, percentage: value } : entry))
         : [{ profile, progress_date: progressDate, percentage: value }, ...current];
       appStorage.saveDailyHeartProgress(updated);
       return updated;
@@ -1110,30 +1115,29 @@ export default function App() {
       return;
     }
     const profile = adminMode ? activeProfile : accountProfile ?? activeProfile;
-    setHeartProgress((current) => ({ ...current, [profile]: Math.max(current[profile], percentage) }));
+    const isReset = percentage <= 0;
+
+    setHeartProgress((current) => ({
+      ...current,
+      [profile]: isReset ? 0 : Math.max(current[profile], percentage)
+    }));
     recordDailyHeartProgress(profile, percentage);
+
     if (!supabase || (!accountProfile && !adminMode)) return;
     try {
       const savedPercentage = adminMode
-        ? await saveAdminHeartProgress(profile, percentage)
-        : await saveMyHeartProgress(percentage);
+        ? await saveAdminHeartProgress(profile, isReset ? 0 : percentage)
+        : await saveMyHeartProgress(isReset ? 0 : percentage);
+      const nextVal = isReset ? 0 : Math.max(percentage, savedPercentage);
       setHeartProgress((current) => ({
-        ...current, [profile]: Math.max(current[profile], savedPercentage)
+        ...current,
+        [profile]: nextVal
       }));
-      recordDailyHeartProgress(profile, savedPercentage);
+      recordDailyHeartProgress(profile, nextVal);
       setDailyActionError(null);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Progres hati gagal disimpan.';
       setDailyActionError(message);
-      try {
-        const [progress, history] = await Promise.all([loadProfileHeartProgress(), loadDailyHeartProgress()]);
-        setHeartProgress(progress);
-        setDailyHeartProgress(history);
-        appStorage.saveDailyHeartProgress(history);
-      } catch (refreshError) {
-        const refreshMessage = refreshError instanceof Error ? refreshError.message : 'Progres hati gagal dimuat ulang.';
-        setDailyActionError(`${message} ${refreshMessage}`);
-      }
     }
   };
 
@@ -1143,38 +1147,35 @@ export default function App() {
       return;
     }
     const profile = adminMode ? activeProfile : accountProfile ?? activeProfile;
-    const nextProgress = (current: Record<CoupleProfile, number>) => ({
-      ...current,
-      [profile]: Math.max(current[profile], percentage)
-    });
+    const isReset = percentage <= 0;
+
     setMeetingFillProgress((current) => {
-      const updated = nextProgress(current);
+      const updated = {
+        ...current,
+        [profile]: isReset ? 0 : Math.max(current[profile], percentage)
+      };
       appStorage.saveMeetingFillProgress(getJakartaDate(), updated);
       return updated;
     });
-    if (!supabase) return;
-    if (!accountProfile && !adminMode) return;
+
+    if (!supabase || (!accountProfile && !adminMode)) return;
     try {
       const savedPercentage = adminMode
-        ? await saveAdminMeetingFillProgress(profile, percentage)
-        : await saveMyMeetingFillProgress(percentage);
+        ? await saveAdminMeetingFillProgress(profile, isReset ? 0 : percentage)
+        : await saveMyMeetingFillProgress(isReset ? 0 : percentage);
       setMeetingFillProgress((current) => {
-        const updated = { ...current, [profile]: Math.max(current[profile], savedPercentage) };
+        const updated = {
+          ...current,
+          [profile]: isReset ? 0 : Math.max(current[profile], savedPercentage)
+        };
         appStorage.saveMeetingFillProgress(getJakartaDate(), updated);
         return updated;
       });
       setDailyActionError(null);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Progres konfirmasi bertemu gagal disimpan.';
+      const message =
+        error instanceof Error ? error.message : 'Progres konfirmasi bertemu gagal disimpan.';
       setDailyActionError(message);
-      try {
-        const refreshed = await loadMeetingFillProgress();
-        setMeetingFillProgress(refreshed);
-        appStorage.saveMeetingFillProgress(getJakartaDate(), refreshed);
-      } catch (refreshError) {
-        const refreshMessage = refreshError instanceof Error ? refreshError.message : 'Progres konfirmasi bertemu gagal dimuat ulang.';
-        setDailyActionError(`${message} ${refreshMessage}`);
-      }
     }
   };
 
@@ -1239,7 +1240,7 @@ export default function App() {
     setSelectedPinIdForMap(pin.id);
     setActiveSection('peta');
     soundManager.playTap();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop(true);
   };
 
   const handleAddCycle = (cycle: CycleRecord) => {
@@ -1640,10 +1641,10 @@ export default function App() {
     soundManager.playTap();
     setActiveSection((prevSection) => {
       if (prevSection === sectionId) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollToTop(true);
         return prevSection;
       }
-      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      scrollToTop(false);
       return sectionId;
     });
   };
@@ -1815,7 +1816,7 @@ export default function App() {
                 pins={settings.isGuestMode ? pins.filter((pin) => !pin.isSensitive) : pins}
                 onPinClick={(pin) => {
                   setSelectedPinIdForMap(pin.id);
-                  document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
+                  scrollToElement('#peta-kenangan');
                 }}
               />
 
@@ -1845,10 +1846,10 @@ export default function App() {
                   onHeartProgressChange={(percentage) => { void handleHeartProgressChange(percentage); }}
                   onMeetingFillProgressChange={(percentage) => { void handleMeetingFillProgressChange(percentage); }}
                   onExploreClick={() => {
-                    document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
+                    scrollToElement('#peta-kenangan');
                   }}
                   onAddMemoryClick={() => {
-                    document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
+                    scrollToElement('#peta-kenangan');
                   }}
                 />
               </ErrorBoundary>
@@ -1884,7 +1885,7 @@ export default function App() {
                 settings={settings}
                 onOpenPinInMap={(pin) => {
                   setSelectedPinIdForMap(pin.id);
-                  document.getElementById('peta-kenangan')?.scrollIntoView({ behavior: 'smooth' });
+                  scrollToElement('#peta-kenangan');
                 }}
               />
 
@@ -2075,7 +2076,7 @@ export default function App() {
   };
 
   return (
-    <>
+    <SmoothScrollProvider isLocked={isLocked}>
       <AnimatePresence>
         {!isSplashDone && (
           <AppSplashScreen
@@ -2088,6 +2089,6 @@ export default function App() {
         )}
       </AnimatePresence>
       {renderAppContent()}
-    </>
+    </SmoothScrollProvider>
   );
 }

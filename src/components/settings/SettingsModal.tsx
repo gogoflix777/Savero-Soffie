@@ -124,6 +124,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.92, opacity: 0, y: 25 }}
         transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+        data-lenis-prevent
         className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-lg overflow-y-auto rounded-3xl border-2 border-[#7A1018]/30 bg-[#fffaf0] p-5 text-[#57202c] shadow-2xl dark:bg-[#250709] dark:text-rose-50 sm:p-8"
       >
         <div className="flex items-center justify-between pb-4 border-b border-[#7A1018]/15 mb-6">

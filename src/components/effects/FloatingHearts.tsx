@@ -63,7 +63,11 @@ export const FloatingHearts: React.FC = React.memo(() => {
   };
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none" aria-hidden="true">
+    <div
+      className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none"
+      aria-hidden="true"
+      style={{ contain: 'strict' }}
+    >
       {particles.map((p) => (
         <div
           key={p.id}
@@ -73,8 +77,7 @@ export const FloatingHearts: React.FC = React.memo(() => {
             opacity: p.opacity,
             animationDuration: `${p.duration}s`,
             animationDelay: `-${p.delay}s`,
-            ['--drift-x' as string]: `${p.drift}px`,
-            filter: 'drop-shadow(0 2px 4px rgba(122, 16, 24, 0.12))'
+            ['--drift-x' as string]: `${p.drift}px`
           }}
         >
           {renderIcon(p.type, p.size, p.color)}
