@@ -402,6 +402,7 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
   const fusionGradId = `puffy-heart-fusion-${uid}`;
 
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const floorReflectionRef = useRef<HTMLSpanElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const waveBackRef = useRef<SVGPathElement>(null);
   const waveMidRef = useRef<SVGPathElement>(null);
@@ -654,6 +655,50 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
         const floatRot = Math.sin(t * 1.35) * 2.0;
         buttonRef.current.style.setProperty('translate', `0 ${floatY.toFixed(2)}px`);
         buttonRef.current.style.setProperty('rotate', `${floatRot.toFixed(2)}deg`);
+
+        // Pantulan cahaya di lantai (stay di tempat & bereaksi dinamis terhadap posisi dan arah hati)
+        if (floorReflectionRef.current) {
+          // Rasio kedekatan dengan lantai:
+          // floatY berkisar antara ~ -11px (paling tinggi) s/d +11px (paling dekat ke lantai)
+          // proximity: 0 = melayang tinggi di atas, 1 = turun mendekati lantai
+          const proximity = Math.min(1, Math.max(0, (floatY + 11) / 22));
+
+          const level = visualPercentageRef.current;
+          const meetingLevel = visualMeetingPercentageRef.current;
+          const glowLevel = Math.min(1, Math.max(0, level / 100));
+          const meetingGlow = Math.min(1, Math.max(0, meetingLevel / 100));
+
+          // Kecerahan pantulan: jika hati dekat ke bawah maka semakin terang
+          const baseOpacity = 0.24;
+          const peakOpacity = 0.88;
+          const currentOpacity =
+            baseOpacity +
+            proximity * (peakOpacity - baseOpacity) +
+            glowLevel * 0.14 +
+            meetingGlow * 0.12;
+
+          // Skala pantulan: memadat saat mendekat, ikut squish saat di-tap (s.scaleX)
+          const scaleX = (0.75 + proximity * 0.38) * s.scaleX;
+          const scaleY = 0.70 + proximity * 0.44;
+
+          // Arah pantulan: dinamis mengikuti ke mana arah condong / pergerakan hati
+          const shiftX =
+            Math.sin(floatRot * (Math.PI / 180)) * 48 +
+            s.velX * 22 +
+            s.sloshAngle * 0.4;
+          const skewX = -floatRot * 2.2;
+
+          // Ketajaman cahaya: semakin dekat ke lantai semakin fokus/terang, semakin jauh semakin diffuse/blur
+          const blurPx = Math.max(1.5, 4.5 - proximity * 2.5);
+
+          floorReflectionRef.current.style.transform = `translate(calc(-50% + ${shiftX.toFixed(
+            2
+          )}px), 0) scale(${scaleX.toFixed(3)}, ${scaleY.toFixed(3)}) skewX(${skewX.toFixed(
+            2
+          )}deg)`;
+          floorReflectionRef.current.style.opacity = Math.min(1, currentOpacity).toFixed(3);
+          floorReflectionRef.current.style.filter = `blur(${blurPx.toFixed(1)}px)`;
+        }
       }
 
       const currentLeak = leakStateRef.current;
@@ -1411,6 +1456,13 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
 
   return (
     <div className="relative inline-flex items-center justify-center">
+      {/* Pantulan Cahaya Lantai Dinamis (Stay di tempat, tidak ikut floating ke atas/bawah) */}
+      <span
+        ref={floorReflectionRef}
+        className="heart-floating-floor-shadow"
+        aria-hidden="true"
+      />
+
       <button
         type="button"
         ref={buttonRef}
@@ -1506,9 +1558,6 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
             aria-hidden="true"
           />
         ))}
-
-        {/* Bayangan Lantai Dinamis */}
-        <span className="heart-floating-floor-shadow" aria-hidden="true" />
 
         <svg
           ref={svgRef}
