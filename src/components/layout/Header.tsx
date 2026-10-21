@@ -211,45 +211,6 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* Quick Shortcuts on Larger Screens (>= 640px) */}
-          <div className="hidden min-[640px]:flex items-center gap-1 sm:gap-1.5">
-            {/* Medali / Badges Button */}
-            {onOpenBadges && (
-              <button
-                onClick={() => handleAction(onOpenBadges)}
-                className="flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-white/90 bg-gradient-to-b from-white to-[#fff0f4] text-amber-500 shadow-[0_2px_5px_rgba(140,30,60,0.08),inset_0_1px_1px_#fff] transition hover:scale-105 active:scale-95 dark:border-white/10 dark:from-[#351824] dark:to-[#220d16] dark:text-amber-300"
-                title="Medali Pencapaian"
-                aria-label="Buka medali pencapaian"
-              >
-                <Award className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              </button>
-            )}
-
-            {/* Kunci Aplikasi (Lock) */}
-            <button
-              onClick={() => handleAction(onLockApp)}
-              className="flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-white/90 bg-gradient-to-b from-white to-[#fff0f4] text-[#8c2840] shadow-[0_2px_5px_rgba(140,30,60,0.08),inset_0_1px_1px_#fff] transition hover:scale-105 active:scale-95 dark:border-white/10 dark:from-[#351824] dark:to-[#220d16] dark:text-rose-200"
-              title="Kunci Aplikasi"
-              aria-label="Kunci aplikasi"
-            >
-              <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </button>
-
-            {/* Mode Terang / Gelap (Theme Toggle) */}
-            <button
-              onClick={() => handleAction(onToggleDarkMode)}
-              className="flex h-7.5 w-7.5 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-white/90 bg-gradient-to-b from-white to-[#fff0f4] text-amber-500 shadow-[0_2px_5px_rgba(140,30,60,0.08),inset_0_1px_1px_#fff] transition hover:scale-105 active:scale-95 dark:border-white/10 dark:from-[#351824] dark:to-[#220d16] dark:text-amber-300"
-              title={settings.darkMode ? 'Ubah ke Mode Terang' : 'Ubah ke Mode Gelap'}
-              aria-label={settings.darkMode ? 'Ubah ke Mode Terang' : 'Ubah ke Mode Gelap'}
-            >
-              {settings.darkMode ? (
-                <Sun className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              ) : (
-                <Moon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              )}
-            </button>
-          </div>
-
           {/* ANIMATED BURGER BUTTON (Accessible on all screens, compact on mobile/iPhone 5) */}
           <button
             type="button"
