@@ -105,7 +105,10 @@ export const appStorage = {
       ...saved,
       notifications: {
         ...initialSettings.notifications!,
-        ...(saved.notifications ?? {})
+        ...(saved.notifications ?? {}),
+        enabled: true,
+        webPush: true,
+        inAppToast: true
       },
       shareCycleWithPartner: true,
       shareOnlyPredictions: false,

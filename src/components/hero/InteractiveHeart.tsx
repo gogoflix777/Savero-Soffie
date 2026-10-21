@@ -666,20 +666,29 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
         beatPulse = Math.pow(Math.max(0, Math.sin(t * speed)), 8) * 0.055;
       }
 
-      const stiffness = 225;
-      const damping = 12.5;
-      s.velX =
-        (s.velX + (s.targetX + beatPulse - s.scaleX) * stiffness * dt) *
-        Math.exp(-damping * dt);
-      s.velY =
-        (s.velY + (s.targetY + beatPulse - s.scaleY) * stiffness * dt) *
-        Math.exp(-damping * dt);
-      s.scaleX += s.velX * dt * 10;
-      s.scaleY += s.velY * dt * 10;
+      // Spring physics stabil dengan batas clamp (mencegah akumulasi / ledakan skala saat tap cepat)
+      const springK = 180;
+      const springDamp = 18;
+      const forceX = (s.targetX + beatPulse - s.scaleX) * springK - s.velX * springDamp;
+      const forceY = (s.targetY + beatPulse - s.scaleY) * springK - s.velY * springDamp;
+      s.velX += forceX * dt;
+      s.velY += forceY * dt;
+      s.velX = Math.max(-0.6, Math.min(0.6, s.velX));
+      s.velY = Math.max(-0.6, Math.min(0.6, s.velY));
 
-      s.tiltAngle += (s.targetTilt - s.tiltAngle) * Math.min(1, dt * 12);
-      s.rotX += (s.targetRotX - s.rotX) * Math.min(1, dt * 10);
-      s.rotY += (s.targetRotY - s.rotY) * Math.min(1, dt * 10);
+      s.scaleX += s.velX * dt * 4;
+      s.scaleY += s.velY * dt * 4;
+      // Kunci skala hati di rentang aman agar tidak membesar liar sampai menutupi layar
+      s.scaleX = Math.max(0.88, Math.min(1.15, s.scaleX));
+      s.scaleY = Math.max(0.88, Math.min(1.15, s.scaleY));
+
+      // Fitur gyro / kursor tilt dihilangkan: selalu stabil tegak 0deg
+      s.tiltAngle = 0;
+      s.targetTilt = 0;
+      s.rotX = 0;
+      s.rotY = 0;
+      s.targetRotX = 0;
+      s.targetRotY = 0;
 
       const sloshForce = -s.sloshAngle * 0.12;
       s.sloshVel = (s.sloshVel + sloshForce) * 0.88;
@@ -724,7 +733,7 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
 
         const liquidY = 184 - (level / 100) * 172;
         const amplitude = (3.4 + s.waveEnergy * 2.3) * (level > 98.5 ? 0.32 : 1);
-        const slosh = -(s.tiltAngle + s.rotY * 0.5) * 0.65;
+        const slosh = s.sloshAngle * 0.4;
 
         waveBackRef.current?.setAttribute(
           'd',
@@ -897,24 +906,21 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
       if (svgRef.current) {
         const holdJitter =
           holdActiveRef.current || currentLeak?.phase === 'draining'
-            ? Math.sin(s.wavePhaseFront * 4.5) * 1.3
+            ? Math.sin(s.wavePhaseFront * 4.5) * 1.0
             : 0;
         svgRef.current.style.setProperty('--jelly-sx', s.scaleX.toFixed(4));
         svgRef.current.style.setProperty('--jelly-sy', s.scaleY.toFixed(4));
         svgRef.current.style.setProperty(
           '--jelly-rot',
-          `${(s.tiltAngle + holdJitter).toFixed(2)}deg`
+          `${holdJitter.toFixed(2)}deg`
         );
-        svgRef.current.style.setProperty('--jelly-rx', `${s.rotX.toFixed(2)}deg`);
-        svgRef.current.style.setProperty('--jelly-ry', `${s.rotY.toFixed(2)}deg`);
+        svgRef.current.style.setProperty('--jelly-rx', '0deg');
+        svgRef.current.style.setProperty('--jelly-ry', '0deg');
         svgRef.current.style.setProperty('--slosh-deg', `${s.sloshAngle.toFixed(2)}deg`);
       }
 
       if (glassHighlightRef.current) {
-        glassHighlightRef.current.setAttribute(
-          'transform',
-          `translate(${(s.rotY * 0.35).toFixed(2)}, ${(-s.rotX * 0.35).toFixed(2)})`
-        );
+        glassHighlightRef.current.setAttribute('transform', 'translate(0, 0)');
       }
 
       physicsFrameRef.current = window.requestAnimationFrame(animatePhysics);
@@ -1165,20 +1171,13 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
       spawnRipple(clientX, clientY);
     }
 
-    let tilt = 0;
-    if (clientX !== undefined && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const relX = (clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
-      tilt = Math.max(-10, Math.min(10, relX * 10));
-    }
-
-    springRef.current.targetX = 1.18;
-    springRef.current.targetY = 0.82;
-    springRef.current.targetTilt = tilt;
-    springRef.current.velX += 0.08;
-    springRef.current.velY -= 0.08;
-    springRef.current.sloshVel += tilt ? tilt * 0.9 : 4.5;
-    springRef.current.waveEnergy = 2.1;
+    springRef.current.targetX = 1.05;
+    springRef.current.targetY = 0.95;
+    springRef.current.targetTilt = 0;
+    springRef.current.velX = 0.04;
+    springRef.current.velY = -0.04;
+    springRef.current.sloshVel = 2.0;
+    springRef.current.waveEnergy = 1.6;
     if (isProfileProgressHeart) upwellingRef.current?.setAttribute('opacity', '0.9');
 
     holdActiveRef.current = true;
@@ -1349,10 +1348,11 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
     }
     if (readOnly) return;
 
-    springRef.current.velX = -0.38;
-    springRef.current.velY = 0.42;
-    springRef.current.waveEnergy = 2.4;
-    springRef.current.sloshVel += (Math.random() > 0.5 ? 1 : -1) * 7;
+    // Dorongan squish terkontrol saat di-tap (tidak berlebih / tidak membesar menutupi layar)
+    springRef.current.velX = -0.14;
+    springRef.current.velY = 0.16;
+    springRef.current.waveEnergy = Math.min(2.0, springRef.current.waveEnergy + 0.4);
+    springRef.current.sloshVel = (Math.random() > 0.5 ? 1 : -1) * 3.2;
 
     const lv = currentPercentage >= 70 ? 3 : currentPercentage >= 30 ? 2 : 1;
     if (isProfileProgressHeart) {
@@ -1374,7 +1374,7 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
     setIsPopping(false);
     window.requestAnimationFrame(() => setIsPopping(true));
     if (popTimer.current) window.clearTimeout(popTimer.current);
-    popTimer.current = window.setTimeout(() => setIsPopping(false), 680);
+    popTimer.current = window.setTimeout(() => setIsPopping(false), 450);
     onTap?.({ x: event.clientX, y: event.clientY }, profileName);
   };
 
@@ -1416,21 +1416,6 @@ export const InteractiveHeart: React.FC<InteractiveHeartProps> = ({
         ref={buttonRef}
         disabled={readOnly}
         onClick={handleTap}
-        onPointerMove={(event) => {
-          if (!buttonRef.current || leakState?.active) return;
-          const rect = buttonRef.current.getBoundingClientRect();
-          const nx = ((event.clientX - rect.left) / rect.width - 0.5) * 2;
-          const ny = ((event.clientY - rect.top) / rect.height - 0.5) * 2;
-          springRef.current.targetRotY = Math.max(-1, Math.min(1, nx)) * 14;
-          springRef.current.targetRotX = -Math.max(-1, Math.min(1, ny)) * 12;
-          if (holdActiveRef.current) {
-            springRef.current.targetTilt = Math.max(-1, Math.min(1, nx)) * 9;
-          }
-        }}
-        onPointerLeave={() => {
-          springRef.current.targetRotX = 0;
-          springRef.current.targetRotY = 0;
-        }}
         onPointerDown={(event) => {
           if (event.button !== 0) return;
           try {

@@ -39,6 +39,7 @@ import {
   StreakRestore
 } from '../../types';
 import { soundManager } from '../../utils/audio';
+import { triggerNotification } from '../../utils/notifications';
 
 interface HeroSectionProps {
   settings: AppSettings;
@@ -355,8 +356,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const [moodChangedProfile, setMoodChangedProfile] = useState<'Savero' | 'Soffie' | null>(null);
   const [diaryBubbleProfile, setDiaryBubbleProfile] = useState<'Savero' | 'Soffie' | null>(null);
   const [diaryHistoryIndex, setDiaryHistoryIndex] = useState(0);
-  const [dailyNotice, setDailyNotice] = useState('');
-  const [meetingNotice, setMeetingNotice] = useState('');
   const [replyText, setReplyText] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
@@ -425,6 +424,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       cancelAnimationFrame(id);
     };
   }, [heartProgress.Soffie, heartProgress.Savero]);
+
+  useEffect(() => {
+    if (dailyActionError) {
+      triggerNotification({
+        category: 'notes',
+        title: 'Pemberitahuan Sistem',
+        message: dailyActionError,
+        settings: settings.notifications
+      });
+    }
+  }, [dailyActionError, settings.notifications]);
 
   const spawnStageExplosionParticles = useCallback(
     (icons: string[], count = 20, isClimax = true) => {
@@ -1021,50 +1031,68 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   ]);
 
   const handleRestore = async () => {
-    setDailyNotice('');
     try {
       await onRestoreStreak();
-      setDailyNotice('Streak berhasil dipulihkan.');
+      triggerNotification({
+        category: 'streak',
+        title: 'Streak Berhasil Dipulihkan 🔥',
+        message: 'Streak cinta Savero & Soffie telah kembali menyala!',
+        settings: settings.notifications
+      });
       playStreakIgnitionSequence();
     } catch (error) {
-      setDailyNotice(
-        error instanceof Error ? error.message : 'Streak belum bisa dipulihkan.'
-      );
+      triggerNotification({
+        category: 'notes',
+        title: 'Pemulihan Streak Gagal',
+        message: error instanceof Error ? error.message : 'Streak belum bisa dipulihkan.',
+        settings: settings.notifications
+      });
     }
   };
 
   const handleMeeting = async () => {
-    setDailyNotice('');
-    setMeetingNotice('');
     try {
       await onConfirmMeeting();
       soundManager.playHeart();
-      setMeetingNotice('Konfirmasi bertemu tersimpan ♥');
-      window.setTimeout(() => setMeetingNotice(''), 2800);
+      triggerNotification({
+        category: 'meeting',
+        title: 'Konfirmasi Bertemu Tersimpan ♥',
+        message: 'Konfirmasi bertemu hari ini tersimpan! Klik tombol Palu jika ingin membocorkan & membatalkan.',
+        settings: settings.notifications
+      });
       return true;
     } catch (error) {
-      setDailyNotice(
-        error instanceof Error ? error.message : 'Konfirmasi belum tersimpan.'
-      );
+      triggerNotification({
+        category: 'notes',
+        title: 'Gagal Menyimpan',
+        message: error instanceof Error ? error.message : 'Konfirmasi belum tersimpan.',
+        settings: settings.notifications
+      });
       return false;
     }
   };
 
   const handleCancelMeeting = async () => {
-    setDailyNotice('');
-    setMeetingNotice('');
     try {
       localStorage.removeItem(`cerita_kita_meeting_collision_${today}_Savero`);
       localStorage.removeItem(`cerita_kita_meeting_collision_${today}_Soffie`);
       await onCancelMeeting();
-      setMeetingNotice('Liquid konfirmasi bertemu dibocorkan & dibatalkan.');
-      window.setTimeout(() => setMeetingNotice(''), 3200);
+      triggerNotification({
+        category: 'hammer',
+        title: 'Liquid Hati Dibocorkan 🔨',
+        message: 'Liquid konfirmasi bertemu dibocorkan & dibatalkan ke 0%.',
+        settings: settings.notifications
+      });
     } catch (error) {
-      setDailyNotice(
-        error instanceof Error
-          ? error.message
-          : 'Konfirmasi bertemu belum bisa dibatalkan.'
-      );
+      triggerNotification({
+        category: 'notes',
+        title: 'Gagal Membatalkan',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Konfirmasi bertemu belum bisa dibatalkan.',
+        settings: settings.notifications
+      });
     }
   };
 
@@ -1795,20 +1823,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
         {/* UNIFIED 3D CLAY LOCKET DOCK */}
         <div className="-mt-1 mb-3.5 flex w-full max-w-[380px] flex-col items-center gap-1.5">
-          {meetingNotice ? (
-            <p className="px-2 text-center text-[10px] font-bold leading-snug text-[#6e2b3c] dark:text-rose-200/90">
-              <span key="meeting-notice" role="status">
-                {meetingNotice}
-              </span>
-            </p>
-          ) : meetingToday.has(activeProfile) ? (
-            <p className="px-2 text-center text-[10px] font-bold leading-snug text-[#6e2b3c] dark:text-rose-200/90">
-              <span key="meeting-confirmed">
-                Konfirmasi bertemu profil ini sudah tersimpan ♥ (Klik tombol Palu untuk membocorkan & membatalkan)
-              </span>
-            </p>
-          ) : null}
-
           <div className="hero-unified-clay-dock inline-flex items-center p-1">
             <button
               type="button"
@@ -1873,23 +1887,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               )}
             </div>
           ) : null}
-
-          {dailyActionError && (
-            <p
-              role="alert"
-              className="max-w-[300px] text-center text-[9.5px] font-bold text-red-600 dark:text-red-300"
-            >
-              {dailyActionError}
-            </p>
-          )}
-          {dailyNotice && (
-            <p
-              role="status"
-              className="max-w-[300px] text-center text-[9.5px] font-bold text-[#8d3d52] dark:text-rose-100"
-            >
-              {dailyNotice}
-            </p>
-          )}
         </div>
 
         {/* Time Counters */}
