@@ -1479,7 +1479,7 @@ export default function App() {
     }
   };
 
-  const handleRemoveMovie = async (movie: MovieItem) => {
+  const handleRemoveMovie = async (movie: MovieItem): Promise<void> => {
     // 1. Local-first immediate removal: works offline or without Supabase
     setMovies((current) => {
       const remainingMovies = current.filter((item) => {
@@ -1518,7 +1518,7 @@ export default function App() {
     });
   };
 
-  const handleRemoveTvSeries = async (series: TvSeries) => {
+  const handleRemoveTvSeries = async (series: TvSeries): Promise<void> => {
     // 1. Local-first immediate removal: works offline or without Supabase
     setTvSeries((current) => {
       const remainingTvSeries = current.filter((item) => {
