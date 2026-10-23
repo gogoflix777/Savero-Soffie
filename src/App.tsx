@@ -666,7 +666,29 @@ export default function App() {
         }
       })
       .subscribe();
-    return () => { void realtimeClient.removeChannel(channel); };
+
+    // Auto catch-up sync whenever phone screen unlocks or tab returns to foreground
+    const handleCatchUpOnWake = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        void refreshDaily();
+        void refreshCycleRecords();
+        void refreshIntimateLogs();
+        void refreshHeartProgress();
+        void refreshDailyHeartProgress();
+        void refreshMeetingFillProgress();
+        void refreshMemoryPins();
+        void refreshWishlistPlaces();
+        void refreshMovieNightPlan();
+      }
+    };
+    document.addEventListener('visibilitychange', handleCatchUpOnWake);
+    window.addEventListener('focus', handleCatchUpOnWake);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleCatchUpOnWake);
+      window.removeEventListener('focus', handleCatchUpOnWake);
+      void realtimeClient.removeChannel(channel);
+    };
   }, [accountProfile, isAdminAccount, authenticated, activeProfile, settings.notifications]);
 
   useEffect(() => {

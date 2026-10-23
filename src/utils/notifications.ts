@@ -122,13 +122,30 @@ export async function showSystemNotification(params: {
   // 1. Service Worker Notification: The ONLY method that reliably works on mobile Android & iOS PWA
   if ('serviceWorker' in navigator) {
     try {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<ServiceWorkerRegistration | null>((_, reject) =>
+          setTimeout(() => reject(new Error('SW ready timeout')), 1000)
+        )
+      ]);
       if (reg && 'showNotification' in reg) {
         await reg.showNotification(title, options);
         return;
       }
-    } catch (swErr) {
-      console.warn('[Push] ServiceWorker showNotification failed, trying fallback:', swErr);
+    } catch {
+      // If serviceWorker.ready timed out, try messaging the active controller directly
+      try {
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_NOTIFICATION',
+            title,
+            options
+          });
+          return;
+        }
+      } catch (ctrlErr) {
+        console.warn('[Push] Controller message fallback failed:', ctrlErr);
+      }
     }
   }
 
