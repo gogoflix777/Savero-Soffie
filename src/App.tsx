@@ -1482,13 +1482,13 @@ export default function App() {
   const handleRemoveMovie = async (movie: MovieItem) => {
     // 1. Local-first immediate removal: works offline or without Supabase
     setMovies((current) => {
-      const updated = current.filter((item) => {
+      const remainingMovies = current.filter((item) => {
         if (movie.id && item.id === movie.id) return false;
         if (movie.tmdbId && item.tmdbId === movie.tmdbId) return false;
         return true;
       });
-      appStorage.saveMovies(updated);
-      return updated;
+      appStorage.saveMovies(remainingMovies);
+      return remainingMovies;
     });
     setMediaCatalogError(null);
 
@@ -1521,13 +1521,13 @@ export default function App() {
   const handleRemoveTvSeries = async (series: TvSeries) => {
     // 1. Local-first immediate removal: works offline or without Supabase
     setTvSeries((current) => {
-      const updated = current.filter((item) => {
+      const remainingTvSeries = current.filter((item) => {
         if (series.id && item.id === series.id) return false;
         if (series.tmdbId && item.tmdbId === series.tmdbId) return false;
         return true;
       });
-      appStorage.saveTvSeries(updated);
-      return updated;
+      appStorage.saveTvSeries(remainingTvSeries);
+      return remainingTvSeries;
     });
     setMediaCatalogError(null);
 
