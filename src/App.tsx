@@ -511,17 +511,36 @@ export default function App() {
         if (payload.eventType === 'INSERT' && plannedBy && plannedBy !== activeProfile) {
           triggerNotification({
             category: 'movie',
-            title: `Jadwal Nonton Baru dari ${plannedBy} 🎬`,
-            message: movieTitle ? `Kencan nonton "${movieTitle}" telah dikonfirmasi!` : 'Jadwal kencan nonton baru dikonfirmasi!',
+            title: `${plannedBy} Menambahkan Jadwal Nonton 🎬`,
+            message: movieTitle ? `Kencan nonton "${movieTitle}" telah dikonfirmasi oleh ${plannedBy}!` : `${plannedBy} menambahkan jadwal kencan nonton baru!`,
             settings: settings.notifications
           });
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cycle_records' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cycle_records' }, (payload) => {
         void refreshCycleRecords();
+        if (activeProfile === 'Savero' && (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE')) {
+          const row = (payload.new || {}) as { payload?: { mood?: string; notes?: string } };
+          const moodInfo = row.payload?.mood ? ` (Mood: ${row.payload.mood})` : '';
+          triggerNotification({
+            category: 'notes',
+            title: 'Soffie Menambahkan Catatan Siklus 🌸',
+            message: `Soffie baru saja mencatat siklus & mood hari ini${moodInfo}. Berikan perhatian manis dan pelukan hangat ya!`,
+            settings: settings.notifications
+          });
+        }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'intimate_logs' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'intimate_logs' }, (payload) => {
         void refreshIntimateLogs();
+        if (payload.eventType === 'INSERT') {
+          const partner = activeProfile === 'Savero' ? 'Soffie' : 'Savero';
+          triggerNotification({
+            category: 'notes',
+            title: `${partner} Menambahkan Catatan Momen Mesra 💋`,
+            message: `${partner} baru saja menambahkan catatan momen spesial berdua ke log intim.`,
+            settings: settings.notifications
+          });
+        }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_checkins' }, (payload) => {
         void refreshDaily();
@@ -529,21 +548,40 @@ export default function App() {
         if (row && row.profile && row.profile !== activeProfile) {
           triggerNotification({
             category: 'photo',
-            title: `Instant Cinta dari ${row.profile} 📸`,
-            message: row.diary_text || 'Foto dan instant baru telah diunggah!',
+            title: `${row.profile} Menambahkan Foto & Instant Baru 📸`,
+            message: row.diary_text ? `"${row.diary_text}"` : `${row.profile} baru saja mengunggah foto dan momen hari ini!`,
             settings: settings.notifications
           });
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'streak_restores' }, () => { void refreshDaily(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_confirmations' }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'streak_restores' }, (payload) => {
         void refreshDaily();
-        const row = payload.new as { profile?: string } | undefined;
-        if (row && row.profile && row.profile !== activeProfile) {
+        const row = (payload.new || {}) as { restored_by?: string };
+        const restoredBy = row.restored_by || (activeProfile === 'Savero' ? 'Soffie' : 'Savero');
+        if (restoredBy !== activeProfile && payload.eventType === 'INSERT') {
           triggerNotification({
             category: 'streak',
-            title: 'Konfirmasi Bertemu 💕',
-            message: `${row.profile} telah mengonfirmasi pertemuan berdua hari ini!`,
+            title: `${restoredBy} Memulihkan Streak Cinta 🔥`,
+            message: `Streak cinta Savero & Soffie telah kembali menyala berkat ${restoredBy}!`,
+            settings: settings.notifications
+          });
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_confirmations' }, (payload) => {
+        void refreshDaily();
+        const row = (payload.new || payload.old) as { profile?: string } | undefined;
+        if (payload.eventType === 'INSERT' && row && row.profile && row.profile !== activeProfile) {
+          triggerNotification({
+            category: 'streak',
+            title: `${row.profile} Mengonfirmasi Bertemu Hari Ini 💞`,
+            message: `${row.profile} telah mengisi hati penuh & mengonfirmasi pertemuan berdua hari ini!`,
+            settings: settings.notifications
+          });
+        } else if (payload.eventType === 'DELETE' && row && row.profile && row.profile !== activeProfile) {
+          triggerNotification({
+            category: 'hammer',
+            title: `${row.profile} Membocorkan Konfirmasi Temu 🔨`,
+            message: `${row.profile} membatalkan status pertemuan hari ini dengan palu.`,
             settings: settings.notifications
           });
         }
@@ -551,30 +589,85 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profile_heart_progress' }, () => { void refreshHeartProgress(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profile_daily_heart_progress' }, () => { void refreshDailyHeartProgress(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_fill_progress' }, () => { void refreshMeetingFillProgress(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_media_catalog' }, () => { void refreshSharedMediaCatalog(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'favorite_singers' }, () => { void refreshFavoriteSingers(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_media_catalog' }, (payload) => {
+        void refreshSharedMediaCatalog();
+        if (payload.eventType === 'INSERT') {
+          const partner = activeProfile === 'Savero' ? 'Soffie' : 'Savero';
+          const row = payload.new as { kind?: string; payload?: { title?: string; name?: string; addedBy?: string } } | undefined;
+          const mediaCreator = row?.payload?.addedBy || partner;
+          if (mediaCreator !== activeProfile) {
+            const mediaTitle = row?.payload?.title || row?.payload?.name;
+            triggerNotification({
+              category: 'movie',
+              title: `${mediaCreator} Menambahkan Koleksi Tontonan Baru 🎬`,
+              message: mediaTitle
+                ? `${mediaCreator} menambahkan "${mediaTitle}" ke katalog tontonan bersama!`
+                : `${mediaCreator} menambahkan tontonan baru ke katalog bersama!`,
+              settings: settings.notifications
+            });
+          }
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'favorite_singers' }, (payload) => {
+        void refreshFavoriteSingers();
+        const row = payload.new as { profile?: string; payload?: { name?: string } } | undefined;
+        if (payload.eventType === 'INSERT' && row && row.profile && row.profile !== activeProfile) {
+          const singerName = row.payload?.name || 'seorang artis';
+          triggerNotification({
+            category: 'notes',
+            title: `${row.profile} Menambahkan Artis Favorit Baru 🎵`,
+            message: `${row.profile} menambahkan "${singerName}" ke daftar musik favorit cinta!`,
+            settings: settings.notifications
+          });
+        }
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'app_photos' }, (payload) => {
+        const partner = activeProfile === 'Savero' ? 'Soffie' : 'Savero';
+        const row = payload.new as { title?: string } | undefined;
+        const photoTitle = row?.title;
+        triggerNotification({
+          category: 'photo',
+          title: `${partner} Menambahkan Foto Kenangan Baru 🖼️`,
+          message: photoTitle
+            ? `${partner} mengunggah foto "${photoTitle}" ke album kenangan bersama!`
+            : `${partner} baru saja menambahkan foto baru ke album kenangan bersama!`,
+          settings: settings.notifications
+        });
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'memory_pins' }, (payload) => {
         void refreshMemoryPins();
-        const row = payload.new as { title?: string; addedBy?: string } | undefined;
-        if (row && row.addedBy && row.addedBy !== activeProfile) {
+        const row = (payload.new || {}) as { title?: string; addedBy?: string; payload?: { title?: string; addedBy?: string } };
+        const pinData = row.payload || row;
+        const addedBy = pinData.addedBy || (activeProfile === 'Savero' ? 'Soffie' : 'Savero');
+        const title = pinData.title;
+        if (payload.eventType === 'INSERT' && addedBy && addedBy !== activeProfile) {
           triggerNotification({
             category: 'pin',
-            title: 'Pin Kenangan Baru 📍',
-            message: row.title ? `Pin "${row.title}" telah ditambahkan ke peta!` : 'Pin kenangan baru telah ditambahkan.',
+            title: `${addedBy} Menambahkan Pin Kenangan Baru 📍`,
+            message: title ? `Pin "${title}" telah ditambahkan ke peta kenangan cinta!` : `${addedBy} menambahkan lokasi kenangan baru di peta!`,
             settings: settings.notifications
           });
         }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'wishlist_places' }, (payload) => {
         void refreshWishlistPlaces();
-        const row = (payload.new || {}) as { payload?: { name?: string; requestedBy?: string } };
-        const placeName = row.payload?.name;
-        const requestedBy = row.payload?.requestedBy;
-        if (payload.eventType === 'INSERT' && requestedBy && requestedBy !== activeProfile && placeName) {
+        const row = (payload.new || {}) as { payload?: { name?: string; requestedBy?: string; isVisited?: boolean }; name?: string; requestedBy?: string; isVisited?: boolean };
+        const place = row.payload || row;
+        const placeName = place?.name;
+        const requestedBy = place?.requestedBy || (activeProfile === 'Savero' ? 'Soffie' : 'Savero');
+        if (payload.eventType === 'INSERT' && requestedBy !== activeProfile && placeName) {
           triggerNotification({
             category: 'wishlist',
-            title: `Wishlist Baru dari ${requestedBy} 💖`,
-            message: `Tempat "${placeName}" ditambahkan ke wishlist!`,
+            title: `${requestedBy} Menambahkan Wishlist Kencan 💖`,
+            message: `Tempat kencan "${placeName}" telah ditambahkan ke wishlist impian kalian!`,
+            settings: settings.notifications
+          });
+        } else if (payload.eventType === 'UPDATE' && place?.isVisited) {
+          const partner = activeProfile === 'Savero' ? 'Soffie' : 'Savero';
+          triggerNotification({
+            category: 'wishlist',
+            title: `${partner} Menandai Wishlist Terwujud! 🎉`,
+            message: `Tempat kencan "${placeName || 'impian'}" ditandai sudah dikunjungi bersama!`,
             settings: settings.notifications
           });
         }
@@ -606,8 +699,8 @@ export default function App() {
         if (incomingReply.authorProfile !== activeProfile) {
           triggerNotification({
             category: 'reply',
-            title: `${incomingReply.authorProfile} Membalas Instantmu 💬`,
-            message: incomingReply.emoji ? `${incomingReply.emoji} ${incomingReply.text}` : incomingReply.text,
+            title: `${incomingReply.authorProfile} Memberikan Balasan Cinta 💬`,
+            message: incomingReply.emoji ? `${incomingReply.emoji} "${incomingReply.text}"` : `"${incomingReply.text}"`,
             settings: settings.notifications
           });
         }
@@ -623,8 +716,8 @@ export default function App() {
           });
           triggerNotification({
             category: 'reply',
-            title: `${reply.authorProfile} Membalas Instantmu 💬`,
-            message: reply.emoji ? `${reply.emoji} ${reply.text}` : reply.text,
+            title: `${reply.authorProfile} Memberikan Balasan Cinta 💬`,
+            message: reply.emoji ? `${reply.emoji} "${reply.text}"` : `"${reply.text}"`,
             settings: settings.notifications
           });
         }
@@ -659,8 +752,8 @@ export default function App() {
         if (plan && plan.plannedBy !== activeProfile) {
           triggerNotification({
             category: 'movie',
-            title: `Jadwal Nonton dari ${plan.plannedBy} 🎬`,
-            message: `Kencan nonton "${plan.movieTitle}" telah dikonfirmasi!`,
+            title: `${plan.plannedBy} Menambahkan Jadwal Nonton 🎬`,
+            message: `Kencan nonton "${plan.movieTitle}" telah dikonfirmasi oleh ${plan.plannedBy}!`,
             settings: settings.notifications
           });
         }
