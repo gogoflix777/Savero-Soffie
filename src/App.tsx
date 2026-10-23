@@ -1480,14 +1480,26 @@ export default function App() {
   };
 
   const handleRemoveMovie = async (movie: MovieItem) => {
-    if (!movie.tmdbId) throw new Error('Item wishlist tidak memiliki ID TMDB yang valid.');
-    if (isSupabaseConfigured) await removeSharedMediaItem('movie', movie.tmdbId);
-    setMediaCatalogError(null);
+    // 1. Local-first immediate removal: works offline or without Supabase
     setMovies((current) => {
-      const updated = current.filter((item) => item.tmdbId !== movie.tmdbId);
+      const updated = current.filter((item) => {
+        if (movie.id && item.id === movie.id) return false;
+        if (movie.tmdbId && item.tmdbId === movie.tmdbId) return false;
+        return true;
+      });
       appStorage.saveMovies(updated);
       return updated;
     });
+    setMediaCatalogError(null);
+
+    // 2. Cloud sync if Supabase is connected and tmdbId is present
+    if (isSupabaseConfigured && movie.tmdbId) {
+      try {
+        await removeSharedMediaItem('movie', movie.tmdbId);
+      } catch (err) {
+        console.warn('Gagal menghapus film dari Supabase, namun tetap berhasil dihapus dari penyimpanan lokal:', err);
+      }
+    }
   };
 
   const handleAddTvSeries = async (series: TvSeries) => {
@@ -1507,14 +1519,26 @@ export default function App() {
   };
 
   const handleRemoveTvSeries = async (series: TvSeries) => {
-    if (!series.tmdbId) throw new Error('Item wishlist tidak memiliki ID TMDB yang valid.');
-    if (isSupabaseConfigured) await removeSharedMediaItem('tv', series.tmdbId);
-    setMediaCatalogError(null);
+    // 1. Local-first immediate removal: works offline or without Supabase
     setTvSeries((current) => {
-      const updated = current.filter((item) => item.tmdbId !== series.tmdbId);
+      const updated = current.filter((item) => {
+        if (series.id && item.id === series.id) return false;
+        if (series.tmdbId && item.tmdbId === series.tmdbId) return false;
+        return true;
+      });
       appStorage.saveTvSeries(updated);
       return updated;
     });
+    setMediaCatalogError(null);
+
+    // 2. Cloud sync if Supabase is connected and tmdbId is present
+    if (isSupabaseConfigured && series.tmdbId) {
+      try {
+        await removeSharedMediaItem('tv', series.tmdbId);
+      } catch (err) {
+        console.warn('Gagal menghapus serial TV dari Supabase, namun tetap berhasil dihapus dari penyimpanan lokal:', err);
+      }
+    }
   };
 
   const handleToggleActorLike = async (actorId: string, likedBy: 'Savero' | 'Soffie' | 'Berdua') => {

@@ -18,7 +18,8 @@ import {
   ListFilter,
   CheckCircle,
   X,
-  Bookmark
+  Bookmark,
+  Trash2
 } from 'lucide-react';
 import { CloseButton } from '../common/CloseButton';
 import { MovieItem, MovieNightPlan, ActorItem, MovieCollection, TvSeries, MemoryPin, AppSettings } from '../../types';
@@ -849,6 +850,23 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                           <span>{movie.tmdbRating.toFixed(1)}</span>
                         </div>
                       )}
+
+                      {movie.status === 'watchlist' && (
+                        <button
+                          type="button"
+                          title="Hapus dari Wishlist"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm(`Hapus "${movie.title}" dari Wishlist?`)) {
+                              soundManager.playClose();
+                              void onRemoveMovie(movie);
+                            }
+                          }}
+                          className="absolute bottom-1.5 right-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white/80 opacity-80 hover:opacity-100 hover:bg-red-600 hover:text-white backdrop-blur-xs transition shadow-xs"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
                     </div>
 
                     <div className="p-1 pt-1.5 text-left">
@@ -943,13 +961,28 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
 
                       <div className="mt-3.5 flex items-center gap-2 border-t border-rose-200/40 pt-2.5 dark:border-white/10">
                         {series.status === 'watchlist' ? (
-                          <button
-                            type="button"
-                            onClick={() => void onUpdateTvSeries({ ...series, status: 'watching' })}
-                            className="w-full rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] py-2 text-xs font-extrabold text-white shadow-xs"
-                          >
-                            Mulai Nonton Berdua
-                          </button>
+                          <div className="flex w-full items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => void onUpdateTvSeries({ ...series, status: 'watching' })}
+                              className="flex-1 rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] py-2 text-xs font-extrabold text-white shadow-xs"
+                            >
+                              Mulai Nonton Berdua
+                            </button>
+                            <button
+                              type="button"
+                              title="Hapus dari Wishlist Serial"
+                              onClick={() => {
+                                if (window.confirm(`Hapus serial "${series.title}" dari Wishlist?`)) {
+                                  soundManager.playClose();
+                                  void onRemoveTvSeries(series);
+                                }
+                              }}
+                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-950/40 dark:text-red-300"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         ) : (
                           <>
                             <button
@@ -965,6 +998,19 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                               className="flex-1 rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] py-1.5 text-xs font-extrabold text-white shadow-xs"
                             >
                               +1 Episode Selesai
+                            </button>
+                            <button
+                              type="button"
+                              title="Hapus Serial"
+                              onClick={() => {
+                                if (window.confirm(`Hapus serial "${series.title}" dari Koleksi?`)) {
+                                  soundManager.playClose();
+                                  void onRemoveTvSeries(series);
+                                }
+                              }}
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-red-200/60 bg-red-50 text-red-600 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-950/40 dark:text-red-300"
+                            >
+                              <Trash2 className="h-3 w-3" />
                             </button>
                           </>
                         )}
@@ -1441,25 +1487,46 @@ export const MoviesSection: React.FC<MoviesSectionProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-center justify-end gap-2 border-t border-rose-200/50 pt-3 dark:border-white/10">
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-rose-200/50 pt-3 dark:border-white/10">
                   <button
                     type="button"
-                    onClick={() => setSelectedMovie(null)}
-                    className="clay-subcard-3d rounded-full px-4 py-2 font-extrabold text-[#7a3444] dark:text-rose-200"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      soundManager.playSuccess();
-                      void onUpdateMovie(selectedMovie);
-                      setSelectedMovie(null);
+                    onClick={async () => {
+                      const isWatchlist = selectedMovie.status === 'watchlist';
+                      const confirmMsg = isWatchlist
+                        ? `Hapus "${selectedMovie.title}" dari Wishlist Nonton?`
+                        : `Hapus "${selectedMovie.title}" dari Koleksi Film?`;
+                      if (window.confirm(confirmMsg)) {
+                        soundManager.playClose();
+                        await onRemoveMovie(selectedMovie);
+                        setSelectedMovie(null);
+                      }
                     }}
-                    className="rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] px-5 py-2 font-extrabold text-white shadow-md active:scale-95"
+                    className="flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50/90 px-3.5 py-2 text-xs font-extrabold text-red-600 transition-all hover:bg-red-100 hover:border-red-300 dark:border-red-500/20 dark:bg-red-950/40 dark:text-red-300"
                   >
-                    Simpan Perubahan
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>{selectedMovie.status === 'watchlist' ? 'Hapus dari Wishlist' : 'Hapus Film'}</span>
                   </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMovie(null)}
+                      className="clay-subcard-3d rounded-full px-4 py-2 font-extrabold text-[#7a3444] dark:text-rose-200"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        soundManager.playSuccess();
+                        void onUpdateMovie(selectedMovie);
+                        setSelectedMovie(null);
+                      }}
+                      className="rounded-full bg-gradient-to-b from-[#ff6b98] to-[#d9386a] px-5 py-2 font-extrabold text-white shadow-md active:scale-95"
+                    >
+                      Simpan Perubahan
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             </motion.div>
